@@ -1,0 +1,465 @@
+<Window x:Class="PlcIoCheckerQr.Wpf.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:PlcIoCheckerQr.Wpf"
+        Title="PLC IO Checker QR Builder"
+        Width="1320"
+        Height="900"
+        MinWidth="1120"
+        MinHeight="760"
+        WindowStartupLocation="CenterScreen"
+        Background="{StaticResource WindowBg}">
+
+  <Window.Resources>
+    <local:UppercaseTextConverter x:Key="UppercaseTextConverter"/>
+    <DataTemplate x:Key="UppercaseComboBoxItemTemplate">
+      <TextBlock Text="{Binding Converter={StaticResource UppercaseTextConverter}}"/>
+    </DataTemplate>
+  </Window.Resources>
+
+  <Grid>
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="*"/>
+      <RowDefinition Height="38"/>
+    </Grid.RowDefinitions>
+
+    <Menu Grid.Row="0"
+          Background="{StaticResource HeaderBg}"
+          Foreground="{StaticResource TextMain}"
+          AutomationProperties.AutomationId="MainMenu">
+      <MenuItem Header="ファイル" AutomationProperties.AutomationId="FileMenu">
+        <MenuItem Header="JSON 読み込み"
+                  AutomationProperties.AutomationId="LoadJsonMenuItem"
+                  Click="LoadJson_Click"/>
+        <MenuItem Header="JSON 保存"
+                  AutomationProperties.AutomationId="SaveJsonMenuItem"
+                  Click="SaveJson_Click"/>
+        <MenuItem Header="JSON 表示"
+                  AutomationProperties.AutomationId="ShowJsonMenuItem"
+                  Click="ShowJson_Click"/>
+      </MenuItem>
+      <MenuItem x:Name="_qrMenu" Header="QR" AutomationProperties.AutomationId="QrMenu"
+                ToolTip="QR の分割、表示サイズ、誤り訂正レベルを設定します。">
+        <MenuItem Header="分割サイズ"
+                  AutomationProperties.AutomationId="QrChunkSizeMenu"
+                  ToolTip="1つのQRに入れる文字数です。小さいほどページ数は増えますが、QRは粗くなり読み取りやすくなります。">
+          <MenuItem Header="350 chars/page" Tag="chunk:350" IsCheckable="True" Click="QrOptionMenuItem_Click"
+                    ToolTip="読み取り優先です。ページ数は増えますが、QRが粗くなります。"/>
+          <MenuItem Header="500 chars/page" Tag="chunk:500" IsCheckable="True" Click="QrOptionMenuItem_Click"
+                    ToolTip="標準設定です。読み取りやすさとページ数のバランスを取ります。"/>
+          <MenuItem Header="800 chars/page" Tag="chunk:800" IsCheckable="True" Click="QrOptionMenuItem_Click"
+                    ToolTip="ページ数を減らします。QRが少し細かくなるため、読み取り距離に注意してください。"/>
+          <MenuItem Header="1200 chars/page" Tag="chunk:1200" IsCheckable="True" Click="QrOptionMenuItem_Click"
+                    ToolTip="ページ数を最小化したい場合向けです。QRが細かくなり、読み取りにくくなる場合があります。"/>
+        </MenuItem>
+        <MenuItem Header="表示サイズ"
+                  AutomationProperties.AutomationId="QrDisplaySizeMenu"
+                  ToolTip="画面上に表示するQR画像の大きさです。読み取り端末や画面サイズに合わせて変更します。">
+          <MenuItem Header="600 px" Tag="size:600" IsCheckable="True" Click="QrOptionMenuItem_Click"
+                    ToolTip="小さめの表示です。画面が狭い場合に使います。"/>
+          <MenuItem Header="800 px" Tag="size:800" IsCheckable="True" Click="QrOptionMenuItem_Click"
+                    ToolTip="中くらいの表示です。通常のノートPC画面向けです。"/>
+          <MenuItem Header="1000 px" Tag="size:1000" IsCheckable="True" Click="QrOptionMenuItem_Click"
+                    ToolTip="標準設定です。読み取りやすさを優先した表示サイズです。"/>
+          <MenuItem Header="1200 px" Tag="size:1200" IsCheckable="True" Click="QrOptionMenuItem_Click"
+                    ToolTip="大きめの表示です。離れた位置から読み取る場合に使います。"/>
+        </MenuItem>
+        <MenuItem Header="誤り訂正"
+                  AutomationProperties.AutomationId="QrErrorCorrectionMenu"
+                  ToolTip="QRが一部欠けたり汚れたりしても復元できる強さです。強くするほど復元力は上がりますが、QRは細かくなります。">
+          <MenuItem Header="L" Tag="ec:L" IsCheckable="True" Click="QrOptionMenuItem_Click"
+                    ToolTip="約7%まで復元できます。画面表示向けで、QRは最も粗く読み取りやすい設定です。"/>
+          <MenuItem Header="M" Tag="ec:M" IsCheckable="True" Click="QrOptionMenuItem_Click"
+                    ToolTip="約15%まで復元できます。通常運用でバランスのよい設定です。"/>
+          <MenuItem Header="Q" Tag="ec:Q" IsCheckable="True" Click="QrOptionMenuItem_Click"
+                    ToolTip="約25%まで復元できます。印刷や多少の汚れを想定する場合に使います。"/>
+          <MenuItem Header="H" Tag="ec:H" IsCheckable="True" Click="QrOptionMenuItem_Click"
+                    ToolTip="約30%まで復元できます。復元力は高いですが、QRが細かくなり読み取りにくくなる場合があります。"/>
+        </MenuItem>
+      </MenuItem>
+      <MenuItem Header="ヘルプ" AutomationProperties.AutomationId="HelpMenu">
+        <MenuItem Header="バージョン情報"
+                  AutomationProperties.AutomationId="AboutMenuItem"
+                  Click="AboutMenuItem_Click"/>
+      </MenuItem>
+    </Menu>
+
+    <Grid x:Name="_inputView" Grid.Row="1">
+      <Grid.RowDefinitions>
+        <RowDefinition Height="Auto"/>
+        <RowDefinition Height="*"/>
+      </Grid.RowDefinitions>
+
+      <Border Grid.Row="0"
+              Background="{StaticResource HeaderBg}"
+              BorderBrush="{StaticResource BorderSoft}"
+              BorderThickness="0,0,0,1"
+              Padding="24,16">
+        <Grid>
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="Auto"/>
+          </Grid.ColumnDefinitions>
+
+          <StackPanel Grid.Column="0" Orientation="Vertical">
+            <TextBlock Text="PLC IO Checker QR Builder"
+                       FontSize="23"
+                       FontWeight="SemiBold"
+                       Foreground="{StaticResource TextMain}"/>
+            <TextBlock x:Name="_headerProjectName"
+                       Text="PLC QR Project"
+                       Margin="0,4,0,0"
+                       Foreground="{StaticResource TextMuted}"/>
+          </StackPanel>
+
+          <StackPanel Grid.Column="1"
+                      Orientation="Horizontal"
+                      VerticalAlignment="Center"
+                      Margin="20,0,0,0">
+            <Button Content="QR 生成"
+                    Style="{StaticResource PrimaryButton}"
+                    Click="Generate_Click"/>
+          </StackPanel>
+        </Grid>
+      </Border>
+
+      <TabControl x:Name="_mainTabs" Grid.Row="1">
+        <TabItem Header="デバイス">
+          <Border Style="{StaticResource PanelBorder}">
+            <Grid>
+              <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="16"/>
+                <RowDefinition Height="*"/>
+              </Grid.RowDefinitions>
+
+              <Grid Grid.Row="0">
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="*"/>
+                  <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0" Orientation="Vertical" Margin="0,0,20,0">
+                  <TextBlock Text="デバイス" Style="{StaticResource SectionTitle}"/>
+                  <TextBlock Text="アドレスとデータ型を編集します" Style="{StaticResource SectionMeta}"/>
+                </StackPanel>
+                <StackPanel Grid.Column="1"
+                            Orientation="Horizontal"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Center">
+                  <Button Content="行を追加"
+                          Style="{StaticResource AppButton}"
+                          Margin="0,0,8,0"
+                          Click="AddDevice_Click"/>
+                  <Button Content="選択行を削除"
+                          Style="{StaticResource GhostButton}"
+                          Click="DeleteDevice_Click"/>
+                </StackPanel>
+              </Grid>
+
+              <DataGrid x:Name="_devicesGrid"
+                        Grid.Row="2"
+                        AlternationCount="2"/>
+            </Grid>
+          </Border>
+        </TabItem>
+
+        <TabItem Header="タイムチャート">
+          <Border Style="{StaticResource PanelBorder}">
+            <Grid>
+              <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="16"/>
+                <RowDefinition Height="*"/>
+              </Grid.RowDefinitions>
+
+              <Grid Grid.Row="0">
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="*"/>
+                  <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0" Orientation="Vertical" Margin="0,0,20,0">
+                  <TextBlock Text="タイムチャート対象" Style="{StaticResource SectionTitle}"/>
+                  <TextBlock Text="Android のタイムチャートに表示するアドレスを指定します（最大20件）" Style="{StaticResource SectionMeta}"/>
+                </StackPanel>
+                <StackPanel Grid.Column="1"
+                            Orientation="Horizontal"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Center">
+                  <Button Content="行を追加"
+                          Style="{StaticResource AppButton}"
+                          Margin="0,0,8,0"
+                          Click="AddWatch_Click"/>
+                  <Button Content="選択行を削除"
+                          Style="{StaticResource GhostButton}"
+                          Click="DeleteWatch_Click"/>
+                </StackPanel>
+              </Grid>
+
+              <DataGrid x:Name="_watchGrid"
+                        Grid.Row="2"
+                        AlternationCount="2"/>
+            </Grid>
+          </Border>
+        </TabItem>
+
+        <TabItem Header="トラップ">
+          <Border Style="{StaticResource PanelBorder}">
+            <Grid>
+              <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="16"/>
+                <RowDefinition Height="*"/>
+              </Grid.RowDefinitions>
+
+              <Grid Grid.Row="0">
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="*"/>
+                  <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0" Orientation="Vertical" Margin="0,0,20,0">
+                  <TextBlock Text="トラップ" Style="{StaticResource SectionTitle}"/>
+                  <TextBlock Text="条件、しきい値、有効状態を編集します" Style="{StaticResource SectionMeta}"/>
+                </StackPanel>
+                <StackPanel Grid.Column="1"
+                            Orientation="Horizontal"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Center">
+                  <Button Content="行を追加"
+                          Style="{StaticResource AppButton}"
+                          Margin="0,0,8,0"
+                          Click="AddTrap_Click"/>
+                  <Button Content="選択行を削除"
+                          Style="{StaticResource GhostButton}"
+                          Click="DeleteTrap_Click"/>
+                </StackPanel>
+              </Grid>
+
+              <DataGrid x:Name="_trapsGrid"
+                        Grid.Row="2"
+                        AlternationCount="2"/>
+            </Grid>
+          </Border>
+        </TabItem>
+
+        <TabItem Header="プロジェクト/接続">
+          <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <Grid>
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="1.05*"/>
+                <ColumnDefinition Width="18"/>
+                <ColumnDefinition Width="1*"/>
+              </Grid.ColumnDefinitions>
+
+              <Border Grid.Column="0" Style="{StaticResource PanelBorder}">
+                <Grid>
+                  <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="16"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                  </Grid.RowDefinitions>
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="175"/>
+                    <ColumnDefinition Width="*"/>
+                  </Grid.ColumnDefinitions>
+
+                  <StackPanel Grid.Row="0" Grid.ColumnSpan="2">
+                    <TextBlock Text="プロジェクト" Style="{StaticResource SectionTitle}"/>
+                    <TextBlock Text="Android 側に渡す基本情報" Style="{StaticResource SectionMeta}"/>
+                  </StackPanel>
+
+                  <TextBlock Grid.Row="2" Grid.Column="0" Text="プロジェクト名" Style="{StaticResource FormLabel}" Margin="0,6,14,6"/>
+                  <TextBox x:Name="_projectName" Grid.Row="2" Grid.Column="1" Text="PLC QR Project" Margin="0,4,0,4"/>
+
+                  <TextBlock Grid.Row="3" Grid.Column="0" Text="メーカー" Style="{StaticResource FormLabel}" Margin="0,6,14,6"/>
+                  <ComboBox x:Name="_vendor" Grid.Row="3" Grid.Column="1" Margin="0,4,0,4" ItemTemplate="{StaticResource UppercaseComboBoxItemTemplate}"/>
+
+                  <TextBlock Grid.Row="4" Grid.Column="0" Text="CPU model" Style="{StaticResource FormLabel}" Margin="0,6,14,6"/>
+                  <ComboBox x:Name="_model" Grid.Row="4" Grid.Column="1" Margin="0,4,0,4"/>
+
+                  <TextBlock Grid.Row="5" Grid.Column="0" Text="表示密度" Style="{StaticResource FormLabel}" Margin="0,6,14,6"/>
+                  <ComboBox x:Name="_density" Grid.Row="5" Grid.Column="1" Margin="0,4,0,4" ItemTemplate="{StaticResource UppercaseComboBoxItemTemplate}"/>
+
+                  <TextBlock x:Name="_keyenceModeLabel" Grid.Row="6" Grid.Column="0" Text="KEYENCE 表示" Style="{StaticResource FormLabel}" Margin="0,6,14,6"/>
+                  <ComboBox x:Name="_keyenceMode" Grid.Row="6" Grid.Column="1" Margin="0,4,0,4" ItemTemplate="{StaticResource UppercaseComboBoxItemTemplate}"/>
+                </Grid>
+              </Border>
+
+              <Border Grid.Column="2" Style="{StaticResource PanelBorder}">
+                <Grid>
+                  <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="16"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                  </Grid.RowDefinitions>
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="175"/>
+                    <ColumnDefinition Width="*"/>
+                  </Grid.ColumnDefinitions>
+
+                  <StackPanel Grid.Row="0" Grid.ColumnSpan="2">
+                    <TextBlock Text="接続" Style="{StaticResource SectionTitle}"/>
+                    <TextBlock Text="PLC 通信設定" Style="{StaticResource SectionMeta}"/>
+                  </StackPanel>
+
+                  <TextBlock Grid.Row="2" Grid.Column="0" Text="Connection mode" Style="{StaticResource FormLabel}" Margin="0,6,14,6"/>
+                  <ComboBox x:Name="_connectionMode" Grid.Row="2" Grid.Column="1" Margin="0,4,0,4" ItemTemplate="{StaticResource UppercaseComboBoxItemTemplate}"/>
+
+                  <TextBlock Grid.Row="3" Grid.Column="0" Text="IP address" Style="{StaticResource FormLabel}" Margin="0,6,14,6"/>
+                  <TextBox x:Name="_host" Grid.Row="3" Grid.Column="1" Text="192.168.250.100" Margin="0,4,0,4"/>
+
+                  <TextBlock Grid.Row="4" Grid.Column="0" Text="Port" Style="{StaticResource FormLabel}" Margin="0,6,14,6"/>
+                  <TextBox x:Name="_port" Grid.Row="4" Grid.Column="1" Text="1025" Margin="0,4,0,4"/>
+
+                  <TextBlock Grid.Row="5" Grid.Column="0" Text="Transport" Style="{StaticResource FormLabel}" Margin="0,6,14,6"/>
+                  <ComboBox x:Name="_transport" Grid.Row="5" Grid.Column="1" Margin="0,4,0,4" ItemTemplate="{StaticResource UppercaseComboBoxItemTemplate}"/>
+
+                  <TextBlock Grid.Row="6" Grid.Column="0" Text="監視周期 ms" Style="{StaticResource FormLabel}" Margin="0,6,14,6"/>
+                  <TextBox x:Name="_interval" Grid.Row="6" Grid.Column="1" Text="500" Margin="0,4,0,4"/>
+
+                  <TextBlock Grid.Row="7" Grid.Column="0" Text="Timeout ms" Style="{StaticResource FormLabel}" Margin="0,6,14,6"/>
+                  <TextBox x:Name="_timeout" Grid.Row="7" Grid.Column="1" Text="2000" Margin="0,4,0,4"/>
+
+                  <TextBlock x:Name="_networkLabel" Grid.Row="8" Grid.Column="0" Text="Network" Style="{StaticResource FormLabel}" Margin="0,6,14,6"/>
+                  <TextBox x:Name="_network" Grid.Row="8" Grid.Column="1" Text="0" Margin="0,4,0,4"/>
+
+                  <TextBlock x:Name="_stationLabel" Grid.Row="9" Grid.Column="0" Text="Station" Style="{StaticResource FormLabel}" Margin="0,6,14,6"/>
+                  <TextBox x:Name="_station" Grid.Row="9" Grid.Column="1" Text="255" Margin="0,4,0,4"/>
+
+                  <TextBlock x:Name="_moduleIoLabel" Grid.Row="10" Grid.Column="0" Text="Module IO" Style="{StaticResource FormLabel}" Margin="0,6,14,6"/>
+                  <TextBox x:Name="_moduleIo" Grid.Row="10" Grid.Column="1" Text="1023" Margin="0,4,0,4"/>
+
+                  <TextBlock x:Name="_multidropLabel" Grid.Row="11" Grid.Column="0" Text="Multidrop" Style="{StaticResource FormLabel}" Margin="0,6,14,6"/>
+                  <TextBox x:Name="_multidrop" Grid.Row="11" Grid.Column="1" Text="0" Margin="0,4,0,4"/>
+                </Grid>
+              </Border>
+            </Grid>
+          </ScrollViewer>
+        </TabItem>
+      </TabControl>
+    </Grid>
+
+    <Grid x:Name="_qrView"
+          Grid.Row="1"
+          Visibility="Collapsed"
+          Background="{StaticResource QrStageBg}">
+      <Grid.RowDefinitions>
+        <RowDefinition Height="Auto"/>
+        <RowDefinition Height="*"/>
+        <RowDefinition Height="Auto"/>
+      </Grid.RowDefinitions>
+
+      <Border Grid.Row="0"
+              Background="{StaticResource HeaderBg}"
+              BorderBrush="{StaticResource BorderSoft}"
+              BorderThickness="0,0,0,1"
+              Padding="22,16">
+        <Grid>
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="Auto"/>
+          </Grid.ColumnDefinitions>
+
+          <Button Grid.Column="0"
+                  Content="入力へ戻る"
+                  Style="{StaticResource AppButton}"
+                  Click="BackToEditor_Click"/>
+
+          <StackPanel Grid.Column="1"
+                      Orientation="Vertical"
+                      Margin="18,0,0,0"
+                      VerticalAlignment="Center">
+            <TextBlock Text="QR"
+                       FontSize="24"
+                       FontWeight="SemiBold"/>
+            <TextBlock x:Name="_pageLabel"
+                       Foreground="{StaticResource TextMuted}"
+                       Margin="0,4,0,0"
+                       TextTrimming="CharacterEllipsis"/>
+          </StackPanel>
+
+          <StackPanel Grid.Column="2"
+                      Orientation="Horizontal"
+                      VerticalAlignment="Center">
+            <Button Content="前へ"
+                    Style="{StaticResource AppButton}"
+                    Margin="0,0,8,0"
+                    Click="PrevQr_Click"/>
+            <Button Content="次へ"
+                    Style="{StaticResource AppButton}"
+                    Margin="0,0,8,0"
+                    Click="NextQr_Click"/>
+            <Button Content="PNG 保存"
+                    Style="{StaticResource AppButton}"
+                    Click="SaveQrImages_Click"/>
+          </StackPanel>
+        </Grid>
+      </Border>
+
+      <Grid Grid.Row="1" Margin="24">
+        <Border Background="{StaticResource PanelBg}"
+                BorderBrush="{StaticResource BorderSoft}"
+                BorderThickness="1"
+                CornerRadius="16"
+                Padding="28">
+          <Viewbox Stretch="Uniform" StretchDirection="Both">
+            <Border Background="White"
+                    BorderBrush="{StaticResource BorderSoft}"
+                    BorderThickness="1"
+                    CornerRadius="12"
+                    Padding="24">
+              <Image x:Name="_qrImage"
+                     Width="900"
+                     Height="900"
+                     Stretch="Uniform"
+                     RenderOptions.BitmapScalingMode="NearestNeighbor"/>
+            </Border>
+          </Viewbox>
+        </Border>
+      </Grid>
+
+      <Border Grid.Row="2"
+              Background="{StaticResource HeaderBg}"
+              BorderBrush="{StaticResource BorderSoft}"
+              BorderThickness="0,1,0,0"
+              Padding="24,12">
+        <TextBlock x:Name="_qrMeta"
+                   Foreground="{StaticResource TextMuted}"
+                   VerticalAlignment="Center"
+                   TextTrimming="CharacterEllipsis"/>
+      </Border>
+    </Grid>
+
+    <Border Grid.Row="2"
+            Background="{StaticResource HeaderBg}"
+            BorderBrush="{StaticResource BorderSoft}"
+            BorderThickness="0,1,0,0"
+            Padding="16,0">
+      <DockPanel LastChildFill="True">
+        <TextBlock x:Name="_summaryText"
+                   DockPanel.Dock="Right"
+                   Foreground="{StaticResource TextMuted}"
+                   VerticalAlignment="Center"
+                   Margin="20,0,0,0"/>
+        <TextBlock x:Name="_statusText"
+                   Text="準備完了"
+                   Foreground="{StaticResource TextMuted}"
+                   VerticalAlignment="Center"/>
+      </DockPanel>
+    </Border>
+  </Grid>
+</Window>

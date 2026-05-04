@@ -1,31 +1,51 @@
 # PlcIoChecker QR
 
-Temporary Python tool for creating PLC IO Checker project QR codes.
+PC tool for creating PLC IO Checker project settings for Android.
 
-The mobile apps import the same project JSON used by normal JSON import. For QR
-transfer, JSON is minified, raw-deflate-compressed, base64url-encoded, split into small
-chunks, and shown as one QR code per chunk.
+The Android app in `../PlcIoChecker_Android` is the QR reader. The QR JSON and
+selection values in this repository follow that Android app's `ProjectDefinition`
+model and enum names.
 
-QR payloads use compressed minified JSON to reduce the number of QR pages. JSON
-saved from the PC app remains pretty-printed for manual inspection.
+## Product Intent
 
-## Setup
+This app exists to avoid difficult smartphone text entry. Project data is edited
+on a PC, then exported as Android-compatible JSON or QR codes.
 
-```bash
-cd /Users/macminim2/Development/PLC_App/PlcIoChecker_QR
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-python app.py
+Primary workflows:
+
+- Device settings
+- Time chart target settings
+- Trap settings
+
+Project metadata, connection settings, and QR output settings are supporting
+workflow areas.
+
+## Folders
+
+- `dotnet/`: current .NET WPF implementation and tests.
+- `python/`: earlier Python test implementation kept for reference.
+
+## .NET WPF App
+
+```powershell
+cd D:\github\PlcIoChecker_QR\dotnet
+dotnet run --project src\PlcIoCheckerQr.Wpf
 ```
 
-## .NET Porting
+The app can generate QR pages, save Android-importable JSON, and save QR PNG
+files. QR display uses a dedicated screen so it can be shown large enough for
+phone scanning.
 
-For the future .NET PC app, read [DOTNET_PORTING_GUIDE.md](DOTNET_PORTING_GUIDE.md).
-It records the exact QR payload format, raw deflate requirement, UI scope, and
-implementation traps learned from the Python prototype.
+## Build Single-File EXE
 
-## QR Format
+```powershell
+cd D:\github\PlcIoChecker_QR
+.\build-dotnet-onefile.bat
+```
+
+The executable is written to `dotnet\publish\win-x64`.
+
+## Android-Compatible QR Format
 
 Each QR contains:
 
@@ -36,38 +56,24 @@ PLCIOC2D|<session>|<index>|<total>|<sha256>|<payload-chunk>
 - `index` is 1-based.
 - `sha256` is calculated from the minified JSON bytes after decompression.
 - `payload-chunk` is a slice of base64url-encoded raw-deflate-compressed JSON without padding.
-- `PLCIOC1` and `PLCIOC2Z` are not supported. Invalid or old QR formats should fail visibly.
+- Android reads this with `Inflater(true)`, so the .NET app uses raw deflate, not zlib or gzip containers.
 
-## Compression Note
+## Android Enum Values Used By The GUI
 
-Use raw deflate, not Python's normal `zlib.compress()` container format.
-Android can read the zlib container, but iOS `Compression.COMPRESSION_ZLIB`
-did not restore Python zlib-container bytes correctly in testing. The symptom
-was that the QR was detected, but the app rejected it as invalid after checksum
-verification. `PLCIOC2D` means the payload is raw deflate (`wbits=-15`) wrapped
-with base64url, and both Android and iOS should decode that exact format.
+- Vendor: `Melsec`, `Keyence`
+- Connection mode: `Real`, `DemoMock`
+- KEYENCE display: `Normal`, `Xym`
+- Transport: `Tcp`, `Udp`
+- Block density: `Compact`, `Detailed`
+- Trap condition: `Rise`, `Fall`, `Change`, `GreaterOrEqual`, `LessOrEqual`, `Equal`, `NotEqual`
+- Device data type: `Bit`, `Int16`, `UInt16`, `Int32`, `UInt32`, `Float32`
 
-The chunk size and QR display size are adjustable in the PC app. Larger chunks
-reduce QR pages. Smaller chunks create more QR pages, but are easier for phones
-to read.
+## Python Reference
 
-Some phone models read dense QR codes better than others. The PC app default is
-`QR 1枚の文字数=350` because iOS can be less stable with dense one-page QR
-codes. For the safest cross-device test, use:
-
-- `QR 1枚の文字数`: `200` or `350`
-- `QR表示サイズpx`: `650` or larger
-- `QR誤り訂正`: `L 読取優先`
-
-Trap conditions must use the mobile app enum names exactly:
-
-- `Rise`
-- `Fall`
-- `Change`
-- `GreaterOrEqual`
-- `LessOrEqual`
-- `Equal`
-- `NotEqual`
-
-Do not emit aliases such as `Changed`; the PC-side GUI should prevent invalid
-values instead of relying on mobile-side fallback.
+```powershell
+cd D:\github\PlcIoChecker_QR\python
+python -m venv .venv
+.\.venv\Scripts\activate
+pip install -r requirements.txt
+python app.py
+```
