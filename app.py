@@ -53,7 +53,7 @@ class PlcQrApp(tk.Tk):
         self.station = self._entry(form, "Station", "255", 11)
         self.module_io = self._entry(form, "Module IO", "1023", 12)
         self.multidrop = self._entry(form, "Multidrop", "0", 13)
-        self.chunk_size = self._entry(form, "QR 1枚の文字数", "700", 14)
+        self.chunk_size = self._entry(form, "QR 1枚の文字数", "350", 14)
         self.qr_display_size = self._entry(form, "QR表示サイズpx", "650", 15)
         self.qr_error_correction = self._combo(form, "QR誤り訂正", list(QR_ERROR_CORRECTION_LEVELS.keys()), "L 読取優先", 16)
 
@@ -148,7 +148,7 @@ class PlcQrApp(tk.Tk):
     def generate(self) -> None:
         try:
             project = self.build_project()
-            chunk_size = self._int_value(self.chunk_size, default=700, minimum=200, maximum=2400)
+            chunk_size = self._int_value(self.chunk_size, default=350, minimum=200, maximum=2400)
             self.chunks = encode_project_chunks(project, chunk_size=chunk_size)
             self.qr_images = [self.make_qr_image(chunk.text()) for chunk in self.chunks]
             self.current_index = 0

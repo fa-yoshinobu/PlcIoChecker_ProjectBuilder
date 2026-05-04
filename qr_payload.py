@@ -6,11 +6,12 @@ import json
 import re
 import time
 import uuid
+import zlib
 from dataclasses import dataclass
 from typing import Iterable
 
 
-QR_PREFIX = "PLCIOC1"
+QR_PREFIX = "PLCIOC2D"
 VALID_TRAP_CONDITIONS = {
     "Rise",
     "Fall",
@@ -149,15 +150,22 @@ def project_json_bytes(project: dict) -> bytes:
     return json.dumps(project, ensure_ascii=False, indent=2).encode("utf-8")
 
 
-def project_qr_bytes(project: dict) -> bytes:
+def project_qr_json_bytes(project: dict) -> bytes:
     return json.dumps(project, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+
+
+def project_qr_bytes(project: dict) -> bytes:
+    compressor = zlib.compressobj(level=9, wbits=-15)
+    data = project_qr_json_bytes(project)
+    return compressor.compress(data) + compressor.flush()
 
 
 def encode_project_chunks(project: dict, chunk_size: int) -> list[QrChunk]:
     safe_chunk_size = max(200, int(chunk_size))
-    data = project_qr_bytes(project)
+    data = project_qr_json_bytes(project)
+    compressed_data = project_qr_bytes(project)
     checksum = hashlib.sha256(data).hexdigest()
-    encoded = base64.urlsafe_b64encode(data).decode("ascii").rstrip("=")
+    encoded = base64.urlsafe_b64encode(compressed_data).decode("ascii").rstrip("=")
     session = uuid.uuid4().hex[:12]
     payloads = [encoded[i : i + safe_chunk_size] for i in range(0, len(encoded), safe_chunk_size)] or [""]
     total = len(payloads)
@@ -178,7 +186,8 @@ def decode_chunks(chunks: Iterable[QrChunk]) -> bytes:
         raise ValueError("QR chunks do not belong to the same project")
     encoded = "".join(chunk.payload for chunk in chunk_list)
     padding = "=" * (-len(encoded) % 4)
-    data = base64.urlsafe_b64decode(encoded + padding)
+    compressed_data = base64.urlsafe_b64decode(encoded + padding)
+    data = zlib.decompress(compressed_data, wbits=-15)
     if hashlib.sha256(data).hexdigest() != first.checksum:
         raise ValueError("QR checksum mismatch")
     return data
