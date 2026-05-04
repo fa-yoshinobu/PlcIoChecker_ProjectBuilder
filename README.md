@@ -19,6 +19,12 @@ pip install -r requirements.txt
 python app.py
 ```
 
+## .NET Porting
+
+For the future .NET PC app, read [DOTNET_PORTING_GUIDE.md](DOTNET_PORTING_GUIDE.md).
+It records the exact QR payload format, raw deflate requirement, UI scope, and
+implementation traps learned from the Python prototype.
+
 ## QR Format
 
 Each QR contains:
