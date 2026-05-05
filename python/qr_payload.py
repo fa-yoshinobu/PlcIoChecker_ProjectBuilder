@@ -12,14 +12,23 @@ from typing import Iterable
 
 
 QR_PREFIX = "PLCIOC2D"
+PROJECT_SCHEMA = "plc-io-checker-project"
+PROJECT_SCHEMA_VERSION = 2
+MAX_TIME_CHART_CHANNELS = 20
+
+VALID_VENDORS = {"MELSEC", "KEYENCE"}
+VALID_CONNECTION_MODES = {"REAL", "DEMO_MOCK"}
+VALID_KEYENCE_DEVICE_MODES = {"NORMAL", "XYM"}
+VALID_TRANSPORTS = {"TCP", "UDP"}
+VALID_DATA_TYPES = {"BIT", "INT16", "UINT16", "INT32", "UINT32", "FLOAT32"}
 VALID_TRAP_CONDITIONS = {
-    "Rise",
-    "Fall",
-    "Change",
-    "GreaterOrEqual",
-    "LessOrEqual",
-    "Equal",
-    "NotEqual",
+    "RISING_EDGE",
+    "FALLING_EDGE",
+    "CHANGE",
+    "GREATER_OR_EQUAL",
+    "LESS_OR_EQUAL",
+    "EQUAL",
+    "NOT_EQUAL",
 }
 
 
@@ -50,108 +59,172 @@ def parse_lines(text: str) -> list[str]:
 
 def make_project(
     *,
-    name: str,
+    project_name: str,
     vendor: str,
     connection_mode: str,
     host: str,
     port: int,
-    monitor_interval_ms: int,
+    polling_interval_ms: int,
     timeout_ms: int,
-    machine_label: str,
+    cpu_model: str,
     keyence_device_mode: str,
-    transport_mode: str,
-    network: int,
-    station: int,
-    module_io: int,
-    multidrop: int,
-    devices_text: str,
-    watch_text: str,
+    transport: str,
+    network_no: int,
+    station_no: int,
+    module_io_no: int,
+    multidrop_no: int,
+    device_list_text: str,
+    time_chart_text: str,
     traps_text: str,
-    block_display_density: str = "Compact",
 ) -> dict:
     now_ms = int(time.time() * 1000)
-    project_id = f"{slugify(name)}-{now_ms}"
-    devices = []
-    for line in parse_lines(devices_text):
-        parts = [part.strip() for part in line.split(",")]
-        if not parts or not parts[0]:
-            continue
-        address = parts[0].upper()
-        data_type = parts[1] if len(parts) > 1 and parts[1] else guess_data_type(address)
-        devices.append({"address": address, "dataType": data_type})
+    project_id = f"{slugify(project_name)}-{now_ms}"
+    normalized_vendor = validate_value(vendor, VALID_VENDORS, "vendor")
+    device_list = parse_device_list(device_list_text, normalized_vendor)
+    device_types = {item["address"]: item["dataType"] for item in device_list}
+    time_chart = parse_time_chart(time_chart_text, device_types, normalized_vendor)
+    traps = parse_traps(traps_text, device_types, normalized_vendor)
 
-    watch_items = [line.upper() for line in parse_lines(watch_text)]
-
-    traps = []
-    for offset, line in enumerate(parse_lines(traps_text), start=1):
-        parts = [part.strip() for part in line.split(",")]
-        if len(parts) < 2 or not parts[0] or not parts[1]:
-            continue
-        threshold = None
-        if len(parts) >= 3 and parts[2]:
-            threshold = float(parts[2])
-        enabled = True
-        if len(parts) >= 4 and parts[3]:
-            enabled = parts[3].lower() not in {"0", "false", "off", "no"}
-        traps.append(
-            {
-                "id": f"trap-{offset}",
-                "address": parts[0].upper(),
-                "enabled": enabled,
-                "condition": validate_trap_condition(parts[1]),
-                "threshold": threshold,
-                "triggerCount": 0,
-                "lastTriggeredAtEpochMs": None,
-                "lastObservedValue": None,
-            }
-        )
+    plc = {
+        "vendor": normalized_vendor,
+        "cpuModel": cpu_model.strip(),
+        "connection": {
+            "mode": validate_value(connection_mode, VALID_CONNECTION_MODES, "connection mode"),
+            "host": host.strip(),
+            "port": int(port),
+            "transport": validate_value(transport, VALID_TRANSPORTS, "transport"),
+            "pollingIntervalMs": int(polling_interval_ms),
+            "timeoutMs": int(timeout_ms),
+        },
+    }
+    if normalized_vendor == "MELSEC":
+        plc["melsec"] = {
+            "networkNo": int(network_no),
+            "stationNo": int(station_no),
+            "moduleIoNo": int(module_io_no),
+            "multidropNo": int(multidrop_no),
+        }
+    else:
+        plc["keyence"] = {
+            "deviceMode": validate_value(keyence_device_mode, VALID_KEYENCE_DEVICE_MODES, "KEYENCE device mode"),
+        }
 
     return {
-        "id": project_id,
-        "name": name,
-        "connection": {
-            "vendor": vendor,
-            "connectionMode": connection_mode,
-            "host": host,
-            "port": port,
-            "monitorIntervalMs": monitor_interval_ms,
-            "timeoutMs": timeout_ms,
-            "machineLabel": machine_label,
-            "keyenceDeviceMode": keyence_device_mode,
-            "transportMode": transport_mode,
-            "network": network,
-            "station": station,
-            "moduleIo": module_io,
-            "multidrop": multidrop,
-        },
-        "devices": devices,
-        "watchItems": watch_items,
+        "schema": PROJECT_SCHEMA,
+        "schemaVersion": PROJECT_SCHEMA_VERSION,
+        "projectId": project_id,
+        "projectName": project_name,
+        "plc": plc,
+        "deviceList": device_list,
+        "timeChart": time_chart,
         "traps": traps,
-        "settings": {"blockDisplayDensity": block_display_density},
         "updatedAtEpochMs": now_ms,
     }
 
 
-def validate_trap_condition(text: str) -> str:
-    value = text.strip()
-    if value not in VALID_TRAP_CONDITIONS:
-        allowed = ", ".join(sorted(VALID_TRAP_CONDITIONS))
-        raise ValueError(f"Invalid trap condition: {value}. Use one of: {allowed}")
+def parse_device_list(text: str, vendor: str) -> list[dict[str, str]]:
+    result: list[dict[str, str]] = []
+    seen: set[str] = set()
+    for line in parse_lines(text):
+        parts = [part.strip() for part in line.split(",")]
+        if not parts or not parts[0]:
+            continue
+        address = normalize_address(parts[0])
+        if address in seen:
+            continue
+        data_type = normalize_data_type(parts[1] if len(parts) > 1 and parts[1] else guess_data_type(address, vendor), address, vendor)
+        result.append({"address": address, "dataType": data_type})
+        seen.add(address)
+    return result
+
+
+def parse_time_chart(text: str, device_types: dict[str, str], vendor: str) -> list[dict[str, str]]:
+    result: list[dict[str, str]] = []
+    seen: set[str] = set()
+    for line in parse_lines(text):
+        parts = [part.strip() for part in line.split(",")]
+        if not parts or not parts[0]:
+            continue
+        address = normalize_address(parts[0])
+        if address in seen:
+            continue
+        data_type = parts[1] if len(parts) > 1 and parts[1] else device_types.get(address, guess_data_type(address, vendor))
+        result.append({"address": address, "dataType": normalize_data_type(data_type, address, vendor)})
+        seen.add(address)
+        if len(result) >= MAX_TIME_CHART_CHANNELS:
+            break
+    return result
+
+
+def parse_traps(text: str, device_types: dict[str, str], vendor: str) -> list[dict[str, object]]:
+    result: list[dict[str, object]] = []
+    for offset, line in enumerate(parse_lines(text), start=1):
+        parts = [part.strip() for part in line.split(",")]
+        if len(parts) < 3 or not parts[0] or not parts[1] or not parts[2]:
+            raise ValueError("Trap format is address,dataType,condition,comparisonValue,enabled")
+        address = normalize_address(parts[0])
+        data_type = normalize_data_type(parts[1] or device_types.get(address, guess_data_type(address, vendor)), address, vendor)
+        condition = validate_value(parts[2], VALID_TRAP_CONDITIONS, "trap condition")
+        comparison_value = None
+        if len(parts) >= 4 and parts[3]:
+            comparison_value = float(parts[3])
+        enabled = True
+        if len(parts) >= 5 and parts[4]:
+            enabled = parts[4].lower() not in {"0", "false", "off", "no"}
+        result.append(
+            {
+                "id": f"trap-{offset}",
+                "enabled": enabled,
+                "address": address,
+                "dataType": data_type,
+                "condition": condition,
+                "comparisonValue": comparison_value,
+            }
+        )
+    return result
+
+
+def validate_value(text: str, allowed: set[str], label: str) -> str:
+    value = text.strip().upper()
+    if value not in allowed:
+        allowed_text = ", ".join(sorted(allowed))
+        raise ValueError(f"Invalid {label}: {text}. Use one of: {allowed_text}")
     return value
 
 
-def guess_data_type(address: str) -> str:
-    bit_prefixes = ("X", "Y", "M", "L", "F", "B", "SB", "SM", "STC", "TC", "TS", "CC", "CS", "R", "MR", "LR", "CR", "VB")
+def normalize_address(text: str) -> str:
+    return text.strip().upper()
+
+
+def normalize_data_type(text: str, address: str, vendor: str) -> str:
+    value = validate_value(text, VALID_DATA_TYPES, "data type")
+    if guess_data_type(address, vendor) == "BIT":
+        return "BIT"
+    return "INT16" if value == "BIT" else value
+
+
+def guess_data_type(address: str, vendor: str) -> str:
+    melsec_bit_prefixes = ("STC", "TC", "TS", "CC", "CS", "X", "Y", "M", "L", "F", "B", "SB", "SM")
+    keyence_bit_prefixes = ("MR", "LR", "CR", "VB", "X", "Y", "M", "L", "R", "B")
     normalized = address.upper()
-    return "Bit" if any(normalized.startswith(prefix) for prefix in bit_prefixes) else "Int16"
+    bit_prefixes = keyence_bit_prefixes if vendor == "KEYENCE" else melsec_bit_prefixes
+    return "BIT" if any(normalized.startswith(prefix) for prefix in bit_prefixes) else "INT16"
 
 
 def project_json_bytes(project: dict) -> bytes:
-    return json.dumps(project, ensure_ascii=False, indent=2).encode("utf-8")
+    return json.dumps(without_none(project), ensure_ascii=False, indent=2).encode("utf-8")
 
 
 def project_qr_json_bytes(project: dict) -> bytes:
-    return json.dumps(project, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    return json.dumps(without_none(project), ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+
+
+def without_none(value: object) -> object:
+    if isinstance(value, dict):
+        return {key: without_none(item) for key, item in value.items() if item is not None}
+    if isinstance(value, list):
+        return [without_none(item) for item in value]
+    return value
 
 
 def project_qr_bytes(project: dict) -> bytes:

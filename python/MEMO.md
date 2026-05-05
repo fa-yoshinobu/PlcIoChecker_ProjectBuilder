@@ -1,31 +1,23 @@
-# PlcIoChecker QR Memo
+# PlcIoChecker QR Python Memo
 
-## 目的
+The Python folder is a prototype and regression reference for QR payload
+generation. Keep it aligned with the .NET WPF app and the Android/iOS import
+schema.
 
-スマホで設定入力する手間を減らすため、PC側でPLC IO Checker用の設定を作成し、QRコードでAndroid/iOSアプリへ取り込めるようにする。
+## Scope
 
-## Python試作でやること
+- Build project JSON schema v2.
+- Generate QR text with `PLCIOC2D`.
+- Use raw deflate and base64url without padding.
+- Keep QR defaults at 800 payload characters, 1000 px preview, and correction L.
 
-- PC上でPLC設定、デバイス登録、タイムチャート登録、トラップ登録を入力する。
-- 既存のプロジェクトJSONに近い形式でデータを作る。
-- QRに載せるJSONは枚数削減のため最小化して raw deflate 圧縮する。PC保存用JSONは確認しやすいよう整形済みでよい。
-- QRが大きすぎて読めない場合に備えて、複数枚QRに分割する。
-- PC側で1枚あたりのQR文字数とQR表示サイズを調整できるようにする。
-- 端末によって読めるQR密度が違うため、初期値は読取優先で `QR 1枚の文字数=350` にする。枚数優先で読める端末だけ `700` などへ上げる。
-  - 目安: `QR表示サイズpx=650`, `QR誤り訂正=L 読取優先`
-- Android/iOS側はカメラで複数枚QRを読み取り、全枚数がそろったらプロジェクトJSONとしてインポートする。
-- QR形式は圧縮前提の `PLCIOC2D` とする。互換性は捨ててよいので `PLCIOC1`/`PLCIOC2Z` fallback は作らない。
+## Project Data Rules
 
-## .NET版でやること
+- `deviceList` is the device registration list.
+- `timeChart` is an independent list of typed monitor targets, capped at 20.
+- `traps` is an independent list of typed trap targets.
+- MELSEC routing fields are emitted only under `plc.melsec`.
+- KEYENCE mode is emitted only under `plc.keyence.deviceMode`.
 
-- スマホアプリで作成・エクスポートしたJSONをPCアプリで読み込めるようにする。
-- 読み込んだJSONをPC上で編集できるようにする。
-- 編集後、JSON保存またはQR表示でスマホへ戻せるようにする。
-- JSONの互換性はAndroid/iOSの通常インポートと同じルールにそろえる。
-
-## 方針
-
-- ネットワーク経由の転送は手間が増えるため、まずはQRを基本にする。
-- QR枚数が増えることは許容する。読めない大きいQRを1枚出すより、読みやすい複数枚を優先する。
-- Python版は動作確認用。UIや編集機能を本格化するのは.NET版で行う。
-- 不正なJSON値をスマホ側で別名変換して救済しない。バグに気づけなくなるため、PC側GUIで正しい候補だけを出し、試作版も不正値はエラーにする。
+The Python prototype should not invent compatibility fallbacks. If an input value
+is outside the schema value set, fail early.
