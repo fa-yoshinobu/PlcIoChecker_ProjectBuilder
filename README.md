@@ -58,14 +58,17 @@ PLCIOC2D|<session>|<index>|<total>|<sha256>|<payload-chunk>
 - `payload-chunk` is a slice of base64url-encoded raw-deflate-compressed JSON without padding.
 - Android reads this with `Inflater(true)`, so the .NET app uses raw deflate, not zlib or gzip containers.
 
-## GUI Selection Values
+## Project JSON v2 Values
 
-- Vendor: `Melsec`, `Keyence`
-- Connection mode: `Real`, `DemoMock`
-- KEYENCE display: `Normal`, `Xym`
-- Transport: `Tcp`, `Udp`
-- Trap condition: `Rise`, `Fall`, `Change`, `GreaterOrEqual`, `LessOrEqual`, `Equal`, `NotEqual`
-- Device data type: `Bit`, `Int16`, `UInt16`, `Int32`, `UInt32`, `Float32`
+- `plc.vendor`: `MELSEC`, `KEYENCE`
+- `plc.connection.mode`: `REAL`, `DEMO_MOCK`
+- `plc.keyence.deviceMode`: `NORMAL`, `XYM`
+- `plc.connection.transport`: `TCP`, `UDP`
+- `traps.condition`: `RISING_EDGE`, `FALLING_EDGE`, `CHANGE`, `GREATER_OR_EQUAL`, `LESS_OR_EQUAL`, `EQUAL`, `NOT_EQUAL`
+- `dataType`: `BIT`, `INT16`, `UINT16`, `INT32`, `UINT32`, `FLOAT32`
+
+Generated project JSON includes only the shared v2 schema fields. UI-only
+preferences and runtime observation values are not emitted.
 
 ## Python Reference
 
