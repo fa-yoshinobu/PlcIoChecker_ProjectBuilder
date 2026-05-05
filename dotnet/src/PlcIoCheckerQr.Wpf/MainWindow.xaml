@@ -90,7 +90,7 @@
 
     <!-- Row 1: ダークナビバー -->
     <Border Grid.Row="1" Background="{StaticResource NavBg}">
-      <Grid Height="56">
+      <Grid Height="88">
 
         <!-- 入力画面ナビ -->
         <Grid x:Name="_navInputArea">
@@ -102,19 +102,22 @@
           <StackPanel Grid.Column="0" Orientation="Horizontal"
                       VerticalAlignment="Center" Margin="24,0,0,0">
             <Image Source="/icon.ico"
-                   Width="24"
-                   Height="24"
-                   Margin="0,0,10,0"
+                   Width="64"
+                   Height="64"
+                   Margin="0,0,14,0"
                    RenderOptions.BitmapScalingMode="HighQuality"/>
             <TextBlock Text="PLC IO Checker"
                        Foreground="{StaticResource NavFg}"
-                       FontWeight="SemiBold" FontSize="15"/>
+                       FontWeight="SemiBold" FontSize="15"
+                       VerticalAlignment="Center"/>
             <TextBlock Text=" Project Builder"
                        Foreground="{StaticResource NavFgMuted}"
-                       FontSize="15"/>
+                       FontSize="15"
+                       VerticalAlignment="Center"/>
             <TextBlock Text=" — "
                        Foreground="{StaticResource NavHover}"
-                       FontSize="15" Margin="8,0"/>
+                       FontSize="15" Margin="8,0"
+                       VerticalAlignment="Center"/>
             <TextBlock x:Name="_headerProjectName"
                        Foreground="{StaticResource NavFgMuted}"
                        FontSize="13"
@@ -278,7 +281,7 @@
                 </Grid.ColumnDefinitions>
                 <StackPanel Grid.Column="0" Orientation="Vertical" Margin="0,0,20,0">
                   <TextBlock x:Name="_watchTitle" Text="タイムチャート対象" Style="{StaticResource SectionTitle}"/>
-                  <TextBlock x:Name="_watchMeta" Text="Android のタイムチャートに表示するアドレスを指定します（最大20件）" Style="{StaticResource SectionMeta}"/>
+                  <TextBlock x:Name="_watchMeta" Text="モバイルアプリのタイムチャートに表示するアドレスを指定します（最大20件）" Style="{StaticResource SectionMeta}"/>
                 </StackPanel>
                 <StackPanel Grid.Column="1"
                             Orientation="Horizontal"
@@ -401,6 +404,7 @@
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
                   </Grid.RowDefinitions>
                   <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="175"/>
@@ -409,7 +413,7 @@
 
                   <StackPanel Grid.Row="0" Grid.ColumnSpan="2">
                     <TextBlock x:Name="_projectSectionTitle" Text="プロジェクト" Style="{StaticResource SectionTitle}"/>
-                    <TextBlock x:Name="_projectSectionMeta" Text="Android 側に渡す基本情報" Style="{StaticResource SectionMeta}"/>
+                    <TextBlock x:Name="_projectSectionMeta" Text="モバイルアプリに渡す基本情報" Style="{StaticResource SectionMeta}"/>
                   </StackPanel>
 
                   <TextBlock x:Name="_projectNameLabel" Grid.Row="2" Grid.Column="0" Text="プロジェクト名" Style="{StaticResource FormLabel}" Margin="0,6,14,6"/>
@@ -423,6 +427,14 @@
 
                   <TextBlock x:Name="_keyenceModeLabel" Grid.Row="5" Grid.Column="0" Text="KEYENCE 表示" Style="{StaticResource FormLabel}" Margin="0,6,14,6"/>
                   <ComboBox x:Name="_keyenceMode" Grid.Row="5" Grid.Column="1" Margin="0,4,0,4" ItemTemplate="{StaticResource UppercaseComboBoxItemTemplate}"/>
+
+                  <TextBlock x:Name="_supportedDevicesLabel" Grid.Row="6" Grid.Column="0" Text="Supported devices" Style="{StaticResource FormLabel}" Margin="0,6,14,6"/>
+                  <TextBlock x:Name="_supportedDevicesText"
+                             Grid.Row="6"
+                             Grid.Column="1"
+                             Foreground="{StaticResource TextMuted}"
+                             TextWrapping="Wrap"
+                             Margin="0,6,0,6"/>
                 </Grid>
               </Border>
 

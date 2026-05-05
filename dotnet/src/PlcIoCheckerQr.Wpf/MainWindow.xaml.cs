@@ -260,6 +260,7 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        MoveProjectTabFirst();
         SetupComboBoxes();
         SetupGrids();
         LoadDefaultRows();
@@ -267,12 +268,25 @@ public partial class MainWindow : Window
 
         _vendor.SelectionChanged += (_, _) => ApplyVendorDefaults();
         _keyenceMode.SelectionChanged += (_, _) => ApplyDeviceContextToRows();
+        _model.SelectionChanged += (_, _) => UpdateDeviceValidationStatus();
         _projectName.TextChanged += (_, _) => UpdateHeaderProjectName();
 
         ApplyVendorDefaults();
         UpdateHeaderProjectName();
         UpdateQrMenuChecks();
         Generate(showQrScreen: false);
+    }
+
+    private void MoveProjectTabFirst()
+    {
+        if (!_mainTabs.Items.Contains(_projectTab))
+        {
+            return;
+        }
+
+        _mainTabs.Items.Remove(_projectTab);
+        _mainTabs.Items.Insert(0, _projectTab);
+        _mainTabs.SelectedItem = _projectTab;
     }
 
     private void SetupComboBoxes()
@@ -451,12 +465,14 @@ public partial class MainWindow : Window
         }
 
         ApplyDeviceContextToRows();
+        UpdateSupportedDeviceNames();
     }
 
     private void ApplyDeviceContextToRows()
     {
         var vendor = Selected(_vendor);
         var keyenceDeviceMode = SelectedKeyenceDeviceMode();
+        var machineLabel = Selected(_model);
 
         foreach (var row in _devices)
         {
@@ -467,7 +483,7 @@ public partial class MainWindow : Window
             }
 
             row.Address = row.Address.Trim().ToUpperInvariant();
-            if (IsSupportedDeviceAddress(row.Address, vendor, keyenceDeviceMode))
+            if (IsSupportedDeviceAddress(row.Address, vendor, keyenceDeviceMode, machineLabel))
             {
                 row.EnsureDataTypeAllowed();
             }
@@ -482,7 +498,7 @@ public partial class MainWindow : Window
             }
 
             row.Address = row.Address.Trim().ToUpperInvariant();
-            if (IsSupportedDeviceAddress(row.Address, vendor, keyenceDeviceMode))
+            if (IsSupportedDeviceAddress(row.Address, vendor, keyenceDeviceMode, machineLabel))
             {
                 row.EnsureDataTypeAllowed();
             }
@@ -497,7 +513,7 @@ public partial class MainWindow : Window
             }
 
             trap.Address = trap.Address.Trim().ToUpperInvariant();
-            if (IsSupportedDeviceAddress(trap.Address, vendor, keyenceDeviceMode))
+            if (IsSupportedDeviceAddress(trap.Address, vendor, keyenceDeviceMode, machineLabel))
             {
                 trap.EnsureDataTypeAllowed();
                 trap.Condition = ProjectFactory.CoerceTrapConditionForAddress(trap.Address, trap.Condition, vendor, keyenceDeviceMode);
@@ -507,6 +523,7 @@ public partial class MainWindow : Window
         _devicesGrid.Items.Refresh();
         _watchGrid.Items.Refresh();
         _trapsGrid.Items.Refresh();
+        UpdateSupportedDeviceNames();
         UpdateDeviceValidationStatus();
     }
 
@@ -771,6 +788,7 @@ public partial class MainWindow : Window
         _vendorLabel.Text = T("field.vendor");
         _modelLabel.Text = T("field.model");
         _keyenceModeLabel.Text = T("field.keyenceMode");
+        _supportedDevicesLabel.Text = T("field.supportedDevices");
 
         _connectionSectionTitle.Text = T("section.connection.title");
         _connectionSectionMeta.Text = T("section.connection.meta");
@@ -810,6 +828,7 @@ public partial class MainWindow : Window
         }
 
         _trapsGrid.Items.Refresh();
+        UpdateSupportedDeviceNames();
         if (_chunks.Count == 0)
         {
             _pageLabel.Text = T("status.qrNotGenerated");
@@ -872,17 +891,22 @@ public partial class MainWindow : Window
     {
         var vendor = Selected(_vendor);
         var keyenceDeviceMode = SelectedKeyenceDeviceMode();
+        var machineLabel = Selected(_model);
         var invalidAddress = DeviceAddresses()
-            .FirstOrDefault(address => !IsSupportedDeviceAddress(address, vendor, keyenceDeviceMode));
-
+            .FirstOrDefault(address => !IsSupportedDeviceAddress(address, vendor, keyenceDeviceMode, machineLabel));
         if (invalidAddress is null)
         {
             SetStatus(T("status.deviceCheckOk"));
             return;
         }
 
-        var context = vendor == "Keyence" ? $"{vendor} {keyenceDeviceMode}" : vendor;
+        var context = vendor == "Keyence" ? $"{DisplayVendor(vendor)} {keyenceDeviceMode.ToUpperInvariant()}" : DisplayVendor(vendor);
         SetStatus(Tf("status.unsupportedDevice", context, invalidAddress), isError: true);
+    }
+
+    private void UpdateSupportedDeviceNames()
+    {
+        _supportedDevicesText.Text = string.Join(", ", ProjectFactory.SupportedDeviceNames(Selected(_vendor), SelectedKeyenceDeviceMode()));
     }
 
     private IEnumerable<string> DeviceAddresses() =>
@@ -892,11 +916,11 @@ public partial class MainWindow : Window
             .Where(address => !string.IsNullOrWhiteSpace(address))
             .Select(address => address.Trim().ToUpperInvariant());
 
-    private static bool IsSupportedDeviceAddress(string address, string vendor, string keyenceDeviceMode)
+    private static bool IsSupportedDeviceAddress(string address, string vendor, string keyenceDeviceMode, string? machineLabel)
     {
         try
         {
-            ProjectFactory.ValidateDeviceAddress(address, vendor, keyenceDeviceMode);
+            ProjectFactory.ValidateDeviceAddress(address, vendor, keyenceDeviceMode, machineLabel);
             return true;
         }
         catch (ArgumentException)
@@ -909,7 +933,7 @@ public partial class MainWindow : Window
     {
         _summaryText.Text = Tf(
             "summary.text",
-            project.Connection.Vendor,
+            DisplayVendor(project.Connection.Vendor),
             project.Connection.MachineLabel,
             project.Devices.Count,
             project.TimeChartAddresses.Count,
@@ -1429,13 +1453,14 @@ public partial class MainWindow : Window
     {
         var vendor = Selected(_vendor);
         var keyenceDeviceMode = SelectedKeyenceDeviceMode();
+        var machineLabel = Selected(_model);
         var count = ParseRange(countTextBox, fallback: 1, min: 1, max: maxCount);
-        foreach (var address in ProjectFactory.BuildDeviceBlock(startTextBox.Text, count, vendor, keyenceDeviceMode))
+        foreach (var address in ProjectFactory.BuildDeviceBlock(startTextBox.Text, count, vendor, keyenceDeviceMode, machineLabel))
         {
             var row = new DeviceRow();
             row.SetDeviceContext(vendor, keyenceDeviceMode);
             row.Address = address;
-            row.DataType = ProjectFactory.GuessDataType(address, vendor, keyenceDeviceMode);
+            row.DataType = ProjectFactory.GuessDataType(address, vendor, keyenceDeviceMode, machineLabel);
             yield return row;
         }
     }
@@ -1444,13 +1469,14 @@ public partial class MainWindow : Window
     {
         var vendor = Selected(_vendor);
         var keyenceDeviceMode = SelectedKeyenceDeviceMode();
+        var machineLabel = Selected(_model);
         var count = ParseRange(countTextBox, fallback: 1, min: 1, max: maxCount);
-        foreach (var address in ProjectFactory.BuildDeviceBlock(startTextBox.Text, count, vendor, keyenceDeviceMode))
+        foreach (var address in ProjectFactory.BuildDeviceBlock(startTextBox.Text, count, vendor, keyenceDeviceMode, machineLabel))
         {
             var row = new WatchRow();
             row.SetDeviceContext(vendor, keyenceDeviceMode);
             row.Address = address;
-            row.DataType = ProjectFactory.GuessDataType(address, vendor, keyenceDeviceMode);
+            row.DataType = ProjectFactory.GuessDataType(address, vendor, keyenceDeviceMode, machineLabel);
             yield return row;
         }
     }
@@ -2037,6 +2063,13 @@ public partial class MainWindow : Window
 
     private string SelectedKeyenceDeviceMode() =>
         Selected(_vendor) == "Keyence" ? Selected(_keyenceMode) : "Normal";
+
+    private static string DisplayVendor(string vendor) => vendor.Trim().ToUpperInvariant() switch
+    {
+        "MELSEC" => "MELSEC",
+        "KEYENCE" => "KEYENCE",
+        _ => vendor,
+    };
 
     private static void SelectItem(ComboBox comboBox, string value)
     {

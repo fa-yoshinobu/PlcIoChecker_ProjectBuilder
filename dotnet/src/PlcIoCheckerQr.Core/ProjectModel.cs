@@ -86,38 +86,40 @@ public static partial class ProjectFactory
         Bit("X", DeviceAddressNumberFormat.Hex),
         Bit("Y", DeviceAddressNumberFormat.Hex),
         Bit("M"),
+        Word("D"),
+        Bit("L"),
+        Bit("F"),
         Bit("B", DeviceAddressNumberFormat.Hex),
         Bit("SB", DeviceAddressNumberFormat.Hex),
-        Bit("F"),
-        Bit("V"),
-        Bit("L"),
         Bit("SM"),
-        Word("D"),
+        Bit("STC"),
+        Bit("TC"),
+        Bit("CC"),
         Word("W", DeviceAddressNumberFormat.Hex),
         Word("SW", DeviceAddressNumberFormat.Hex),
         Word("R"),
-        Bit("TS"),
-        Bit("TC"),
-        Word("TN"),
-        Bit("STS"),
-        Bit("STC"),
-        Word("STN"),
-        Bit("CS"),
-        Bit("CC"),
-        Word("CN"),
-        Bit("LTS"),
-        Bit("LTC"),
-        Word("LTN"),
-        Bit("LSTS"),
-        Bit("LSTC"),
-        Word("LSTN"),
-        Bit("LCS"),
-        Bit("LCC"),
-        Word("LCN"),
-        Word("Z"),
-        Word("LZ"),
         Word("ZR"),
-        Word("RD"),
+        Word("SD"),
+    ];
+
+    private static readonly DeviceFamilyRule[] MelsecIqFDeviceFamilies =
+    [
+        Bit("X", DeviceAddressNumberFormat.Octal),
+        Bit("Y", DeviceAddressNumberFormat.Octal),
+        Bit("M"),
+        Word("D"),
+        Bit("L"),
+        Bit("F"),
+        Bit("B", DeviceAddressNumberFormat.Hex),
+        Bit("SB", DeviceAddressNumberFormat.Hex),
+        Bit("SM"),
+        Bit("STC"),
+        Bit("TC"),
+        Bit("CC"),
+        Word("W", DeviceAddressNumberFormat.Hex),
+        Word("SW", DeviceAddressNumberFormat.Hex),
+        Word("R"),
+        Word("ZR"),
         Word("SD"),
     ];
 
@@ -174,12 +176,12 @@ public static partial class ProjectFactory
             }
 
             var address = parts[0].ToUpperInvariant();
-            ValidateDeviceAddress(address, input.Vendor, input.KeyenceDeviceMode);
+            ValidateDeviceAddress(address, input.Vendor, input.KeyenceDeviceMode, input.MachineLabel);
             var dataType = parts.Length > 1 && !string.IsNullOrWhiteSpace(parts[1])
                 ? parts[1]
-                : GuessDataType(address, input.Vendor, input.KeyenceDeviceMode);
+                : GuessDataType(address, input.Vendor, input.KeyenceDeviceMode, input.MachineLabel);
             ValidateChoice(dataType, DeviceDataTypes, "device data type");
-            dataType = ValidateDataTypeForAddress(address, dataType, input.Vendor, input.KeyenceDeviceMode, "device data type");
+            dataType = ValidateDataTypeForAddress(address, dataType, input.Vendor, input.KeyenceDeviceMode, input.MachineLabel, "device data type");
             devices.Add(new DeviceDefinition(address, dataType));
         }
 
@@ -188,7 +190,7 @@ public static partial class ProjectFactory
             .ToDictionary(group => group.Key, group => group.First().DataType, StringComparer.OrdinalIgnoreCase);
 
         var timeChart = ParseLines(input.WatchText)
-            .Select(line => ParseDeviceLine(line, input.Vendor, input.KeyenceDeviceMode, deviceTypesByAddress))
+            .Select(line => ParseDeviceLine(line, input.Vendor, input.KeyenceDeviceMode, input.MachineLabel, deviceTypesByAddress))
             .DistinctBy(target => target.Address, StringComparer.OrdinalIgnoreCase)
             .ToList();
         if (timeChart.Count > MaxTimeChartTargets)
@@ -207,13 +209,13 @@ public static partial class ProjectFactory
             }
 
             var address = parts[0].ToUpperInvariant();
-            ValidateDeviceAddress(address, input.Vendor, input.KeyenceDeviceMode);
+            ValidateDeviceAddress(address, input.Vendor, input.KeyenceDeviceMode, input.MachineLabel);
             var hasDataType = parts.Length >= 3 && DeviceDataTypes.Contains(parts[1], StringComparer.Ordinal);
             var dataType = hasDataType
                 ? parts[1]
-                : deviceTypesByAddress.GetValueOrDefault(address, GuessDataType(address, input.Vendor, input.KeyenceDeviceMode));
+                : deviceTypesByAddress.GetValueOrDefault(address, GuessDataType(address, input.Vendor, input.KeyenceDeviceMode, input.MachineLabel));
             ValidateChoice(dataType, DeviceDataTypes, "trap data type");
-            dataType = ValidateDataTypeForAddress(address, dataType, input.Vendor, input.KeyenceDeviceMode, "trap data type");
+            dataType = ValidateDataTypeForAddress(address, dataType, input.Vendor, input.KeyenceDeviceMode, input.MachineLabel, "trap data type");
             var condition = ValidateTrapConditionForAddress(address, hasDataType ? parts[2] : parts[1], input.Vendor, input.KeyenceDeviceMode);
             var thresholdIndex = hasDataType ? 3 : 2;
             var enabledIndex = hasDataType ? 4 : 3;
@@ -274,16 +276,17 @@ public static partial class ProjectFactory
         string line,
         string vendor,
         string keyenceDeviceMode,
+        string machineLabel,
         IReadOnlyDictionary<string, string> registeredDeviceTypes)
     {
         var parts = line.Split(',').Select(part => part.Trim()).ToArray();
         var address = parts[0].ToUpperInvariant();
-        ValidateDeviceAddress(address, vendor, keyenceDeviceMode);
+        ValidateDeviceAddress(address, vendor, keyenceDeviceMode, machineLabel);
         var dataType = parts.Length > 1 && !string.IsNullOrWhiteSpace(parts[1])
             ? parts[1]
-            : registeredDeviceTypes.GetValueOrDefault(address, GuessDataType(address, vendor, keyenceDeviceMode));
+            : registeredDeviceTypes.GetValueOrDefault(address, GuessDataType(address, vendor, keyenceDeviceMode, machineLabel));
         ValidateChoice(dataType, DeviceDataTypes, "time chart data type");
-        dataType = ValidateDataTypeForAddress(address, dataType, vendor, keyenceDeviceMode, "time chart data type");
+        dataType = ValidateDataTypeForAddress(address, dataType, vendor, keyenceDeviceMode, machineLabel, "time chart data type");
         return new MonitorTargetDefinition(address, dataType);
     }
 
@@ -292,9 +295,10 @@ public static partial class ProjectFactory
         string dataType,
         string vendor,
         string keyenceDeviceMode,
+        string? machineLabel,
         string name)
     {
-        var allowed = DeviceDataTypesForAddress(address, vendor, keyenceDeviceMode);
+        var allowed = DeviceDataTypesForAddress(address, vendor, keyenceDeviceMode, machineLabel);
         if (allowed.Contains(dataType, StringComparer.Ordinal))
         {
             return dataType;
@@ -314,16 +318,19 @@ public static partial class ProjectFactory
     public static string GuessDataType(string address, string vendor) => GuessDataType(address, vendor, "Normal");
 
     public static string GuessDataType(string address, string vendor, string keyenceDeviceMode) =>
-        IsBitAddress(address, vendor, keyenceDeviceMode) ? "Bit" : "Int16";
+        GuessDataType(address, vendor, keyenceDeviceMode, machineLabel: null);
 
-    public static IReadOnlyList<string> DeviceDataTypesForAddress(string address, string vendor, string keyenceDeviceMode = "Normal")
+    public static string GuessDataType(string address, string vendor, string keyenceDeviceMode, string? machineLabel) =>
+        IsBitAddress(address, vendor, keyenceDeviceMode, machineLabel) ? "Bit" : "Int16";
+
+    public static IReadOnlyList<string> DeviceDataTypesForAddress(string address, string vendor, string keyenceDeviceMode = "Normal", string? machineLabel = null)
     {
         if (string.IsNullOrWhiteSpace(address))
         {
             return DeviceDataTypes;
         }
 
-        return TryResolveDeviceFamily(address, vendor, keyenceDeviceMode, out var family)
+        return TryResolveDeviceFamily(address, vendor, keyenceDeviceMode, machineLabel, out var family)
             ? family.IsBit
                 ? ["Bit"]
                 : DeviceDataTypes.Where(dataType => dataType != "Bit").ToArray()
@@ -332,9 +339,12 @@ public static partial class ProjectFactory
 
     public static bool IsBitAddress(string address, string vendor) => IsBitAddress(address, vendor, "Normal");
 
-    public static bool IsBitAddress(string address, string vendor, string keyenceDeviceMode)
+    public static bool IsBitAddress(string address, string vendor, string keyenceDeviceMode) =>
+        IsBitAddress(address, vendor, keyenceDeviceMode, machineLabel: null);
+
+    public static bool IsBitAddress(string address, string vendor, string keyenceDeviceMode, string? machineLabel)
     {
-        return TryResolveDeviceFamily(address, vendor, keyenceDeviceMode, out var family)
+        return TryResolveDeviceFamily(address, vendor, keyenceDeviceMode, machineLabel, out var family)
             && family.IsBit;
     }
 
@@ -396,27 +406,32 @@ public static partial class ProjectFactory
         _ => false,
     };
 
-    public static void ValidateDeviceAddress(string address, string vendor, string keyenceDeviceMode = "Normal")
+    public static IReadOnlyList<string> SupportedDeviceNames(string vendor, string keyenceDeviceMode = "Normal") =>
+        AllowedDeviceFamilyCodes(vendor, keyenceDeviceMode).ToArray();
+
+    public static void ValidateDeviceAddress(string address, string vendor, string keyenceDeviceMode = "Normal", string? machineLabel = null)
     {
-        if (TryResolveDeviceFamily(address, vendor, keyenceDeviceMode, out _))
+        if (TryResolveDeviceFamily(address, vendor, keyenceDeviceMode, machineLabel, out _))
         {
             return;
         }
 
-        var context = vendor == "Keyence" ? $"Keyence {keyenceDeviceMode}" : vendor;
+        var context = vendor.Equals("Keyence", StringComparison.OrdinalIgnoreCase)
+            ? $"KEYENCE {keyenceDeviceMode.ToUpperInvariant()}"
+            : "MELSEC";
         throw new ArgumentException($"Unsupported device for {context}: {address}. Use one of: {string.Join(", ", AllowedDeviceFamilyCodes(vendor, keyenceDeviceMode))}");
     }
 
-    public static IReadOnlyList<string> BuildDeviceBlock(string startAddress, int count, string vendor, string keyenceDeviceMode = "Normal")
+    public static IReadOnlyList<string> BuildDeviceBlock(string startAddress, int count, string vendor, string keyenceDeviceMode = "Normal", string? machineLabel = null)
     {
         if (count <= 0)
         {
             throw new ArgumentOutOfRangeException(nameof(count), count, "Point count must be greater than zero.");
         }
 
-        if (!TryResolveDeviceFamily(startAddress, vendor, keyenceDeviceMode, out var family, out var parsedAddress))
+        if (!TryResolveDeviceFamily(startAddress, vendor, keyenceDeviceMode, machineLabel, out var family, out var parsedAddress))
         {
-            ValidateDeviceAddress(startAddress, vendor, keyenceDeviceMode);
+            ValidateDeviceAddress(startAddress, vendor, keyenceDeviceMode, machineLabel);
         }
 
         var startLogicalNumber = ToLogicalNumber(parsedAddress.Number, family.NumberFormat);
@@ -458,12 +473,16 @@ public static partial class ProjectFactory
             .Where(line => line.Length > 0 && !line.StartsWith('#'));
 
     private static bool TryResolveDeviceFamily(string address, string vendor, string keyenceDeviceMode, out DeviceFamilyRule family) =>
-        TryResolveDeviceFamily(address, vendor, keyenceDeviceMode, out family, out _);
+        TryResolveDeviceFamily(address, vendor, keyenceDeviceMode, machineLabel: null, out family, out _);
+
+    private static bool TryResolveDeviceFamily(string address, string vendor, string keyenceDeviceMode, string? machineLabel, out DeviceFamilyRule family) =>
+        TryResolveDeviceFamily(address, vendor, keyenceDeviceMode, machineLabel, out family, out _);
 
     private static bool TryResolveDeviceFamily(
         string address,
         string vendor,
         string keyenceDeviceMode,
+        string? machineLabel,
         out DeviceFamilyRule family,
         out DeviceAddressParse parsedAddress)
     {
@@ -475,7 +494,7 @@ public static partial class ProjectFactory
         }
 
         var normalized = address.Trim().ToUpperInvariant();
-        foreach (var candidate in DeviceFamiliesFor(vendor, keyenceDeviceMode).OrderByDescending(item => item.Code.Length))
+        foreach (var candidate in DeviceFamiliesFor(vendor, keyenceDeviceMode, machineLabel).OrderByDescending(item => item.Code.Length))
         {
             if (!normalized.StartsWith(candidate.Code, StringComparison.OrdinalIgnoreCase) ||
                 normalized.Length <= candidate.Code.Length)
@@ -495,11 +514,11 @@ public static partial class ProjectFactory
         return false;
     }
 
-    private static IReadOnlyList<DeviceFamilyRule> DeviceFamiliesFor(string vendor, string keyenceDeviceMode)
+    private static IReadOnlyList<DeviceFamilyRule> DeviceFamiliesFor(string vendor, string keyenceDeviceMode, string? machineLabel = null)
     {
         if (!vendor.Equals("Keyence", StringComparison.OrdinalIgnoreCase))
         {
-            return MelsecDeviceFamilies;
+            return ModelUsesOctalDirectIo(machineLabel) ? MelsecIqFDeviceFamilies : MelsecDeviceFamilies;
         }
 
         return keyenceDeviceMode.Equals("Xym", StringComparison.OrdinalIgnoreCase)
@@ -510,6 +529,9 @@ public static partial class ProjectFactory
     private static IEnumerable<string> AllowedDeviceFamilyCodes(string vendor, string keyenceDeviceMode) =>
         DeviceFamiliesFor(vendor, keyenceDeviceMode).Select(family => family.Code);
 
+    private static bool ModelUsesOctalDirectIo(string? machineLabel) =>
+        string.Equals(machineLabel?.Trim(), "iQ-F", StringComparison.OrdinalIgnoreCase);
+
     private static bool TryParseAddressNumber(
         string numberText,
         DeviceAddressNumberFormat numberFormat,
@@ -519,10 +541,31 @@ public static partial class ProjectFactory
         return numberFormat switch
         {
             DeviceAddressNumberFormat.Hex => TryParseNumber(numberText, usesHexAddressing: true, out number),
+            DeviceAddressNumberFormat.Octal => TryParseOctalNumber(numberText, out number),
             DeviceAddressNumberFormat.KeyenceBitBank => TryParseKeyenceBitBankNumber(numberText, out number),
             DeviceAddressNumberFormat.KeyenceXymBit => TryParseKeyenceXymBitNumber(numberText, out number),
             _ => TryParseNumber(numberText, usesHexAddressing: false, out number),
         };
+    }
+
+    private static bool TryParseOctalNumber(string numberText, out uint number)
+    {
+        number = 0;
+        if (string.IsNullOrWhiteSpace(numberText) ||
+            !numberText.All(character => character is >= '0' and <= '7'))
+        {
+            return false;
+        }
+
+        try
+        {
+            number = Convert.ToUInt32(numberText, 8);
+            return true;
+        }
+        catch (OverflowException)
+        {
+            return false;
+        }
     }
 
     private static bool TryParseKeyenceBitBankNumber(string numberText, out uint number) =>
@@ -582,10 +625,14 @@ public static partial class ProjectFactory
         family.NumberFormat switch
         {
             DeviceAddressNumberFormat.Hex => $"{family.Code}{number.ToString($"X{width}", CultureInfo.InvariantCulture)}",
+            DeviceAddressNumberFormat.Octal => $"{family.Code}{FormatOctalNumber(number, width)}",
             DeviceAddressNumberFormat.KeyenceBitBank => $"{family.Code}{FormatKeyenceBitBankNumber(number)}",
             DeviceAddressNumberFormat.KeyenceXymBit => $"{family.Code}{FormatKeyenceXymBitNumber(number)}",
             _ => $"{family.Code}{number.ToString($"D{width}", CultureInfo.InvariantCulture)}",
         };
+
+    private static string FormatOctalNumber(uint number, int width) =>
+        Convert.ToString((long)number, 8).ToUpperInvariant().PadLeft(width, '0');
 
     private static string FormatKeyenceBitBankNumber(uint physicalNumber)
     {
@@ -613,6 +660,7 @@ public static partial class ProjectFactory
     private enum DeviceAddressNumberFormat
     {
         Decimal,
+        Octal,
         Hex,
         KeyenceBitBank,
         KeyenceXymBit,

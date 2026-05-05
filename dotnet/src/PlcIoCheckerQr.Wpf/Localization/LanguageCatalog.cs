@@ -19,15 +19,14 @@ internal sealed class LanguageCatalog
     public static LanguageCatalog Load(string code)
     {
         var normalizedCode = string.Equals(code, "ja", StringComparison.OrdinalIgnoreCase) ? "ja" : "en";
-        var path = Path.Combine(AppContext.BaseDirectory, "Languages", $"{normalizedCode}.json");
-        if (!File.Exists(path))
-        {
-            return new LanguageCatalog(normalizedCode, new Dictionary<string, string>());
-        }
-
         try
         {
-            using var stream = File.OpenRead(path);
+            using var stream = OpenLanguageStream(normalizedCode);
+            if (stream is null)
+            {
+                return new LanguageCatalog(normalizedCode, new Dictionary<string, string>());
+            }
+
             var texts = JsonSerializer.Deserialize<Dictionary<string, string>>(stream)
                         ?? new Dictionary<string, string>();
             return new LanguageCatalog(normalizedCode, texts);
@@ -43,4 +42,15 @@ internal sealed class LanguageCatalog
 
     public string Format(string key, params object?[] args) =>
         string.Format(CultureInfo.InvariantCulture, Text(key), args);
+
+    private static Stream? OpenLanguageStream(string code)
+    {
+        var path = Path.Combine(AppContext.BaseDirectory, "Languages", $"{code}.json");
+        if (File.Exists(path))
+        {
+            return File.OpenRead(path);
+        }
+
+        return typeof(LanguageCatalog).Assembly.GetManifestResourceStream($"PlcIoCheckerQr.Wpf.Languages.{code}.json");
+    }
 }

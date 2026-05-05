@@ -59,11 +59,12 @@ jobs:
         run: |
           $publishDir = Join-Path $env:RUNNER_TEMP "plcio-publish"
           $exe = Join-Path $publishDir "PlcIoCheckerProjectBuilder.exe"
-          $en = Join-Path $publishDir "Languages\en.json"
-          $ja = Join-Path $publishDir "Languages\ja.json"
+          $languagesDir = Join-Path $publishDir "Languages"
 
-          foreach ($path in @($exe, $en, $ja)) {
-            if (-not (Test-Path -LiteralPath $path)) {
-              throw "Expected publish output is missing: $path"
-            }
+          if (-not (Test-Path -LiteralPath $exe)) {
+            throw "Expected publish output is missing: $exe"
+          }
+
+          if (Test-Path -LiteralPath $languagesDir) {
+            throw "Language JSON files should be embedded in the EXE, not published beside it: $languagesDir"
           }

@@ -1,7 +1,9 @@
 using PlcIoCheckerQr.Wpf.Localization;
 using QRCoder;
+using System.Diagnostics;
 using System.Reflection;
 using System.Windows;
+using System.Windows.Navigation;
 
 namespace PlcIoCheckerQr.Wpf.Windows;
 
@@ -26,21 +28,21 @@ internal sealed partial class AboutWindow : Window
                 "PLC IO Checker Project Builder",
                 appVersion,
                 "Application",
-                "MIT",
-                "Not specified",
-                "https://github.com/fa-yoshinobu/PlcIoChecker_QR"),
+                "MIT License",
+                "FA Labo(fa_yoshinobu)",
+                "https://github.com/fa-yoshinobu/PlcIoChecker_ProjectBuilder"),
             new LibraryInfo(
                 "QRCoder",
                 GetAssemblyVersionText(typeof(QRCodeGenerator).Assembly),
                 "QR code generation",
-                "MIT",
+                "MIT License",
                 "Raffael Herrmann",
                 "https://github.com/codebude/QRCoder/"),
             new LibraryInfo(
                 ".NET Runtime",
                 Environment.Version.ToString(),
                 "Application runtime",
-                "MIT",
+                "MIT License",
                 "Microsoft Corporation",
                 "https://dotnet.microsoft.com/"),
         };
@@ -51,6 +53,19 @@ internal sealed partial class AboutWindow : Window
     }
 
     private void Close_Click(object sender, RoutedEventArgs e) => Close();
+
+    private void UrlHyperlink_RequestNavigate(object sender, RequestNavigateEventArgs e)
+    {
+        try
+        {
+            Process.Start(new ProcessStartInfo(e.Uri.AbsoluteUri) { UseShellExecute = true });
+            e.Handled = true;
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, ex.Message, Title, MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
 
     private static string GetAssemblyVersionText(Assembly assembly)
     {
@@ -70,9 +85,9 @@ internal sealed partial class AboutWindow : Window
         string Version,
         string Notes,
         string License,
-        string Copyright,
+        string Author,
         string Url)
     {
-        public string Details => $"License: {License}\nCopyright: {Copyright}\nURL: {Url}";
+        public string Details => $"License: {License}\nAuthor: {Author}";
     }
 }

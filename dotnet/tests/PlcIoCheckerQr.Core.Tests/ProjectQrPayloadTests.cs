@@ -121,13 +121,51 @@ public sealed class ProjectQrPayloadTests
     }
 
     [Theory]
+    [InlineData("Melsec", "Normal", "iQ-R", "XFF", "Bit")]
+    [InlineData("Melsec", "Normal", "iQ-R", "SWFF", "Int16")]
+    [InlineData("Melsec", "Normal", "iQ-F", "X77", "Bit")]
+    [InlineData("Keyence", "Normal", "KV-8000", "R015", "Bit")]
+    [InlineData("Keyence", "Normal", "KV-8000", "DM100", "Int16")]
+    [InlineData("Keyence", "Xym", "KV-8000", "X39F", "Bit")]
+    [InlineData("Keyence", "Xym", "KV-8000", "Y1999F", "Bit")]
+    [InlineData("Keyence", "Xym", "KV-8000", "D100", "Int16")]
+    public void ProjectFactoryAcceptsDeviceAddressStringsSupportedByMobileApps(
+        string vendor,
+        string keyenceDeviceMode,
+        string machineLabel,
+        string address,
+        string expectedDataType)
+    {
+        var condition = expectedDataType == "Bit" ? "Rise" : "GreaterOrEqual";
+        var threshold = expectedDataType == "Bit" ? "" : "1";
+        var project = ProjectFactory.MakeProject(TestInput(
+            Vendor: vendor,
+            KeyenceDeviceMode: keyenceDeviceMode,
+            MachineLabel: machineLabel,
+            DevicesText: address,
+            WatchText: address,
+            TrapsText: $"{address},{expectedDataType},{condition},{threshold},true"));
+
+        Assert.Equal(address, project.Devices.Single().Address);
+        Assert.Equal(expectedDataType, project.Devices.Single().DataType);
+        Assert.Equal(address, project.TimeChart.Single().Address);
+        Assert.Equal(expectedDataType, project.TimeChart.Single().DataType);
+        Assert.Equal(address, project.Traps.Single().Address);
+        Assert.Equal(expectedDataType, project.Traps.Single().DataType);
+    }
+
+    [Theory]
     [InlineData("Melsec", "Normal", "DM100")]
+    [InlineData("Melsec", "Normal", "TS0")]
+    [InlineData("Melsec", "Normal", "CN0")]
+    [InlineData("Melsec", "Normal", @"U3E0\G10")]
     [InlineData("Keyence", "Normal", "D100")]
     [InlineData("Keyence", "Normal", "X0")]
-    [InlineData("Keyence", "Normal", "R016")]
+    [InlineData("Keyence", "Normal", "VB0")]
     [InlineData("Keyence", "Xym", "DM100")]
+    [InlineData("Keyence", "Xym", "MR000")]
     [InlineData("Keyence", "Xym", "R100")]
-    public void ProjectFactoryRejectsDeviceFamiliesUnsupportedBySelectedVendorAndMode(
+    public void ProjectFactoryRejectsDeviceNamesUnsupportedByMobileApps(
         string vendor,
         string keyenceDeviceMode,
         string address)
@@ -140,6 +178,61 @@ public sealed class ProjectQrPayloadTests
             TrapsText: "")));
 
         Assert.Contains("Unsupported device", exception.Message);
+    }
+
+    [Theory]
+    [InlineData("Melsec", "Normal", "iQ-R", "DFFFF")]
+    [InlineData("Melsec", "Normal", "iQ-F", "X78")]
+    [InlineData("Keyence", "Normal", "KV-8000", "R016")]
+    [InlineData("Keyence", "Normal", "KV-8000", "CR7916")]
+    [InlineData("Keyence", "Xym", "KV-8000", "X3A0")]
+    [InlineData("Keyence", "Xym", "KV-8000", "Y19A0")]
+    public void ProjectFactoryRejectsInvalidDeviceAddressNumberFormats(
+        string vendor,
+        string keyenceDeviceMode,
+        string machineLabel,
+        string address)
+    {
+        var exception = Assert.Throws<ArgumentException>(() => ProjectFactory.MakeProject(TestInput(
+            Vendor: vendor,
+            KeyenceDeviceMode: keyenceDeviceMode,
+            MachineLabel: machineLabel,
+            DevicesText: address,
+            WatchText: "",
+            TrapsText: "")));
+
+        Assert.Contains("Unsupported device", exception.Message);
+    }
+
+    [Fact]
+    public void ProjectFactoryValidatesDeviceAddressStringsInAllInputSections()
+    {
+        Assert.Throws<ArgumentException>(() => ProjectFactory.MakeProject(TestInput(
+            DevicesText: "DFFFF",
+            WatchText: "",
+            TrapsText: "")));
+        Assert.Throws<ArgumentException>(() => ProjectFactory.MakeProject(TestInput(
+            DevicesText: "",
+            WatchText: "DFFFF",
+            TrapsText: "")));
+        Assert.Throws<ArgumentException>(() => ProjectFactory.MakeProject(TestInput(
+            DevicesText: "",
+            WatchText: "",
+            TrapsText: "DFFFF,Change,,true")));
+    }
+
+    [Fact]
+    public void ProjectFactoryReportsDeviceNamesSupportedByMobileApps()
+    {
+        Assert.Equal(
+            ["X", "Y", "M", "D", "L", "F", "B", "SB", "SM", "STC", "TC", "CC", "W", "SW", "R", "ZR", "SD"],
+            ProjectFactory.SupportedDeviceNames("Melsec"));
+        Assert.Equal(
+            ["R", "B", "MR", "LR", "CR", "DM", "EM", "FM", "ZF", "W", "TM", "CM"],
+            ProjectFactory.SupportedDeviceNames("Keyence", "Normal"));
+        Assert.Equal(
+            ["B", "CR", "ZF", "W", "TM", "CM", "X", "Y", "M", "L", "D", "E", "F"],
+            ProjectFactory.SupportedDeviceNames("Keyence", "Xym"));
     }
 
     [Theory]
@@ -172,6 +265,9 @@ public sealed class ProjectQrPayloadTests
         Assert.Equal(
             ["X0", "X1", "X2", "X3", "X4", "X5", "X6", "X7", "X8", "X9", "XA", "XB", "XC", "XD", "XE", "XF"],
             ProjectFactory.BuildDeviceBlock("X0", 16, "Melsec"));
+        Assert.Equal(
+            ["X0", "X1", "X2", "X3", "X4", "X5", "X6", "X7", "X10"],
+            ProjectFactory.BuildDeviceBlock("X0", 9, "Melsec", "Normal", "iQ-F"));
         Assert.Equal(
             ["R015", "R100"],
             ProjectFactory.BuildDeviceBlock("R015", 2, "Keyence", "Normal"));
@@ -223,6 +319,7 @@ public sealed class ProjectQrPayloadTests
     private static ProjectInput TestInput(
         string Vendor = "Melsec",
         string KeyenceDeviceMode = "Normal",
+        string? MachineLabel = null,
         string DevicesText = "D100",
         string WatchText = "",
         string TrapsText = "") => new(
@@ -233,7 +330,7 @@ public sealed class ProjectQrPayloadTests
         Port: Vendor == "Keyence" ? 8501 : 1025,
         MonitorIntervalMs: 500,
         TimeoutMs: 2000,
-        MachineLabel: Vendor == "Keyence" ? "KV-8000" : "iQ-R",
+        MachineLabel: MachineLabel ?? (Vendor == "Keyence" ? "KV-8000" : "iQ-R"),
         KeyenceDeviceMode: KeyenceDeviceMode,
         TransportMode: "Tcp",
         Network: 0,
