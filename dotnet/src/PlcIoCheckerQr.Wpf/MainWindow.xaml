@@ -47,9 +47,9 @@
           <MenuItem Header="350 chars/page" Tag="chunk:350" IsCheckable="True" Click="QrOptionMenuItem_Click"
                     ToolTip="読み取り優先です。ページ数は増えますが、QRが粗くなります。"/>
           <MenuItem Header="500 chars/page" Tag="chunk:500" IsCheckable="True" Click="QrOptionMenuItem_Click"
-                    ToolTip="標準設定です。読み取りやすさとページ数のバランスを取ります。"/>
+                    ToolTip="読み取りやすさ寄りです。ページ数を少し増やして、QRを粗めにします。"/>
           <MenuItem Header="800 chars/page" Tag="chunk:800" IsCheckable="True" Click="QrOptionMenuItem_Click"
-                    ToolTip="ページ数を減らします。QRが少し細かくなるため、読み取り距離に注意してください。"/>
+                    ToolTip="標準設定です。ページ数と読み取りやすさのバランスを取ります。"/>
           <MenuItem Header="1200 chars/page" Tag="chunk:1200" IsCheckable="True" Click="QrOptionMenuItem_Click"
                     ToolTip="ページ数を最小化したい場合向けです。QRが細かくなり、読み取りにくくなる場合があります。"/>
         </MenuItem>

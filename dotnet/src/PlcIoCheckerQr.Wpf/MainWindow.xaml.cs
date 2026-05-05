@@ -160,7 +160,7 @@ public partial class MainWindow : Window
     private int _currentIndex;
     private string _lastJson = "";
 
-    private int _chunkSize = 350;
+    private int _chunkSize = 800;
     private int _displaySize = 1000;
     private string _errorCorrection = "L";
 
