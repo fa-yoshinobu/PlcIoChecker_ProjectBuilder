@@ -45,7 +45,7 @@ cd D:\github\PlcIoChecker_QR
 
 The executable is written to `dotnet\publish\win-x64`.
 
-## Android-Compatible QR Format
+## App-Compatible QR Format
 
 Each QR contains:
 
@@ -56,7 +56,14 @@ PLCIOC2D|<session>|<index>|<total>|<sha256>|<payload-chunk>
 - `index` is 1-based.
 - `sha256` is calculated from the minified JSON bytes after decompression.
 - `payload-chunk` is a slice of base64url-encoded raw-deflate-compressed JSON without padding.
-- Android reads this with `Inflater(true)`, so the .NET app uses raw deflate, not zlib or gzip containers.
+- Android reads this with `Inflater(true)` and iOS reads it with zlib raw inflate
+  (`inflateInit2(..., -MAX_WBITS)`). The .NET app therefore uses raw deflate,
+  not zlib or gzip containers.
+- Do not replace the app-side decoder with a normal zlib/gzip container decoder.
+  Raw deflate is intentional; otherwise QR payloads can scan successfully but
+  fail during import or checksum validation.
+- QR count is not fixed. Readers must join all chunks first, then decompress the
+  combined compressed bytes.
 
 ## Project JSON v2 Values
 
