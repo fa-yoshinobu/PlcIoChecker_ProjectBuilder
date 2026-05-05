@@ -9,11 +9,11 @@
     <AssemblyName>PlcIoCheckerProjectBuilder</AssemblyName>
     <Product>PLC IO Checker Project Builder</Product>
     <Description>PC project builder and QR export tool for PLC IO Checker.</Description>
-    <Version>0.2.0</Version>
-    <AssemblyVersion>0.2.0.0</AssemblyVersion>
-    <FileVersion>0.2.0.0</FileVersion>
-    <AssemblyInformationalVersion>0.2.0</AssemblyInformationalVersion>
-    <InformationalVersion>0.2.0</InformationalVersion>
+    <Version>0.2.1</Version>
+    <AssemblyVersion>0.2.1.0</AssemblyVersion>
+    <FileVersion>0.2.1.0</FileVersion>
+    <AssemblyInformationalVersion>0.2.1</AssemblyInformationalVersion>
+    <InformationalVersion>0.2.1</InformationalVersion>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <ApplicationIcon>..\..\..\icon.ico</ApplicationIcon>
     <StartupObject />
