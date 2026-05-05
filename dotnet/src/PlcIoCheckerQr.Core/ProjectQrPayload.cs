@@ -19,14 +19,14 @@ public static class ProjectQrPayload
     {
         WriteIndented = true,
         Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
-        DefaultIgnoreCondition = JsonIgnoreCondition.Never,
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
     };
 
     private static readonly JsonSerializerOptions MinifiedJsonOptions = new()
     {
         WriteIndented = false,
         Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
-        DefaultIgnoreCondition = JsonIgnoreCondition.Never,
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
     };
 
     public static byte[] ProjectJsonBytes(PlcProject project) =>
@@ -101,46 +101,113 @@ public static class ProjectQrPayload
 
     private static object ToJsonShape(PlcProject project) => new
     {
-        id = project.Id,
-        name = project.Name,
-        connection = new
+        schema = "plc-io-checker-project",
+        schemaVersion = 2,
+        projectId = project.Id,
+        projectName = project.Name,
+        plc = new
         {
-            vendor = project.Connection.Vendor,
-            connectionMode = project.Connection.ConnectionMode,
-            host = project.Connection.Host,
-            port = project.Connection.Port,
-            monitorIntervalMs = project.Connection.MonitorIntervalMs,
-            timeoutMs = project.Connection.TimeoutMs,
-            machineLabel = project.Connection.MachineLabel,
-            keyenceDeviceMode = project.Connection.KeyenceDeviceMode,
-            transportMode = project.Connection.TransportMode,
-            network = project.Connection.Network,
-            station = project.Connection.Station,
-            moduleIo = project.Connection.ModuleIo,
-            multidrop = project.Connection.Multidrop,
+            vendor = FormatVendor(project.Connection.Vendor),
+            cpuModel = project.Connection.MachineLabel,
+            connection = new
+            {
+                mode = FormatConnectionMode(project.Connection.ConnectionMode),
+                host = project.Connection.Host,
+                port = project.Connection.Port,
+                transport = FormatTransport(project.Connection.TransportMode),
+                pollingIntervalMs = project.Connection.MonitorIntervalMs,
+                timeoutMs = project.Connection.TimeoutMs,
+            },
+            melsec = IsVendor(project.Connection.Vendor, "Melsec")
+                ? new
+                {
+                    networkNo = project.Connection.Network,
+                    stationNo = project.Connection.Station,
+                    moduleIoNo = project.Connection.ModuleIo,
+                    multidropNo = project.Connection.Multidrop,
+                }
+                : null,
+            keyence = IsVendor(project.Connection.Vendor, "Keyence")
+                ? new
+                {
+                    deviceMode = FormatKeyenceDeviceMode(project.Connection.KeyenceDeviceMode),
+                }
+                : null,
         },
-        devices = project.Devices.Select(device => new
+        deviceList = project.Devices.Select(device => new
         {
             address = device.Address,
-            dataType = device.DataType,
+            dataType = FormatDataType(device.DataType),
         }),
-        watchItems = project.WatchItems,
+        timeChart = project.TimeChart.Select(target => new
+        {
+            address = target.Address,
+            dataType = FormatDataType(target.DataType),
+        }),
         traps = project.Traps.Select(trap => new
         {
             id = trap.Id,
-            address = trap.Address,
             enabled = trap.Enabled,
-            condition = trap.Condition,
-            threshold = trap.Threshold,
-            triggerCount = trap.TriggerCount,
-            lastTriggeredAtEpochMs = trap.LastTriggeredAtEpochMs,
-            lastObservedValue = trap.LastObservedValue,
+            address = trap.Address,
+            dataType = FormatDataType(trap.DataType),
+            condition = FormatTrapCondition(trap.Condition),
+            comparisonValue = trap.Threshold,
         }),
-        settings = new
-        {
-            blockDisplayDensity = project.Settings.BlockDisplayDensity,
-        },
         updatedAtEpochMs = project.UpdatedAtEpochMs,
+    };
+
+    private static bool IsVendor(string value, string expected) =>
+        string.Equals(value, expected, StringComparison.OrdinalIgnoreCase);
+
+    private static string FormatVendor(string value) => value switch
+    {
+        "Melsec" => "MELSEC",
+        "Keyence" => "KEYENCE",
+        _ => value.ToUpperInvariant(),
+    };
+
+    private static string FormatConnectionMode(string value) => value switch
+    {
+        "Real" => "REAL",
+        "DemoMock" => "DEMO_MOCK",
+        _ => value.ToUpperInvariant(),
+    };
+
+    private static string FormatKeyenceDeviceMode(string value) => value switch
+    {
+        "Normal" => "NORMAL",
+        "Xym" => "XYM",
+        _ => value.ToUpperInvariant(),
+    };
+
+    private static string FormatTransport(string value) => value switch
+    {
+        "Tcp" => "TCP",
+        "Udp" => "UDP",
+        _ => value.ToUpperInvariant(),
+    };
+
+    private static string FormatDataType(string value) => value switch
+    {
+        "Bit" => "BIT",
+        "Int16" => "INT16",
+        "UInt16" => "UINT16",
+        "Int32" => "INT32",
+        "UInt32" => "UINT32",
+        "Float32" => "FLOAT32",
+        _ => value.ToUpperInvariant(),
+    };
+
+    private static string FormatTrapCondition(string value) => value switch
+    {
+        "Rise" => "RISING_EDGE",
+        "Fall" => "FALLING_EDGE",
+        "Change" => "CHANGE",
+        "GreaterOrEqual" => "GREATER_OR_EQUAL",
+        "LessOrEqual" => "LESS_OR_EQUAL",
+        "Equal" => "EQUAL",
+        "NotEqual" => "NOT_EQUAL",
+        _ => value.ToUpperInvariant(),
     };
 
     private static byte[] RawDeflate(byte[] data)

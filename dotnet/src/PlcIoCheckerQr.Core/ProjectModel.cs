@@ -7,10 +7,13 @@ public sealed record PlcProject(
     string Name,
     PlcConnection Connection,
     IReadOnlyList<DeviceDefinition> Devices,
-    IReadOnlyList<string> WatchItems,
+    IReadOnlyList<MonitorTargetDefinition> TimeChart,
     IReadOnlyList<TrapDefinition> Traps,
     AppSettings Settings,
-    long UpdatedAtEpochMs);
+    long UpdatedAtEpochMs)
+{
+    public IReadOnlyList<string> WatchItems { get; } = TimeChart.Select(target => target.Address).ToArray();
+}
 
 public sealed record PlcConnection(
     string Vendor,
@@ -29,9 +32,12 @@ public sealed record PlcConnection(
 
 public sealed record DeviceDefinition(string Address, string DataType);
 
+public sealed record MonitorTargetDefinition(string Address, string DataType);
+
 public sealed record TrapDefinition(
     string Id,
     string Address,
+    string DataType,
     bool Enabled,
     string Condition,
     double? Threshold,
@@ -115,14 +121,19 @@ public static partial class ProjectFactory
                 ? parts[1]
                 : GuessDataType(address, input.Vendor);
             ValidateChoice(dataType, DeviceDataTypes, "device data type");
+            dataType = CoerceDataTypeForAddress(address, dataType, input.Vendor);
             devices.Add(new DeviceDefinition(address, dataType));
         }
 
-        var watchItems = ParseLines(input.WatchText)
-            .Select(line => line.ToUpperInvariant())
-            .Distinct(StringComparer.OrdinalIgnoreCase)
+        var deviceTypesByAddress = devices
+            .GroupBy(device => device.Address, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.First().DataType, StringComparer.OrdinalIgnoreCase);
+
+        var timeChart = ParseLines(input.WatchText)
+            .Select(line => ParseDeviceLine(line, input.Vendor, deviceTypesByAddress))
+            .DistinctBy(target => target.Address, StringComparer.OrdinalIgnoreCase)
             .ToList();
-        if (watchItems.Count > MaxTimeChartTargets)
+        if (timeChart.Count > MaxTimeChartTargets)
         {
             throw new ArgumentException($"タイムチャートに追加できるのは最大 {MaxTimeChartTargets} チャンネルです。");
         }
@@ -138,27 +149,36 @@ public static partial class ProjectFactory
             }
 
             var address = parts[0].ToUpperInvariant();
-            var condition = ValidateTrapConditionForAddress(address, parts[1], input.Vendor);
+            var hasDataType = parts.Length >= 3 && DeviceDataTypes.Contains(parts[1], StringComparer.Ordinal);
+            var dataType = hasDataType
+                ? parts[1]
+                : deviceTypesByAddress.GetValueOrDefault(address, GuessDataType(address, input.Vendor));
+            ValidateChoice(dataType, DeviceDataTypes, "trap data type");
+            dataType = CoerceDataTypeForAddress(address, dataType, input.Vendor);
+            var condition = ValidateTrapConditionForAddress(address, hasDataType ? parts[2] : parts[1], input.Vendor);
+            var thresholdIndex = hasDataType ? 3 : 2;
+            var enabledIndex = hasDataType ? 4 : 3;
             double? threshold = null;
             if (TrapConditionRequiresThreshold(condition))
             {
-                if (parts.Length < 3 || string.IsNullOrWhiteSpace(parts[2]))
+                if (parts.Length <= thresholdIndex || string.IsNullOrWhiteSpace(parts[thresholdIndex]))
                 {
                     throw new ArgumentException($"Trap threshold is required for {condition}: {address}");
                 }
 
-                threshold = double.Parse(parts[2], System.Globalization.CultureInfo.InvariantCulture);
+                threshold = double.Parse(parts[thresholdIndex], System.Globalization.CultureInfo.InvariantCulture);
             }
 
             var enabled = true;
-            if (parts.Length >= 4 && !string.IsNullOrWhiteSpace(parts[3]))
+            if (parts.Length > enabledIndex && !string.IsNullOrWhiteSpace(parts[enabledIndex]))
             {
-                enabled = parts[3].ToLowerInvariant() is not ("0" or "false" or "off" or "no");
+                enabled = parts[enabledIndex].ToLowerInvariant() is not ("0" or "false" or "off" or "no");
             }
 
             traps.Add(new TrapDefinition(
                 Id: $"trap-{offset}",
                 Address: address,
+                DataType: dataType,
                 Enabled: enabled,
                 Condition: condition,
                 Threshold: threshold,
@@ -186,10 +206,35 @@ public static partial class ProjectFactory
                 input.ModuleIo,
                 input.Multidrop),
             Devices: devices,
-            WatchItems: watchItems,
+            TimeChart: timeChart,
             Traps: traps,
             Settings: new AppSettings(input.BlockDisplayDensity),
             UpdatedAtEpochMs: now);
+    }
+
+    private static MonitorTargetDefinition ParseDeviceLine(
+        string line,
+        string vendor,
+        IReadOnlyDictionary<string, string> registeredDeviceTypes)
+    {
+        var parts = line.Split(',').Select(part => part.Trim()).ToArray();
+        var address = parts[0].ToUpperInvariant();
+        var dataType = parts.Length > 1 && !string.IsNullOrWhiteSpace(parts[1])
+            ? parts[1]
+            : registeredDeviceTypes.GetValueOrDefault(address, GuessDataType(address, vendor));
+        ValidateChoice(dataType, DeviceDataTypes, "time chart data type");
+        dataType = CoerceDataTypeForAddress(address, dataType, vendor);
+        return new MonitorTargetDefinition(address, dataType);
+    }
+
+    private static string CoerceDataTypeForAddress(string address, string dataType, string vendor)
+    {
+        if (IsBitAddress(address, vendor))
+        {
+            return "Bit";
+        }
+
+        return dataType == "Bit" ? GuessDataType(address, vendor) : dataType;
     }
 
     public static string Slugify(string text, string fallback = "plc-project")

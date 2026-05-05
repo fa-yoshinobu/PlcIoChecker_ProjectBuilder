@@ -33,6 +33,7 @@ public partial class MainWindow : Window
     public sealed class WatchRow
     {
         public string Address { get; set; } = "";
+        public string DataType { get; set; } = "Bit";
     }
 
     public sealed class TrapConditionOption(string value)
@@ -74,6 +75,8 @@ public partial class MainWindow : Window
         }
 
         public string ConditionDisplayText => TrapConditionDisplayText(Condition);
+
+        public string DataType { get; set; } = "Bit";
 
         public IReadOnlyList<TrapConditionOption> AvailableConditionOptions =>
             ProjectFactory.TrapConditionsForAddress(Address, _vendor)
@@ -236,6 +239,13 @@ public partial class MainWindow : Window
             Binding = new Binding(nameof(WatchRow.Address)) { UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged },
             Width = new DataGridLength(1, DataGridLengthUnitType.Star),
         });
+        _watchGrid.Columns.Add(new DataGridComboBoxColumn
+        {
+            Header = "Data type",
+            ItemsSource = ProjectFactory.DeviceDataTypes,
+            SelectedItemBinding = new Binding(nameof(WatchRow.DataType)) { UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged },
+            Width = new DataGridLength(170),
+        });
 
         _trapsGrid.ItemsSource = _traps;
         _trapsGrid.PreviewKeyDown += TrapsGrid_PreviewKeyDown;
@@ -245,6 +255,13 @@ public partial class MainWindow : Window
             Header = "アドレス",
             Binding = new Binding(nameof(TrapRow.Address)) { UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged },
             Width = new DataGridLength(1, DataGridLengthUnitType.Star),
+        });
+        _trapsGrid.Columns.Add(new DataGridComboBoxColumn
+        {
+            Header = "Data type",
+            ItemsSource = ProjectFactory.DeviceDataTypes,
+            SelectedItemBinding = new Binding(nameof(TrapRow.DataType)) { UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged },
+            Width = new DataGridLength(170),
         });
         _trapsGrid.Columns.Add(new DataGridTemplateColumn
         {
@@ -471,11 +488,21 @@ public partial class MainWindow : Window
                 var address = row.Address.Trim();
                 var dataType = string.IsNullOrWhiteSpace(row.DataType)
                     ? ProjectFactory.GuessDataType(address, Selected(_vendor))
-                    : row.DataType.Trim();
+                    : CoerceDataTypeForAddress(row.DataType.Trim(), address);
                 return $"{address},{dataType}";
             }));
 
-    private string WatchText() => string.Join(Environment.NewLine, TimeChartAddresses());
+    private string WatchText() => string.Join(Environment.NewLine,
+        _watches
+            .Where(row => !string.IsNullOrWhiteSpace(row.Address))
+            .Select(row =>
+            {
+                var address = row.Address.Trim();
+                var dataType = string.IsNullOrWhiteSpace(row.DataType)
+                    ? ProjectFactory.GuessDataType(address, Selected(_vendor))
+                    : row.DataType.Trim();
+                return $"{address},{dataType}";
+            }));
 
     private IReadOnlyList<string> TimeChartAddresses()
     {
@@ -502,7 +529,14 @@ public partial class MainWindow : Window
     private string TrapsText() => string.Join(Environment.NewLine,
         _traps
             .Where(row => !string.IsNullOrWhiteSpace(row.Address) && !string.IsNullOrWhiteSpace(row.Condition))
-            .Select(row => $"{row.Address.Trim()},{row.Condition.Trim()},{row.Threshold.Trim()},{(row.Enabled ? "true" : "false")}"));
+            .Select(row =>
+            {
+                var address = row.Address.Trim();
+                var dataType = string.IsNullOrWhiteSpace(row.DataType)
+                    ? ProjectFactory.GuessDataType(address, Selected(_vendor))
+                    : CoerceDataTypeForAddress(row.DataType.Trim(), address);
+                return $"{address},{dataType},{row.Condition.Trim()},{row.Threshold.Trim()},{(row.Enabled ? "true" : "false")}";
+            }));
 
     private void ShowQrScreen()
     {
@@ -737,6 +771,18 @@ public partial class MainWindow : Window
                ?? ProjectFactory.GuessDataType(address, Selected(_vendor));
     }
 
+    private string CoerceDataTypeForAddress(string dataType, string address)
+    {
+        var vendor = Selected(_vendor);
+        if (ProjectFactory.IsBitAddress(address, vendor))
+        {
+            return "Bit";
+        }
+
+        var normalized = NormalizeDeviceDataType(dataType, address);
+        return normalized == "Bit" ? ProjectFactory.GuessDataType(address, vendor) : normalized;
+    }
+
     private static bool ParseClipboardBoolean(string text)
     {
         var value = text.Trim();
@@ -787,7 +833,7 @@ public partial class MainWindow : Window
             return;
         }
 
-        Clipboard.SetText(string.Join(Environment.NewLine, rows.Select(row => row.Address)));
+        Clipboard.SetText(string.Join(Environment.NewLine, rows.Select(row => $"{row.Address}\t{row.DataType}")));
         SetStatus($"タイムチャート {rows.Count} 行をコピーしました");
     }
 
@@ -823,7 +869,7 @@ public partial class MainWindow : Window
         SetStatus($"タイムチャート {rows.Count} 行を貼り付けました / {uniqueCount}/{ProjectFactory.MaxTimeChartTargets}");
     }
 
-    private static IEnumerable<WatchRow> ParseWatchClipboardRows(string text)
+    private IEnumerable<WatchRow> ParseWatchClipboardRows(string text)
     {
         var isFirstRow = true;
         foreach (var rawLine in text.Split(["\r\n", "\n"], StringSplitOptions.None))
@@ -844,7 +890,11 @@ public partial class MainWindow : Window
             var address = fields[0].Trim();
             if (!string.IsNullOrWhiteSpace(address))
             {
-                yield return new WatchRow { Address = address };
+                yield return new WatchRow
+                {
+                    Address = address,
+                    DataType = fields.Length > 1 ? CoerceDataTypeForAddress(fields[1], address) : ProjectFactory.GuessDataType(address, Selected(_vendor)),
+                };
             }
         }
     }
@@ -893,7 +943,7 @@ public partial class MainWindow : Window
         }
 
         Clipboard.SetText(string.Join(Environment.NewLine, rows.Select(row =>
-            $"{row.Address}\t{row.ConditionDisplayText}\t{row.Threshold}\t{(row.Enabled ? "TRUE" : "FALSE")}")));
+            $"{row.Address}\t{row.DataType}\t{row.ConditionDisplayText}\t{row.Threshold}\t{(row.Enabled ? "TRUE" : "FALSE")}")));
         SetStatus($"トラップ {rows.Count} 行をコピーしました");
     }
 
@@ -947,15 +997,20 @@ public partial class MainWindow : Window
             var row = new TrapRow();
             row.SetVendor(Selected(_vendor));
             row.Address = address;
-            row.Condition = fields.Length > 1
-                ? NormalizeTrapCondition(fields[1], address)
+            var hasDataType = fields.Length > 2 && ProjectFactory.DeviceDataTypes.Any(dataType => dataType.Equals(fields[1].Trim(), StringComparison.OrdinalIgnoreCase));
+            row.DataType = hasDataType ? CoerceDataTypeForAddress(fields[1], address) : ProjectFactory.GuessDataType(address, Selected(_vendor));
+            var conditionIndex = hasDataType ? 2 : 1;
+            var thresholdIndex = hasDataType ? 3 : 2;
+            var enabledIndex = hasDataType ? 4 : 3;
+            row.Condition = fields.Length > conditionIndex
+                ? NormalizeTrapCondition(fields[conditionIndex], address)
                 : ProjectFactory.DefaultTrapConditionForAddress(address, Selected(_vendor));
-            if (fields.Length > 2 && !string.IsNullOrWhiteSpace(fields[2]))
+            if (fields.Length > thresholdIndex && !string.IsNullOrWhiteSpace(fields[thresholdIndex]))
             {
-                row.Threshold = fields[2].Trim();
+                row.Threshold = fields[thresholdIndex].Trim();
             }
 
-            row.Enabled = fields.Length < 4 || string.IsNullOrWhiteSpace(fields[3]) || ParseClipboardBoolean(fields[3]);
+            row.Enabled = fields.Length <= enabledIndex || string.IsNullOrWhiteSpace(fields[enabledIndex]) || ParseClipboardBoolean(fields[enabledIndex]);
             yield return row;
         }
     }
@@ -1394,32 +1449,33 @@ public partial class MainWindow : Window
         using var document = System.Text.Json.JsonDocument.Parse(json);
         var root = document.RootElement;
 
-        _projectName.Text = ReadString(root, "name", "PLC QR Project");
+        _projectName.Text = ReadString(root, "projectName", "PLC QR Project");
 
-        var connection = root.GetProperty("connection");
-        SelectItem(_vendor, ReadString(connection, "vendor", "Melsec"));
+        var plc = root.GetProperty("plc");
+        var connection = plc.GetProperty("connection");
+        SelectItem(_vendor, ToUiVendor(ReadString(plc, "vendor", "MELSEC")));
         ApplyVendorDefaults();
-        SelectItem(_connectionMode, ReadString(connection, "connectionMode", "Real"));
+        SelectItem(_connectionMode, ToUiConnectionMode(ReadString(connection, "mode", "REAL")));
         _host.Text = ReadString(connection, "host", "192.168.250.100");
         _port.Text = ReadInt(connection, "port", 1025).ToString(CultureInfo.InvariantCulture);
-        SelectItem(_model, ReadString(connection, "machineLabel", Selected(_model)));
-        SelectItem(_keyenceMode, ReadString(connection, "keyenceDeviceMode", "Normal"));
-        SelectItem(_transport, ReadString(connection, "transportMode", "Tcp"));
-        _interval.Text = ReadInt(connection, "monitorIntervalMs", 500).ToString(CultureInfo.InvariantCulture);
-        _timeout.Text = ReadInt(connection, "timeoutMs", 2000).ToString(CultureInfo.InvariantCulture);
-        _network.Text = ReadInt(connection, "network", 0).ToString(CultureInfo.InvariantCulture);
-        _station.Text = ReadInt(connection, "station", 255).ToString(CultureInfo.InvariantCulture);
-        _moduleIo.Text = ReadInt(connection, "moduleIo", 1023).ToString(CultureInfo.InvariantCulture);
-        _multidrop.Text = ReadInt(connection, "multidrop", 0).ToString(CultureInfo.InvariantCulture);
-
-        if (root.TryGetProperty("settings", out var settings))
+        SelectItem(_model, ReadString(plc, "cpuModel", Selected(_model)));
+        if (plc.TryGetProperty("keyence", out var keyence))
         {
-            SelectItem(_density, ReadString(settings, "blockDisplayDensity", "Compact"));
+            SelectItem(_keyenceMode, ToUiKeyenceMode(ReadString(keyence, "deviceMode", "NORMAL")));
         }
 
-        var watchItems = ReadWatchItems(root);
+        SelectItem(_transport, ToUiTransport(ReadString(connection, "transport", "TCP")));
+        _interval.Text = ReadInt(connection, "pollingIntervalMs", 500).ToString(CultureInfo.InvariantCulture);
+        _timeout.Text = ReadInt(connection, "timeoutMs", 2000).ToString(CultureInfo.InvariantCulture);
+        if (plc.TryGetProperty("melsec", out var melsec))
+        {
+            _network.Text = ReadInt(melsec, "networkNo", 0).ToString(CultureInfo.InvariantCulture);
+            _station.Text = ReadInt(melsec, "stationNo", 255).ToString(CultureInfo.InvariantCulture);
+            _moduleIo.Text = ReadInt(melsec, "moduleIoNo", 1023).ToString(CultureInfo.InvariantCulture);
+            _multidrop.Text = ReadInt(melsec, "multidropNo", 0).ToString(CultureInfo.InvariantCulture);
+        }
 
-        if (root.TryGetProperty("devices", out var devicesElement) &&
+        if (root.TryGetProperty("deviceList", out var devicesElement) &&
             devicesElement.ValueKind == System.Text.Json.JsonValueKind.Array)
         {
             _devices.Clear();
@@ -1429,15 +1485,24 @@ public partial class MainWindow : Window
                 _devices.Add(new DeviceRow
                 {
                     Address = address,
-                    DataType = ReadString(device, "dataType", "Int16"),
+                    DataType = CoerceDataTypeForAddress(ToUiDataType(ReadString(device, "dataType", "INT16")), address),
                 });
             }
         }
 
         _watches.Clear();
-        foreach (var address in watchItems)
+        if (root.TryGetProperty("timeChart", out var timeChartElement) &&
+            timeChartElement.ValueKind == System.Text.Json.JsonValueKind.Array)
         {
-            _watches.Add(new WatchRow { Address = address });
+            foreach (var target in timeChartElement.EnumerateArray())
+            {
+                var address = ReadString(target, "address", "");
+                _watches.Add(new WatchRow
+                {
+                    Address = address,
+                    DataType = CoerceDataTypeForAddress(ToUiDataType(ReadString(target, "dataType", ProjectFactory.GuessDataType(address, Selected(_vendor)))), address),
+                });
+            }
         }
 
         if (root.TryGetProperty("traps", out var trapsElement) &&
@@ -1446,7 +1511,7 @@ public partial class MainWindow : Window
             _traps.Clear();
             foreach (var trap in trapsElement.EnumerateArray())
             {
-                var threshold = trap.TryGetProperty("threshold", out var thresholdValue) &&
+                var threshold = trap.TryGetProperty("comparisonValue", out var thresholdValue) &&
                                 thresholdValue.ValueKind == System.Text.Json.JsonValueKind.Number
                     ? thresholdValue.GetDouble().ToString(CultureInfo.InvariantCulture)
                     : "";
@@ -1456,7 +1521,8 @@ public partial class MainWindow : Window
                 var row = new TrapRow();
                 row.SetVendor(Selected(_vendor));
                 row.Address = ReadString(trap, "address", "");
-                row.Condition = ReadString(trap, "condition", "Change");
+                row.DataType = CoerceDataTypeForAddress(ToUiDataType(ReadString(trap, "dataType", ProjectFactory.GuessDataType(row.Address, Selected(_vendor)))), row.Address);
+                row.Condition = ToUiTrapCondition(ReadString(trap, "condition", "CHANGE"));
                 row.Threshold = threshold;
                 row.Enabled = enabled;
                 _traps.Add(row);
@@ -1464,21 +1530,54 @@ public partial class MainWindow : Window
         }
     }
 
-    private static IReadOnlyList<string> ReadWatchItems(System.Text.Json.JsonElement root)
+    private static string ToUiVendor(string value) => value.Trim().ToUpperInvariant() switch
     {
-        if (!root.TryGetProperty("watchItems", out var watchItems) ||
-            watchItems.ValueKind != System.Text.Json.JsonValueKind.Array)
-        {
-            return [];
-        }
+        "KEYENCE" => "Keyence",
+        _ => "Melsec",
+    };
 
-        return watchItems
-            .EnumerateArray()
-            .Select(item => item.GetString())
-            .Where(item => !string.IsNullOrWhiteSpace(item))
-            .Select(item => item!)
-            .ToList();
-    }
+    private static string ToUiConnectionMode(string value) => value.Trim().ToUpperInvariant() switch
+    {
+        "DEMO" or "DEMO_MOCK" or "DEMOMOCK" => "DemoMock",
+        _ => "Real",
+    };
+
+    private static string ToUiKeyenceMode(string value) => value.Trim().ToUpperInvariant() switch
+    {
+        "XYM" => "Xym",
+        _ => "Normal",
+    };
+
+    private static string ToUiTransport(string value) => value.Trim().ToUpperInvariant() switch
+    {
+        "UDP" => "Udp",
+        _ => "Tcp",
+    };
+
+    private static string ToUiDataType(string value) =>
+        ProjectFactory.DeviceDataTypes.FirstOrDefault(dataType =>
+            dataType.Equals(value.Trim(), StringComparison.OrdinalIgnoreCase))
+        ?? value.Trim().ToUpperInvariant() switch
+        {
+            "BIT" => "Bit",
+            "INT16" => "Int16",
+            "UINT16" => "UInt16",
+            "INT32" => "Int32",
+            "UINT32" => "UInt32",
+            "FLOAT32" => "Float32",
+            _ => "Int16",
+        };
+
+    private static string ToUiTrapCondition(string value) => value.Trim().ToUpperInvariant() switch
+    {
+        "RISING_EDGE" or "RISE" => "Rise",
+        "FALLING_EDGE" or "FALL" => "Fall",
+        "GREATER_OR_EQUAL" => "GreaterOrEqual",
+        "LESS_OR_EQUAL" => "LessOrEqual",
+        "EQUAL" => "Equal",
+        "NOT_EQUAL" => "NotEqual",
+        _ => "Change",
+    };
 
     private static string Selected(ComboBox comboBox) => comboBox.SelectedItem?.ToString() ?? "";
 

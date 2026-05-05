@@ -2,9 +2,9 @@
 
 PC tool for creating PLC IO Checker project settings for Android.
 
-The Android app in `../PlcIoChecker_Android` is the QR reader. The QR JSON and
-selection values in this repository follow that Android app's `ProjectDefinition`
-model and enum names.
+The Android app in `../PlcIoChecker_Android` is the QR reader. The QR JSON uses
+the shared `plc-io-checker-project` schema v2 consumed by the Android and iOS
+apps.
 
 ## Product Intent
 
@@ -58,13 +58,12 @@ PLCIOC2D|<session>|<index>|<total>|<sha256>|<payload-chunk>
 - `payload-chunk` is a slice of base64url-encoded raw-deflate-compressed JSON without padding.
 - Android reads this with `Inflater(true)`, so the .NET app uses raw deflate, not zlib or gzip containers.
 
-## Android Enum Values Used By The GUI
+## GUI Selection Values
 
 - Vendor: `Melsec`, `Keyence`
 - Connection mode: `Real`, `DemoMock`
 - KEYENCE display: `Normal`, `Xym`
 - Transport: `Tcp`, `Udp`
-- Block density: `Compact`, `Detailed`
 - Trap condition: `Rise`, `Fall`, `Change`, `GreaterOrEqual`, `LessOrEqual`, `Equal`, `NotEqual`
 - Device data type: `Bit`, `Int16`, `UInt16`, `Int32`, `UInt32`, `Float32`
 

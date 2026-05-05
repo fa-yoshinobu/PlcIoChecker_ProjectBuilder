@@ -20,11 +20,15 @@ public sealed class ProjectQrPayloadTests
 
         using var document = JsonDocument.Parse(decoded);
         var root = document.RootElement;
-        Assert.Equal("unit-project-123", root.GetProperty("id").GetString());
-        Assert.Equal("Melsec", root.GetProperty("connection").GetProperty("vendor").GetString());
-        Assert.Equal("GreaterOrEqual", root.GetProperty("traps")[0].GetProperty("condition").GetString());
-        Assert.False(root.GetProperty("devices")[0].TryGetProperty("comment", out _));
-        Assert.False(root.GetProperty("devices")[0].TryGetProperty("watch", out _));
+        Assert.Equal("plc-io-checker-project", root.GetProperty("schema").GetString());
+        Assert.Equal(2, root.GetProperty("schemaVersion").GetInt32());
+        Assert.Equal("unit-project-123", root.GetProperty("projectId").GetString());
+        Assert.Equal("MELSEC", root.GetProperty("plc").GetProperty("vendor").GetString());
+        Assert.Equal("GREATER_OR_EQUAL", root.GetProperty("traps")[0].GetProperty("condition").GetString());
+        Assert.False(root.GetProperty("deviceList")[0].TryGetProperty("comment", out _));
+        Assert.False(root.GetProperty("deviceList")[0].TryGetProperty("watch", out _));
+        Assert.False(root.TryGetProperty("settings", out _));
+        Assert.False(root.TryGetProperty("watchItems", out _));
     }
 
     [Fact]
@@ -52,10 +56,12 @@ public sealed class ProjectQrPayloadTests
             nowEpochMs: 123);
 
         var json = Encoding.UTF8.GetString(ProjectQrPayload.ProjectQrJsonBytes(project));
-        Assert.Contains("\"vendor\":\"Keyence\"", json);
-        Assert.Contains("\"connectionMode\":\"DemoMock\"", json);
-        Assert.Contains("\"keyenceDeviceMode\":\"Normal\"", json);
-        Assert.Contains("\"blockDisplayDensity\":\"Detailed\"", json);
+        Assert.Contains("\"vendor\":\"KEYENCE\"", json);
+        Assert.Contains("\"mode\":\"DEMO_MOCK\"", json);
+        Assert.Contains("\"deviceMode\":\"NORMAL\"", json);
+        Assert.Contains("\"timeChart\":[{\"address\":\"R000\",\"dataType\":\"BIT\"}]", json);
+        Assert.DoesNotContain("blockDisplayDensity", json);
+        Assert.DoesNotContain("\"melsec\"", json);
     }
 
     [Fact]
