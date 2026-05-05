@@ -1,0 +1,75 @@
+<Window x:Class="PlcIoCheckerQr.Wpf.Windows.AboutWindow"
+        x:ClassModifier="internal"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="バージョン情報"
+        Width="620"
+        Height="430"
+        MinWidth="560"
+        MinHeight="380"
+        WindowStartupLocation="CenterOwner"
+        Background="{StaticResource WindowBg}"
+        Foreground="{StaticResource TextMain}">
+  <Grid Margin="16">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="12"/>
+      <RowDefinition Height="*"/>
+      <RowDefinition Height="Auto"/>
+    </Grid.RowDefinitions>
+
+    <Border Grid.Row="0"
+            Background="{StaticResource PanelBg}"
+            BorderBrush="{StaticResource BorderSoft}"
+            BorderThickness="1"
+            CornerRadius="8"
+            Padding="16">
+      <StackPanel>
+        <TextBlock Text="PLC IO Checker QR Builder"
+                   FontSize="20"
+                   FontWeight="SemiBold"
+                   Foreground="{StaticResource TextMain}"/>
+        <TextBlock x:Name="VersionTextBlock"
+                   Margin="0,6,0,0"
+                   Foreground="{StaticResource TextMuted}"/>
+      </StackPanel>
+    </Border>
+
+    <Border Grid.Row="2"
+            Background="{StaticResource PanelBg}"
+            BorderBrush="{StaticResource BorderSoft}"
+            BorderThickness="1"
+            CornerRadius="8"
+            Padding="12">
+      <ListView x:Name="LibrariesListView"
+                Focusable="False"
+                SelectionMode="Single"
+                BorderThickness="0">
+        <ListView.ItemContainerStyle>
+          <Style TargetType="{x:Type ListViewItem}">
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="IsHitTestVisible" Value="False"/>
+            <Setter Property="Foreground" Value="{StaticResource TextMain}"/>
+          </Style>
+        </ListView.ItemContainerStyle>
+        <ListView.View>
+          <GridView>
+            <GridViewColumn Header="Name" Width="210" DisplayMemberBinding="{Binding Name}"/>
+            <GridViewColumn Header="Version" Width="110" DisplayMemberBinding="{Binding Version}"/>
+            <GridViewColumn Header="Notes" Width="230" DisplayMemberBinding="{Binding Notes}"/>
+          </GridView>
+        </ListView.View>
+      </ListView>
+    </Border>
+
+    <StackPanel Grid.Row="3"
+                Orientation="Horizontal"
+                HorizontalAlignment="Right"
+                Margin="0,14,0,0">
+      <Button Content="閉じる"
+              Style="{StaticResource AppButton}"
+              MinWidth="96"
+              Click="Close_Click"/>
+    </StackPanel>
+  </Grid>
+</Window>
