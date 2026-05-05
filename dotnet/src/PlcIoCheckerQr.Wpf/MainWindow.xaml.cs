@@ -1642,135 +1642,143 @@ public partial class MainWindow : Window
     {
         using var document = System.Text.Json.JsonDocument.Parse(json);
         var root = document.RootElement;
+        RequireProjectJsonV2(root);
 
-        _projectName.Text = ReadString(root, "projectName", "PLC QR Project");
+        _ = ReadRequiredString(root, "projectId");
+        _ = ReadRequiredInt64(root, "updatedAtEpochMs");
+        _projectName.Text = ReadRequiredString(root, "projectName");
 
-        var plc = root.GetProperty("plc");
-        var connection = plc.GetProperty("connection");
-        SelectItem(_vendor, ToUiVendor(ReadString(plc, "vendor", "MELSEC")));
+        var plc = ReadRequiredObject(root, "plc");
+        var connection = ReadRequiredObject(plc, "connection");
+        var vendor = ToUiVendor(ReadRequiredString(plc, "vendor"));
+        SelectItem(_vendor, vendor);
         ApplyVendorDefaults();
-        SelectItem(_connectionMode, ToUiConnectionMode(ReadString(connection, "mode", "REAL")));
-        _host.Text = ReadString(connection, "host", "192.168.250.100");
-        _port.Text = ReadInt(connection, "port", 1025).ToString(CultureInfo.InvariantCulture);
-        SelectItem(_model, ReadString(plc, "cpuModel", Selected(_model)));
-        if (plc.TryGetProperty("keyence", out var keyence))
+        SelectItem(_connectionMode, ToUiConnectionMode(ReadRequiredString(connection, "mode")));
+        _host.Text = ReadRequiredString(connection, "host");
+        var port = ReadRequiredInt(connection, "port");
+        if (port is < 1 or > 65_535)
         {
-            SelectItem(_keyenceMode, ToUiKeyenceMode(ReadString(keyence, "deviceMode", "NORMAL")));
+            throw new InvalidOperationException($"Unsupported connection port: {port}");
+        }
+        _port.Text = port.ToString(CultureInfo.InvariantCulture);
+        SelectItem(_model, ReadRequiredString(plc, "cpuModel"));
+        if (vendor == "Keyence")
+        {
+            var keyence = ReadRequiredObject(plc, "keyence");
+            SelectItem(_keyenceMode, ToUiKeyenceMode(ReadRequiredString(keyence, "deviceMode")));
         }
 
-        SelectItem(_transport, ToUiTransport(ReadString(connection, "transport", "TCP")));
-        _interval.Text = ReadInt(connection, "pollingIntervalMs", 500).ToString(CultureInfo.InvariantCulture);
-        _timeout.Text = ReadInt(connection, "timeoutMs", 2000).ToString(CultureInfo.InvariantCulture);
-        if (plc.TryGetProperty("melsec", out var melsec))
+        SelectItem(_transport, ToUiTransport(ReadRequiredString(connection, "transport")));
+        _interval.Text = ReadRequiredInt(connection, "pollingIntervalMs").ToString(CultureInfo.InvariantCulture);
+        _timeout.Text = ReadRequiredInt(connection, "timeoutMs").ToString(CultureInfo.InvariantCulture);
+        if (vendor == "Melsec")
         {
-            _network.Text = ReadInt(melsec, "networkNo", 0).ToString(CultureInfo.InvariantCulture);
-            _station.Text = ReadInt(melsec, "stationNo", 255).ToString(CultureInfo.InvariantCulture);
-            _moduleIo.Text = ReadInt(melsec, "moduleIoNo", 1023).ToString(CultureInfo.InvariantCulture);
-            _multidrop.Text = ReadInt(melsec, "multidropNo", 0).ToString(CultureInfo.InvariantCulture);
+            var melsec = ReadRequiredObject(plc, "melsec");
+            _network.Text = ReadRequiredInt(melsec, "networkNo").ToString(CultureInfo.InvariantCulture);
+            _station.Text = ReadRequiredInt(melsec, "stationNo").ToString(CultureInfo.InvariantCulture);
+            _moduleIo.Text = ReadRequiredInt(melsec, "moduleIoNo").ToString(CultureInfo.InvariantCulture);
+            _multidrop.Text = ReadRequiredInt(melsec, "multidropNo").ToString(CultureInfo.InvariantCulture);
         }
 
-        if (root.TryGetProperty("deviceList", out var devicesElement) &&
-            devicesElement.ValueKind == System.Text.Json.JsonValueKind.Array)
+        var devicesElement = ReadRequiredArray(root, "deviceList");
+        _devices.Clear();
+        foreach (var device in devicesElement.EnumerateArray())
         {
-            _devices.Clear();
-            foreach (var device in devicesElement.EnumerateArray())
+            var address = ReadRequiredString(device, "address");
+            _devices.Add(new DeviceRow
             {
-                var address = ReadString(device, "address", "");
-                _devices.Add(new DeviceRow
-                {
-                    Address = address,
-                    DataType = CoerceDataTypeForAddress(ToUiDataType(ReadString(device, "dataType", "INT16")), address),
-                });
-            }
+                Address = address,
+                DataType = CoerceDataTypeForAddress(ToUiDataType(ReadRequiredString(device, "dataType")), address),
+            });
         }
 
+        var timeChartElement = ReadRequiredArray(root, "timeChart");
         _watches.Clear();
-        if (root.TryGetProperty("timeChart", out var timeChartElement) &&
-            timeChartElement.ValueKind == System.Text.Json.JsonValueKind.Array)
+        foreach (var target in timeChartElement.EnumerateArray())
         {
-            foreach (var target in timeChartElement.EnumerateArray())
+            var address = ReadRequiredString(target, "address");
+            _watches.Add(new WatchRow
             {
-                var address = ReadString(target, "address", "");
-                _watches.Add(new WatchRow
-                {
-                    Address = address,
-                    DataType = CoerceDataTypeForAddress(ToUiDataType(ReadString(target, "dataType", ProjectFactory.GuessDataType(address, Selected(_vendor)))), address),
-                });
-            }
+                Address = address,
+                DataType = CoerceDataTypeForAddress(ToUiDataType(ReadRequiredString(target, "dataType")), address),
+            });
         }
 
-        if (root.TryGetProperty("traps", out var trapsElement) &&
-            trapsElement.ValueKind == System.Text.Json.JsonValueKind.Array)
+        var trapsElement = ReadRequiredArray(root, "traps");
+        _traps.Clear();
+        foreach (var trap in trapsElement.EnumerateArray())
         {
-            _traps.Clear();
-            foreach (var trap in trapsElement.EnumerateArray())
+            var threshold = "";
+            if (trap.TryGetProperty("comparisonValue", out var thresholdValue) &&
+                thresholdValue.ValueKind != System.Text.Json.JsonValueKind.Null)
             {
-                var threshold = trap.TryGetProperty("comparisonValue", out var thresholdValue) &&
-                                thresholdValue.ValueKind == System.Text.Json.JsonValueKind.Number
-                    ? thresholdValue.GetDouble().ToString(CultureInfo.InvariantCulture)
-                    : "";
-                var enabled = !(trap.TryGetProperty("enabled", out var enabledValue) &&
-                                enabledValue.ValueKind == System.Text.Json.JsonValueKind.False);
-
-                var row = new TrapRow();
-                row.SetVendor(Selected(_vendor));
-                row.Address = ReadString(trap, "address", "");
-                row.DataType = CoerceDataTypeForAddress(ToUiDataType(ReadString(trap, "dataType", ProjectFactory.GuessDataType(row.Address, Selected(_vendor)))), row.Address);
-                row.Condition = ToUiTrapCondition(ReadString(trap, "condition", "CHANGE"));
-                row.Threshold = threshold;
-                row.Enabled = enabled;
-                _traps.Add(row);
+                if (thresholdValue.ValueKind != System.Text.Json.JsonValueKind.Number)
+                {
+                    throw new InvalidOperationException("Project JSON value 'traps.comparisonValue' must be a number or null.");
+                }
+                threshold = thresholdValue.GetDouble().ToString(CultureInfo.InvariantCulture);
             }
+
+            var row = new TrapRow();
+            row.SetVendor(Selected(_vendor));
+            row.Address = ReadRequiredString(trap, "address");
+            row.DataType = CoerceDataTypeForAddress(ToUiDataType(ReadRequiredString(trap, "dataType")), row.Address);
+            row.Condition = ToUiTrapCondition(ReadRequiredString(trap, "condition"));
+            row.Threshold = threshold;
+            row.Enabled = ReadRequiredBool(trap, "enabled");
+            _traps.Add(row);
         }
     }
 
     private static string ToUiVendor(string value) => value.Trim().ToUpperInvariant() switch
     {
+        "MELSEC" => "Melsec",
         "KEYENCE" => "Keyence",
-        _ => "Melsec",
+        _ => throw new InvalidOperationException($"Unsupported PLC vendor: {value}"),
     };
 
     private static string ToUiConnectionMode(string value) => value.Trim().ToUpperInvariant() switch
     {
-        "DEMO" or "DEMO_MOCK" or "DEMOMOCK" => "DemoMock",
-        _ => "Real",
+        "REAL" => "Real",
+        "DEMO_MOCK" => "DemoMock",
+        _ => throw new InvalidOperationException($"Unsupported connection mode: {value}"),
     };
 
     private static string ToUiKeyenceMode(string value) => value.Trim().ToUpperInvariant() switch
     {
+        "NORMAL" => "Normal",
         "XYM" => "Xym",
-        _ => "Normal",
+        _ => throw new InvalidOperationException($"Unsupported KEYENCE device mode: {value}"),
     };
 
     private static string ToUiTransport(string value) => value.Trim().ToUpperInvariant() switch
     {
+        "TCP" => "Tcp",
         "UDP" => "Udp",
-        _ => "Tcp",
+        _ => throw new InvalidOperationException($"Unsupported transport: {value}"),
     };
 
-    private static string ToUiDataType(string value) =>
-        ProjectFactory.DeviceDataTypes.FirstOrDefault(dataType =>
-            dataType.Equals(value.Trim(), StringComparison.OrdinalIgnoreCase))
-        ?? value.Trim().ToUpperInvariant() switch
-        {
-            "BIT" => "Bit",
-            "INT16" => "Int16",
-            "UINT16" => "UInt16",
-            "INT32" => "Int32",
-            "UINT32" => "UInt32",
-            "FLOAT32" => "Float32",
-            _ => "Int16",
-        };
+    private static string ToUiDataType(string value) => value.Trim().ToUpperInvariant() switch
+    {
+        "BIT" => "Bit",
+        "INT16" => "Int16",
+        "UINT16" => "UInt16",
+        "INT32" => "Int32",
+        "UINT32" => "UInt32",
+        "FLOAT32" => "Float32",
+        _ => throw new InvalidOperationException($"Unsupported device data type: {value}"),
+    };
 
     private static string ToUiTrapCondition(string value) => value.Trim().ToUpperInvariant() switch
     {
-        "RISING_EDGE" or "RISE" => "Rise",
-        "FALLING_EDGE" or "FALL" => "Fall",
+        "RISING_EDGE" => "Rise",
+        "FALLING_EDGE" => "Fall",
+        "CHANGE" => "Change",
         "GREATER_OR_EQUAL" => "GreaterOrEqual",
         "LESS_OR_EQUAL" => "LessOrEqual",
         "EQUAL" => "Equal",
         "NOT_EQUAL" => "NotEqual",
-        _ => "Change",
+        _ => throw new InvalidOperationException($"Unsupported trap condition: {value}"),
     };
 
     private static string Selected(ComboBox comboBox) => comboBox.SelectedItem?.ToString() ?? "";
@@ -1795,15 +1803,87 @@ public partial class MainWindow : Window
 
     private static int Clamp(int value, int min, int max) => Math.Min(Math.Max(value, min), max);
 
-    private static string ReadString(System.Text.Json.JsonElement element, string name, string fallback) =>
-        element.TryGetProperty(name, out var value) && value.ValueKind == System.Text.Json.JsonValueKind.String
-            ? value.GetString() ?? fallback
-            : fallback;
+    private static void RequireProjectJsonV2(System.Text.Json.JsonElement root)
+    {
+        var schema = ReadRequiredString(root, "schema");
+        if (schema != "plc-io-checker-project")
+        {
+            throw new InvalidOperationException($"Unsupported project schema: {schema}");
+        }
 
-    private static int ReadInt(System.Text.Json.JsonElement element, string name, int fallback) =>
-        element.TryGetProperty(name, out var value) &&
-        value.ValueKind == System.Text.Json.JsonValueKind.Number &&
-        value.TryGetInt32(out var result)
-            ? result
-            : fallback;
+        var version = ReadRequiredInt(root, "schemaVersion");
+        if (version != 2)
+        {
+            throw new InvalidOperationException($"Unsupported project schema version: {version}");
+        }
+    }
+
+    private static System.Text.Json.JsonElement ReadRequiredObject(System.Text.Json.JsonElement element, string name)
+    {
+        if (!element.TryGetProperty(name, out var value) ||
+            value.ValueKind != System.Text.Json.JsonValueKind.Object)
+        {
+            throw new InvalidOperationException($"Project JSON value '{name}' must be an object.");
+        }
+
+        return value;
+    }
+
+    private static System.Text.Json.JsonElement ReadRequiredArray(System.Text.Json.JsonElement element, string name)
+    {
+        if (!element.TryGetProperty(name, out var value) ||
+            value.ValueKind != System.Text.Json.JsonValueKind.Array)
+        {
+            throw new InvalidOperationException($"Project JSON value '{name}' must be an array.");
+        }
+
+        return value;
+    }
+
+    private static string ReadRequiredString(System.Text.Json.JsonElement element, string name)
+    {
+        if (!element.TryGetProperty(name, out var value) ||
+            value.ValueKind != System.Text.Json.JsonValueKind.String ||
+            value.GetString() is not { } result)
+        {
+            throw new InvalidOperationException($"Project JSON value '{name}' must be a string.");
+        }
+
+        return result;
+    }
+
+    private static int ReadRequiredInt(System.Text.Json.JsonElement element, string name)
+    {
+        if (!element.TryGetProperty(name, out var value) ||
+            value.ValueKind != System.Text.Json.JsonValueKind.Number ||
+            !value.TryGetInt32(out var result))
+        {
+            throw new InvalidOperationException($"Project JSON value '{name}' must be an integer.");
+        }
+
+        return result;
+    }
+
+    private static long ReadRequiredInt64(System.Text.Json.JsonElement element, string name)
+    {
+        if (!element.TryGetProperty(name, out var value) ||
+            value.ValueKind != System.Text.Json.JsonValueKind.Number ||
+            !value.TryGetInt64(out var result))
+        {
+            throw new InvalidOperationException($"Project JSON value '{name}' must be an integer.");
+        }
+
+        return result;
+    }
+
+    private static bool ReadRequiredBool(System.Text.Json.JsonElement element, string name)
+    {
+        if (!element.TryGetProperty(name, out var value) ||
+            value.ValueKind is not (System.Text.Json.JsonValueKind.True or System.Text.Json.JsonValueKind.False))
+        {
+            throw new InvalidOperationException($"Project JSON value '{name}' must be a boolean.");
+        }
+
+        return value.GetBoolean();
+    }
 }

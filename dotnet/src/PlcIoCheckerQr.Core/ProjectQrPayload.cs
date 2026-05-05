@@ -163,28 +163,28 @@ public static class ProjectQrPayload
     {
         "Melsec" => "MELSEC",
         "Keyence" => "KEYENCE",
-        _ => value.ToUpperInvariant(),
+        _ => throw new ArgumentException($"Unsupported PLC vendor: {value}"),
     };
 
     private static string FormatConnectionMode(string value) => value switch
     {
         "Real" => "REAL",
         "DemoMock" => "DEMO_MOCK",
-        _ => value.ToUpperInvariant(),
+        _ => throw new ArgumentException($"Unsupported connection mode: {value}"),
     };
 
     private static string FormatKeyenceDeviceMode(string value) => value switch
     {
         "Normal" => "NORMAL",
         "Xym" => "XYM",
-        _ => value.ToUpperInvariant(),
+        _ => throw new ArgumentException($"Unsupported KEYENCE device mode: {value}"),
     };
 
     private static string FormatTransport(string value) => value switch
     {
         "Tcp" => "TCP",
         "Udp" => "UDP",
-        _ => value.ToUpperInvariant(),
+        _ => throw new ArgumentException($"Unsupported transport: {value}"),
     };
 
     private static string FormatDataType(string value) => value switch
@@ -195,7 +195,7 @@ public static class ProjectQrPayload
         "Int32" => "INT32",
         "UInt32" => "UINT32",
         "Float32" => "FLOAT32",
-        _ => value.ToUpperInvariant(),
+        _ => throw new ArgumentException($"Unsupported device data type: {value}"),
     };
 
     private static string FormatTrapCondition(string value) => value switch
@@ -207,7 +207,7 @@ public static class ProjectQrPayload
         "LessOrEqual" => "LESS_OR_EQUAL",
         "Equal" => "EQUAL",
         "NotEqual" => "NOT_EQUAL",
-        _ => value.ToUpperInvariant(),
+        _ => throw new ArgumentException($"Unsupported trap condition: {value}"),
     };
 
     private static byte[] RawDeflate(byte[] data)
