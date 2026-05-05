@@ -1,88 +1,59 @@
-# PlcIoChecker QR
+# PLC IO Checker Project Builder
 
-PC tool for creating PLC IO Checker project settings for Android.
+[![.NET 8](https://img.shields.io/badge/.NET-8.0-512BD4?logo=dotnet)](https://dotnet.microsoft.com/)
+![Windows WPF](https://img.shields.io/badge/platform-Windows%20WPF-0078D4?logo=windows)
+![Project JSON v2](https://img.shields.io/badge/project%20JSON-v2-2ea44f)
+![QR raw deflate](https://img.shields.io/badge/QR-raw%20deflate-f97316)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-The Android app in `../PlcIoChecker_Android` is the QR reader. The QR JSON uses
-the shared `plc-io-checker-project` schema v2 consumed by the Android and iOS
-apps.
+PLC IO Checker Project Builder is a PC tool for creating PLC IO Checker project settings and transferring them to the mobile apps as JSON or QR codes.
 
-## Product Intent
+Instead of entering long PLC settings on a phone, edit the project on a PC and import it from the Android/iOS app QR scanner.
 
-This app exists to avoid difficult smartphone text entry. Project data is edited
-on a PC, then exported as Android-compatible JSON or QR codes.
+Primary configuration areas:
 
-Primary workflows:
-
-- Device settings
-- Time chart target settings
+- PLC connection settings
+- Device registration
+- Time chart targets
 - Trap settings
 
-Project metadata, connection settings, and QR output settings are supporting
-workflow areas.
+This repository contains only the PC-side project builder and QR export tool. The Android and iOS PLC IO Checker apps are separate paid products, and their source code is not included in this repository.
 
-## Folders
+## Usage
 
-- `dotnet/`: current .NET WPF implementation and tests.
-- `python/`: earlier Python test implementation kept for reference.
+1. Start `PlcIoCheckerProjectBuilder.exe`.
+2. Enter the project and PLC settings.
+   - Project name
+   - Vendor
+   - CPU model
+   - IP address, port, and transport
+3. Register monitored addresses in `Devices`.
+   - Rows can be pasted from Excel.
+   - Columns are `Address / Data type`.
+4. Register graph targets in `Time Chart`.
+   - Up to 20 channels can be imported.
+5. Register trigger rules in `Traps`.
+   - Examples: rising edge, change, greater than or equal.
+6. Save JSON or generate QR pages.
+7. In the Android/iOS app, open `QR Import` and scan the displayed QR pages in order.
 
-## .NET WPF App
+For multi-page QR output, import completes after the mobile app has scanned every page.
 
-```powershell
-cd D:\github\PlcIoChecker_QR\dotnet
-dotnet run --project src\PlcIoCheckerQr.Wpf
-```
+## Scanning Tips
 
-The app can generate QR pages, save Android-importable JSON, and save QR PNG
-files. QR display uses a dedicated screen so it can be shown large enough for
-phone scanning.
+- Display each QR as large as possible.
+- Scan one page before moving to the next.
+- If a device cannot read the QR reliably, reduce the QR chunk size so the tool generates more smaller QR pages.
+- After import, confirm that the project name and device list changed in the mobile app.
 
-## Build Single-File EXE
+## Documents
 
-```powershell
-cd D:\github\PlcIoChecker_QR
-.\build-dotnet-onefile.bat
-```
+- [Build and development](docs/BUILD.md)
+- [QR/JSON format](docs/QR_JSON_FORMAT.md)
+- [GUI requirements](docs/GUI_REQUIREMENTS.md)
 
-The executable is written to `dotnet\publish\win-x64`.
+## License
 
-## App-Compatible QR Format
+This repository is published under the MIT License. See [LICENSE](LICENSE).
 
-Each QR contains:
-
-```text
-PLCIOC2D|<session>|<index>|<total>|<sha256>|<payload-chunk>
-```
-
-- `index` is 1-based.
-- `sha256` is calculated from the minified JSON bytes after decompression.
-- `payload-chunk` is a slice of base64url-encoded raw-deflate-compressed JSON without padding.
-- Android reads this with `Inflater(true)` and iOS reads it with zlib raw inflate
-  (`inflateInit2(..., -MAX_WBITS)`). The .NET app therefore uses raw deflate,
-  not zlib or gzip containers.
-- Do not replace the app-side decoder with a normal zlib/gzip container decoder.
-  Raw deflate is intentional; otherwise QR payloads can scan successfully but
-  fail during import or checksum validation.
-- QR count is not fixed. Readers must join all chunks first, then decompress the
-  combined compressed bytes.
-
-## Project JSON v2 Values
-
-- `plc.vendor`: `MELSEC`, `KEYENCE`
-- `plc.connection.mode`: `REAL`, `DEMO_MOCK`
-- `plc.keyence.deviceMode`: `NORMAL`, `XYM`
-- `plc.connection.transport`: `TCP`, `UDP`
-- `traps.condition`: `RISING_EDGE`, `FALLING_EDGE`, `CHANGE`, `GREATER_OR_EQUAL`, `LESS_OR_EQUAL`, `EQUAL`, `NOT_EQUAL`
-- `dataType`: `BIT`, `INT16`, `UINT16`, `INT32`, `UINT32`, `FLOAT32`
-
-Generated project JSON includes only the shared v2 schema fields. UI-only
-preferences and runtime observation values are not emitted.
-
-## Python Reference
-
-```powershell
-cd D:\github\PlcIoChecker_QR\python
-python -m venv .venv
-.\.venv\Scripts\activate
-pip install -r requirements.txt
-python app.py
-```
+The MIT License applies only to the PC-side project builder and QR export tool in this repository. It does not include the Android/iOS PLC IO Checker mobile apps.

@@ -10,7 +10,7 @@ from PIL import ImageTk
 from qr_payload import encode_project_chunks, make_project, project_json_bytes
 
 
-APP_TITLE = "PlcIoChecker QR Python"
+APP_TITLE = "PLC IO Checker Project Builder Python"
 QR_ERROR_CORRECTION_LEVELS = {
     "L low 7%": qrcode.constants.ERROR_CORRECT_L,
     "M medium 15%": qrcode.constants.ERROR_CORRECT_M,

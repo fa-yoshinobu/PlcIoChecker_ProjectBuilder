@@ -2,7 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:PlcIoCheckerQr.Wpf"
-        Title="PLC IO Checker QR Builder"
+        Title="PLC IO Checker Project Builder"
         Width="1320"
         Height="900"
         MinWidth="1120"
@@ -103,7 +103,7 @@
             <TextBlock Text="PLC IO Checker"
                        Foreground="{StaticResource NavFg}"
                        FontWeight="SemiBold" FontSize="15"/>
-            <TextBlock Text=" QR Builder"
+            <TextBlock Text=" Project Builder"
                        Foreground="{StaticResource NavFgMuted}"
                        FontSize="15"/>
             <TextBlock Text=" — "

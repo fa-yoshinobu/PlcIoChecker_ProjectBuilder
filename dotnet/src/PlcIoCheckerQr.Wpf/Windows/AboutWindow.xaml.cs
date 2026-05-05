@@ -19,7 +19,7 @@ internal sealed partial class AboutWindow : Window
         LibrariesListView.ItemsSource = new[]
         {
             new LibraryInfo(
-                "PLC IO Checker QR Builder",
+                "PLC IO Checker Project Builder",
                 appVersion,
                 "Application",
                 "MIT",

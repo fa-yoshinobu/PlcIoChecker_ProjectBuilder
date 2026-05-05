@@ -1,0 +1,54 @@
+# Build And Development
+
+This document is for developers. The README is focused on app usage.
+
+## .NET WPF App
+
+The production app is the .NET WPF implementation under `dotnet/`.
+
+```powershell
+cd D:\github\PlcIoChecker_QR\dotnet
+dotnet run --project src\PlcIoCheckerQr.Wpf
+```
+
+WPF requires Windows. Core library tests can run on macOS/Linux, but the WPF app
+itself uses Windows Desktop SDK support.
+
+## Tests
+
+```powershell
+cd D:\github\PlcIoChecker_QR
+dotnet test dotnet\tests\PlcIoCheckerQr.Core.Tests\PlcIoCheckerQr.Core.Tests.csproj
+```
+
+On macOS with a newer SDK, this repository has also been tested with:
+
+```bash
+DOTNET_ROLL_FORWARD=Major dotnet test dotnet/tests/PlcIoCheckerQr.Core.Tests/PlcIoCheckerQr.Core.Tests.csproj
+```
+
+## Build Single-File EXE
+
+```powershell
+cd D:\github\PlcIoChecker_QR
+.\build-dotnet-onefile.bat
+```
+
+The executable is written to:
+
+```text
+dotnet\publish\win-x64\PlcIoCheckerProjectBuilder.exe
+```
+
+## Python Reference
+
+The Python app is an earlier prototype and regression reference. Keep it aligned
+with the .NET WPF app when changing QR payload behavior.
+
+```powershell
+cd D:\github\PlcIoChecker_QR\python
+python -m venv .venv
+.\.venv\Scripts\activate
+pip install -r requirements.txt
+python app.py
+```
