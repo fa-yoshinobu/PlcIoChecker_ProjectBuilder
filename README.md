@@ -9,6 +9,12 @@
 ![QR raw deflate](https://img.shields.io/badge/QR-raw%20deflate-f97316)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
+[![C#](https://img.shields.io/badge/C%23-239120?logo=csharp&logoColor=white)](https://learn.microsoft.com/dotnet/csharp/)
+[![Windows](https://img.shields.io/badge/Windows-0078D4?logo=windows&logoColor=white)](https://learn.microsoft.com/windows/)
+[![Python](https://img.shields.io/badge/Python-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+
+[![Release](https://github.com/fa-yoshinobu/PlcIoChecker_QR/actions/workflows/release.yml/badge.svg)](https://github.com/fa-yoshinobu/PlcIoChecker_QR/actions/workflows/release.yml)
+
 PLC IO Checker Project Builder is a PC tool for creating PLC IO Checker project settings and transferring them to the mobile apps as JSON or QR codes.
 
 Instead of entering long PLC settings on a phone, edit the project on a PC and import it from the Android/iOS app QR scanner.
