@@ -1,4 +1,3 @@
-using PlcIoCheckerQr.Core;
 using QRCoder;
 using System.Reflection;
 using System.Windows;
@@ -7,19 +6,39 @@ namespace PlcIoCheckerQr.Wpf.Windows;
 
 internal sealed partial class AboutWindow : Window
 {
-    public AboutWindow()
+    public AboutWindow(bool useEnglish = true)
     {
         InitializeComponent();
 
         var appVersion = GetAssemblyVersionText(Assembly.GetExecutingAssembly());
+        Title = useEnglish ? "About" : "バージョン情報";
         VersionTextBlock.Text = $"Version: {appVersion}";
+        LibrariesTitleTextBlock.Text = useEnglish ? "Libraries" : "使用ライブラリ";
+        CloseButton.Content = useEnglish ? "×  Close" : "×  閉じる";
 
         LibrariesListView.ItemsSource = new[]
         {
-            new LibraryInfo("PLC IO Checker QR Builder", appVersion, "Application"),
-            new LibraryInfo("PlcIoCheckerQr.Core", GetAssemblyVersionText(typeof(ProjectQrPayload).Assembly), "QR payload models and encoding"),
-            new LibraryInfo("QRCoder", GetAssemblyVersionText(typeof(QRCodeGenerator).Assembly), "QR code generation"),
-            new LibraryInfo(".NET Runtime", Environment.Version.ToString(), "Application runtime"),
+            new LibraryInfo(
+                "PLC IO Checker QR Builder",
+                appVersion,
+                "Application",
+                "MIT",
+                "Not specified",
+                "https://github.com/fa-yoshinobu/PlcIoChecker_QR"),
+            new LibraryInfo(
+                "QRCoder",
+                GetAssemblyVersionText(typeof(QRCodeGenerator).Assembly),
+                "QR code generation",
+                "MIT",
+                "Raffael Herrmann",
+                "https://github.com/codebude/QRCoder/"),
+            new LibraryInfo(
+                ".NET Runtime",
+                Environment.Version.ToString(),
+                "Application runtime",
+                "MIT",
+                "Microsoft Corporation",
+                "https://dotnet.microsoft.com/"),
         };
     }
 
@@ -38,5 +57,14 @@ internal sealed partial class AboutWindow : Window
         return version?.ToString() ?? "Unknown";
     }
 
-    private sealed record LibraryInfo(string Name, string Version, string Notes);
+    private sealed record LibraryInfo(
+        string Name,
+        string Version,
+        string Notes,
+        string License,
+        string Copyright,
+        string Url)
+    {
+        public string Details => $"License: {License}\nCopyright: {Copyright}\nURL: {Url}";
+    }
 }

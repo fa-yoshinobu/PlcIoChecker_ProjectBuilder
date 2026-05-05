@@ -51,8 +51,7 @@ public sealed class ProjectQrPayloadTests
             Multidrop: 0,
             DevicesText: "R000\r\nDM100,UInt16",
             WatchText: "R000",
-            TrapsText: "DM100,Change,,true",
-            BlockDisplayDensity: "Detailed"),
+            TrapsText: "DM100,Change,,true"),
             nowEpochMs: 123);
 
         var json = Encoding.UTF8.GetString(ProjectQrPayload.ProjectQrJsonBytes(project));
@@ -60,7 +59,6 @@ public sealed class ProjectQrPayloadTests
         Assert.Contains("\"mode\":\"DEMO_MOCK\"", json);
         Assert.Contains("\"deviceMode\":\"NORMAL\"", json);
         Assert.Contains("\"timeChart\":[{\"address\":\"R000\",\"dataType\":\"BIT\"}]", json);
-        Assert.DoesNotContain("blockDisplayDensity", json);
         Assert.DoesNotContain("\"melsec\"", json);
     }
 

@@ -20,28 +20,30 @@
   <Grid>
     <Grid.RowDefinitions>
       <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
       <RowDefinition Height="*"/>
       <RowDefinition Height="38"/>
     </Grid.RowDefinitions>
 
+    <!-- Row 0: 標準メニュー -->
     <Menu Grid.Row="0"
           Background="{StaticResource HeaderBg}"
           Foreground="{StaticResource TextMain}"
           AutomationProperties.AutomationId="MainMenu">
-      <MenuItem Header="ファイル" AutomationProperties.AutomationId="FileMenu">
-        <MenuItem Header="JSON 読み込み"
+      <MenuItem x:Name="_fileMenu" Header="ファイル" AutomationProperties.AutomationId="FileMenu">
+        <MenuItem x:Name="_loadJsonMenuItem" Header="JSON 読み込み"
                   AutomationProperties.AutomationId="LoadJsonMenuItem"
                   Click="LoadJson_Click"/>
-        <MenuItem Header="JSON 保存"
+        <MenuItem x:Name="_saveJsonMenuItem" Header="JSON 保存"
                   AutomationProperties.AutomationId="SaveJsonMenuItem"
                   Click="SaveJson_Click"/>
-        <MenuItem Header="JSON 表示"
+        <MenuItem x:Name="_showJsonMenuItem" Header="JSON 表示"
                   AutomationProperties.AutomationId="ShowJsonMenuItem"
                   Click="ShowJson_Click"/>
       </MenuItem>
       <MenuItem x:Name="_qrMenu" Header="QR" AutomationProperties.AutomationId="QrMenu"
                 ToolTip="QR の分割、表示サイズ、誤り訂正レベルを設定します。">
-        <MenuItem Header="分割サイズ"
+        <MenuItem x:Name="_qrChunkSizeMenu" Header="分割サイズ"
                   AutomationProperties.AutomationId="QrChunkSizeMenu"
                   ToolTip="1つのQRに入れる文字数です。小さいほどページ数は増えますが、QRは粗くなり読み取りやすくなります。">
           <MenuItem Header="350 chars/page" Tag="chunk:350" IsCheckable="True" Click="QrOptionMenuItem_Click"
@@ -53,7 +55,7 @@
           <MenuItem Header="1200 chars/page" Tag="chunk:1200" IsCheckable="True" Click="QrOptionMenuItem_Click"
                     ToolTip="ページ数を最小化したい場合向けです。QRが細かくなり、読み取りにくくなる場合があります。"/>
         </MenuItem>
-        <MenuItem Header="表示サイズ"
+        <MenuItem x:Name="_qrDisplaySizeMenu" Header="表示サイズ"
                   AutomationProperties.AutomationId="QrDisplaySizeMenu"
                   ToolTip="画面上に表示するQR画像の大きさです。読み取り端末や画面サイズに合わせて変更します。">
           <MenuItem Header="600 px" Tag="size:600" IsCheckable="True" Click="QrOptionMenuItem_Click"
@@ -65,7 +67,7 @@
           <MenuItem Header="1200 px" Tag="size:1200" IsCheckable="True" Click="QrOptionMenuItem_Click"
                     ToolTip="大きめの表示です。離れた位置から読み取る場合に使います。"/>
         </MenuItem>
-        <MenuItem Header="誤り訂正"
+        <MenuItem x:Name="_qrErrorCorrectionMenu" Header="誤り訂正"
                   AutomationProperties.AutomationId="QrErrorCorrectionMenu"
                   ToolTip="QRが一部欠けたり汚れたりしても復元できる強さです。強くするほど復元力は上がりますが、QRは細かくなります。">
           <MenuItem Header="L" Tag="ec:L" IsCheckable="True" Click="QrOptionMenuItem_Click"
@@ -78,54 +80,115 @@
                     ToolTip="約30%まで復元できます。復元力は高いですが、QRが細かくなり読み取りにくくなる場合があります。"/>
         </MenuItem>
       </MenuItem>
-      <MenuItem Header="ヘルプ" AutomationProperties.AutomationId="HelpMenu">
-        <MenuItem Header="バージョン情報"
+      <MenuItem x:Name="_helpMenu" Header="ヘルプ" AutomationProperties.AutomationId="HelpMenu">
+        <MenuItem x:Name="_aboutMenuItem" Header="バージョン情報"
                   AutomationProperties.AutomationId="AboutMenuItem"
                   Click="AboutMenuItem_Click"/>
       </MenuItem>
     </Menu>
 
-    <Grid x:Name="_inputView" Grid.Row="1">
-      <Grid.RowDefinitions>
-        <RowDefinition Height="Auto"/>
-        <RowDefinition Height="*"/>
-      </Grid.RowDefinitions>
+    <!-- Row 1: ダークナビバー -->
+    <Border Grid.Row="1" Background="{StaticResource NavBg}">
+      <Grid Height="56">
 
-      <Border Grid.Row="0"
-              Background="{StaticResource HeaderBg}"
-              BorderBrush="{StaticResource BorderSoft}"
-              BorderThickness="0,0,0,1"
-              Padding="24,16">
-        <Grid>
+        <!-- 入力画面ナビ -->
+        <Grid x:Name="_navInputArea">
           <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*"/>
             <ColumnDefinition Width="Auto"/>
           </Grid.ColumnDefinitions>
 
-          <StackPanel Grid.Column="0" Orientation="Vertical">
-            <TextBlock Text="PLC IO Checker QR Builder"
-                       FontSize="23"
-                       FontWeight="SemiBold"
-                       Foreground="{StaticResource TextMain}"/>
+          <StackPanel Grid.Column="0" Orientation="Horizontal"
+                      VerticalAlignment="Center" Margin="24,0,0,0">
+            <TextBlock Text="PLC IO Checker"
+                       Foreground="{StaticResource NavFg}"
+                       FontWeight="SemiBold" FontSize="15"/>
+            <TextBlock Text=" QR Builder"
+                       Foreground="{StaticResource NavFgMuted}"
+                       FontSize="15"/>
+            <TextBlock Text=" — "
+                       Foreground="{StaticResource NavHover}"
+                       FontSize="15" Margin="8,0"/>
             <TextBlock x:Name="_headerProjectName"
-                       Text="PLC QR Project"
-                       Margin="0,4,0,0"
-                       Foreground="{StaticResource TextMuted}"/>
+                       Foreground="{StaticResource NavFgMuted}"
+                       FontSize="13"
+                       VerticalAlignment="Center"
+                       TextTrimming="CharacterEllipsis"
+                       MaxWidth="360"/>
           </StackPanel>
 
-          <StackPanel Grid.Column="1"
-                      Orientation="Horizontal"
-                      VerticalAlignment="Center"
-                      Margin="20,0,0,0">
-            <Button Content="QR 生成"
+          <StackPanel Grid.Column="1" Orientation="Horizontal"
+                      VerticalAlignment="Center" Margin="0,0,20,0">
+            <Button x:Name="_langButton"
+                    Style="{StaticResource NavOutlineButton}"
+                    Margin="0,0,10,0"
+                    FontSize="12"
+                    Click="LangButton_Click">
+              <StackPanel Orientation="Horizontal">
+                <TextBlock Text="&#x1F310; " FontSize="12" VerticalAlignment="Center"/>
+                <TextBlock x:Name="_langLabel" Text="JP" FontSize="12" VerticalAlignment="Center"/>
+              </StackPanel>
+            </Button>
+            <Button x:Name="_generateQrButton"
+                    Content="▦  QR 生成"
                     Style="{StaticResource PrimaryButton}"
                     Click="Generate_Click"/>
           </StackPanel>
         </Grid>
-      </Border>
 
-      <TabControl x:Name="_mainTabs" Grid.Row="1">
-        <TabItem Header="デバイス">
+        <!-- QR画面ナビ -->
+        <Grid x:Name="_navQrArea" Visibility="Collapsed">
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="Auto"/>
+          </Grid.ColumnDefinitions>
+
+          <Button x:Name="_backToEditorButton"
+                  Grid.Column="0"
+                  Content="← 入力へ戻る"
+                  Style="{StaticResource NavGhostButton}"
+                  Margin="12,0,0,0"
+                  Click="BackToEditor_Click"/>
+
+          <StackPanel Grid.Column="1" Orientation="Vertical"
+                      Margin="18,0" VerticalAlignment="Center">
+            <TextBlock Text="QR"
+                       FontSize="16" FontWeight="SemiBold"
+                       Foreground="{StaticResource NavFg}"/>
+            <TextBlock x:Name="_pageLabel"
+                       Foreground="{StaticResource ErrorFg}"
+                       FontSize="15"
+                       FontWeight="Bold"
+                       TextTrimming="CharacterEllipsis"/>
+          </StackPanel>
+
+          <StackPanel Grid.Column="2" Orientation="Horizontal"
+                      VerticalAlignment="Center" Margin="0,0,20,0">
+            <Button x:Name="_prevQrButton"
+                    Content="←  前へ"
+                    Style="{StaticResource NavGhostButton}"
+                    Margin="0,0,4,0"
+                    Click="PrevQr_Click"/>
+            <Button x:Name="_nextQrButton"
+                    Content="次へ  →"
+                    Style="{StaticResource NavGhostButton}"
+                    Margin="0,0,12,0"
+                    Click="NextQr_Click"/>
+            <Button x:Name="_saveQrImagesButton"
+                    Content="↓  PNG 保存"
+                    Style="{StaticResource AppButton}"
+                    Click="SaveQrImages_Click"/>
+          </StackPanel>
+        </Grid>
+
+      </Grid>
+    </Border>
+
+    <!-- Row 2: コンテンツ -->
+    <Grid x:Name="_inputView" Grid.Row="2">
+      <TabControl x:Name="_mainTabs">
+        <TabItem x:Name="_devicesTab" Header="デバイス">
           <Border Style="{StaticResource PanelBorder}">
             <Grid>
               <Grid.RowDefinitions>
@@ -140,28 +203,32 @@
                   <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <StackPanel Grid.Column="0" Orientation="Vertical" Margin="0,0,20,0">
-                  <TextBlock Text="デバイス" Style="{StaticResource SectionTitle}"/>
-                  <TextBlock Text="アドレスとデータ型を編集します" Style="{StaticResource SectionMeta}"/>
+                  <TextBlock x:Name="_devicesTitle" Text="デバイス" Style="{StaticResource SectionTitle}"/>
+                  <TextBlock x:Name="_devicesMeta" Text="アドレスとデータ型を編集します" Style="{StaticResource SectionMeta}"/>
                 </StackPanel>
                 <StackPanel Grid.Column="1"
                             Orientation="Horizontal"
                             HorizontalAlignment="Right"
                             VerticalAlignment="Center">
-                  <Button Content="上へ"
+                  <Button x:Name="_moveDeviceUpButton"
+                          Content="↑  上へ"
                           Style="{StaticResource GhostButton}"
                           ToolTip="選択したデバイス行を上へ移動します。Alt+↑ でも移動できます。"
                           Margin="0,0,8,0"
                           Click="MoveDeviceUp_Click"/>
-                  <Button Content="下へ"
+                  <Button x:Name="_moveDeviceDownButton"
+                          Content="↓  下へ"
                           Style="{StaticResource GhostButton}"
                           ToolTip="選択したデバイス行を下へ移動します。Alt+↓ でも移動できます。"
                           Margin="0,0,8,0"
                           Click="MoveDeviceDown_Click"/>
-                  <Button Content="行を追加"
+                  <Button x:Name="_addDeviceButton"
+                          Content="+  行を追加"
                           Style="{StaticResource AppButton}"
                           Margin="0,0,8,0"
                           Click="AddDevice_Click"/>
-                  <Button Content="選択行を削除"
+                  <Button x:Name="_deleteDeviceButton"
+                          Content="−  削除"
                           Style="{StaticResource GhostButton}"
                           Click="DeleteDevice_Click"/>
                 </StackPanel>
@@ -174,7 +241,7 @@
           </Border>
         </TabItem>
 
-        <TabItem Header="タイムチャート">
+        <TabItem x:Name="_watchTab" Header="タイムチャート">
           <Border Style="{StaticResource PanelBorder}">
             <Grid>
               <Grid.RowDefinitions>
@@ -189,28 +256,32 @@
                   <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <StackPanel Grid.Column="0" Orientation="Vertical" Margin="0,0,20,0">
-                  <TextBlock Text="タイムチャート対象" Style="{StaticResource SectionTitle}"/>
-                  <TextBlock Text="Android のタイムチャートに表示するアドレスを指定します（最大20件）" Style="{StaticResource SectionMeta}"/>
+                  <TextBlock x:Name="_watchTitle" Text="タイムチャート対象" Style="{StaticResource SectionTitle}"/>
+                  <TextBlock x:Name="_watchMeta" Text="Android のタイムチャートに表示するアドレスを指定します（最大20件）" Style="{StaticResource SectionMeta}"/>
                 </StackPanel>
                 <StackPanel Grid.Column="1"
                             Orientation="Horizontal"
                             HorizontalAlignment="Right"
                             VerticalAlignment="Center">
-                  <Button Content="上へ"
+                  <Button x:Name="_moveWatchUpButton"
+                          Content="↑  上へ"
                           Style="{StaticResource GhostButton}"
                           ToolTip="選択したタイムチャート行を上へ移動します。Alt+↑ でも移動できます。"
                           Margin="0,0,8,0"
                           Click="MoveWatchUp_Click"/>
-                  <Button Content="下へ"
+                  <Button x:Name="_moveWatchDownButton"
+                          Content="↓  下へ"
                           Style="{StaticResource GhostButton}"
                           ToolTip="選択したタイムチャート行を下へ移動します。Alt+↓ でも移動できます。"
                           Margin="0,0,8,0"
                           Click="MoveWatchDown_Click"/>
-                  <Button Content="行を追加"
+                  <Button x:Name="_addWatchButton"
+                          Content="+  行を追加"
                           Style="{StaticResource AppButton}"
                           Margin="0,0,8,0"
                           Click="AddWatch_Click"/>
-                  <Button Content="選択行を削除"
+                  <Button x:Name="_deleteWatchButton"
+                          Content="−  削除"
                           Style="{StaticResource GhostButton}"
                           Click="DeleteWatch_Click"/>
                 </StackPanel>
@@ -223,7 +294,7 @@
           </Border>
         </TabItem>
 
-        <TabItem Header="トラップ">
+        <TabItem x:Name="_trapsTab" Header="トラップ">
           <Border Style="{StaticResource PanelBorder}">
             <Grid>
               <Grid.RowDefinitions>
@@ -238,28 +309,32 @@
                   <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <StackPanel Grid.Column="0" Orientation="Vertical" Margin="0,0,20,0">
-                  <TextBlock Text="トラップ" Style="{StaticResource SectionTitle}"/>
-                  <TextBlock Text="条件、しきい値、有効状態を編集します" Style="{StaticResource SectionMeta}"/>
+                  <TextBlock x:Name="_trapsTitle" Text="トラップ" Style="{StaticResource SectionTitle}"/>
+                  <TextBlock x:Name="_trapsMeta" Text="条件、しきい値、有効状態を編集します" Style="{StaticResource SectionMeta}"/>
                 </StackPanel>
                 <StackPanel Grid.Column="1"
                             Orientation="Horizontal"
                             HorizontalAlignment="Right"
                             VerticalAlignment="Center">
-                  <Button Content="上へ"
+                  <Button x:Name="_moveTrapUpButton"
+                          Content="↑  上へ"
                           Style="{StaticResource GhostButton}"
                           ToolTip="選択したトラップ行を上へ移動します。Alt+↑ でも移動できます。"
                           Margin="0,0,8,0"
                           Click="MoveTrapUp_Click"/>
-                  <Button Content="下へ"
+                  <Button x:Name="_moveTrapDownButton"
+                          Content="↓  下へ"
                           Style="{StaticResource GhostButton}"
                           ToolTip="選択したトラップ行を下へ移動します。Alt+↓ でも移動できます。"
                           Margin="0,0,8,0"
                           Click="MoveTrapDown_Click"/>
-                  <Button Content="行を追加"
+                  <Button x:Name="_addTrapButton"
+                          Content="+  行を追加"
                           Style="{StaticResource AppButton}"
                           Margin="0,0,8,0"
                           Click="AddTrap_Click"/>
-                  <Button Content="選択行を削除"
+                  <Button x:Name="_deleteTrapButton"
+                          Content="−  削除"
                           Style="{StaticResource GhostButton}"
                           Click="DeleteTrap_Click"/>
                 </StackPanel>
@@ -272,7 +347,7 @@
           </Border>
         </TabItem>
 
-        <TabItem Header="プロジェクト/接続">
+        <TabItem x:Name="_projectTab" Header="プロジェクト/接続">
           <ScrollViewer VerticalScrollBarVisibility="Auto">
             <Grid>
               <Grid.ColumnDefinitions>
@@ -290,7 +365,6 @@
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
                   </Grid.RowDefinitions>
                   <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="175"/>
@@ -298,24 +372,21 @@
                   </Grid.ColumnDefinitions>
 
                   <StackPanel Grid.Row="0" Grid.ColumnSpan="2">
-                    <TextBlock Text="プロジェクト" Style="{StaticResource SectionTitle}"/>
-                    <TextBlock Text="Android 側に渡す基本情報" Style="{StaticResource SectionMeta}"/>
+                    <TextBlock x:Name="_projectSectionTitle" Text="プロジェクト" Style="{StaticResource SectionTitle}"/>
+                    <TextBlock x:Name="_projectSectionMeta" Text="Android 側に渡す基本情報" Style="{StaticResource SectionMeta}"/>
                   </StackPanel>
 
-                  <TextBlock Grid.Row="2" Grid.Column="0" Text="プロジェクト名" Style="{StaticResource FormLabel}" Margin="0,6,14,6"/>
+                  <TextBlock x:Name="_projectNameLabel" Grid.Row="2" Grid.Column="0" Text="プロジェクト名" Style="{StaticResource FormLabel}" Margin="0,6,14,6"/>
                   <TextBox x:Name="_projectName" Grid.Row="2" Grid.Column="1" Text="PLC QR Project" Margin="0,4,0,4"/>
 
-                  <TextBlock Grid.Row="3" Grid.Column="0" Text="メーカー" Style="{StaticResource FormLabel}" Margin="0,6,14,6"/>
+                  <TextBlock x:Name="_vendorLabel" Grid.Row="3" Grid.Column="0" Text="メーカー" Style="{StaticResource FormLabel}" Margin="0,6,14,6"/>
                   <ComboBox x:Name="_vendor" Grid.Row="3" Grid.Column="1" Margin="0,4,0,4" ItemTemplate="{StaticResource UppercaseComboBoxItemTemplate}"/>
 
-                  <TextBlock Grid.Row="4" Grid.Column="0" Text="CPU model" Style="{StaticResource FormLabel}" Margin="0,6,14,6"/>
+                  <TextBlock x:Name="_modelLabel" Grid.Row="4" Grid.Column="0" Text="CPU model" Style="{StaticResource FormLabel}" Margin="0,6,14,6"/>
                   <ComboBox x:Name="_model" Grid.Row="4" Grid.Column="1" Margin="0,4,0,4"/>
 
-                  <TextBlock Grid.Row="5" Grid.Column="0" Text="表示密度" Style="{StaticResource FormLabel}" Margin="0,6,14,6"/>
-                  <ComboBox x:Name="_density" Grid.Row="5" Grid.Column="1" Margin="0,4,0,4" ItemTemplate="{StaticResource UppercaseComboBoxItemTemplate}"/>
-
-                  <TextBlock x:Name="_keyenceModeLabel" Grid.Row="6" Grid.Column="0" Text="KEYENCE 表示" Style="{StaticResource FormLabel}" Margin="0,6,14,6"/>
-                  <ComboBox x:Name="_keyenceMode" Grid.Row="6" Grid.Column="1" Margin="0,4,0,4" ItemTemplate="{StaticResource UppercaseComboBoxItemTemplate}"/>
+                  <TextBlock x:Name="_keyenceModeLabel" Grid.Row="5" Grid.Column="0" Text="KEYENCE 表示" Style="{StaticResource FormLabel}" Margin="0,6,14,6"/>
+                  <ComboBox x:Name="_keyenceMode" Grid.Row="5" Grid.Column="1" Margin="0,4,0,4" ItemTemplate="{StaticResource UppercaseComboBoxItemTemplate}"/>
                 </Grid>
               </Border>
 
@@ -341,26 +412,26 @@
                   </Grid.ColumnDefinitions>
 
                   <StackPanel Grid.Row="0" Grid.ColumnSpan="2">
-                    <TextBlock Text="接続" Style="{StaticResource SectionTitle}"/>
-                    <TextBlock Text="PLC 通信設定" Style="{StaticResource SectionMeta}"/>
+                    <TextBlock x:Name="_connectionSectionTitle" Text="接続" Style="{StaticResource SectionTitle}"/>
+                    <TextBlock x:Name="_connectionSectionMeta" Text="PLC 通信設定" Style="{StaticResource SectionMeta}"/>
                   </StackPanel>
 
-                  <TextBlock Grid.Row="2" Grid.Column="0" Text="Connection mode" Style="{StaticResource FormLabel}" Margin="0,6,14,6"/>
+                  <TextBlock x:Name="_connectionModeLabel" Grid.Row="2" Grid.Column="0" Text="Connection mode" Style="{StaticResource FormLabel}" Margin="0,6,14,6"/>
                   <ComboBox x:Name="_connectionMode" Grid.Row="2" Grid.Column="1" Margin="0,4,0,4" ItemTemplate="{StaticResource UppercaseComboBoxItemTemplate}"/>
 
-                  <TextBlock Grid.Row="3" Grid.Column="0" Text="IP address" Style="{StaticResource FormLabel}" Margin="0,6,14,6"/>
+                  <TextBlock x:Name="_hostLabel" Grid.Row="3" Grid.Column="0" Text="IP address" Style="{StaticResource FormLabel}" Margin="0,6,14,6"/>
                   <TextBox x:Name="_host" Grid.Row="3" Grid.Column="1" Text="192.168.250.100" Margin="0,4,0,4"/>
 
-                  <TextBlock Grid.Row="4" Grid.Column="0" Text="Port" Style="{StaticResource FormLabel}" Margin="0,6,14,6"/>
+                  <TextBlock x:Name="_portLabel" Grid.Row="4" Grid.Column="0" Text="Port" Style="{StaticResource FormLabel}" Margin="0,6,14,6"/>
                   <TextBox x:Name="_port" Grid.Row="4" Grid.Column="1" Text="1025" Margin="0,4,0,4"/>
 
-                  <TextBlock Grid.Row="5" Grid.Column="0" Text="Transport" Style="{StaticResource FormLabel}" Margin="0,6,14,6"/>
+                  <TextBlock x:Name="_transportLabel" Grid.Row="5" Grid.Column="0" Text="Transport" Style="{StaticResource FormLabel}" Margin="0,6,14,6"/>
                   <ComboBox x:Name="_transport" Grid.Row="5" Grid.Column="1" Margin="0,4,0,4" ItemTemplate="{StaticResource UppercaseComboBoxItemTemplate}"/>
 
-                  <TextBlock Grid.Row="6" Grid.Column="0" Text="監視周期 ms" Style="{StaticResource FormLabel}" Margin="0,6,14,6"/>
+                  <TextBlock x:Name="_intervalLabel" Grid.Row="6" Grid.Column="0" Text="監視周期 ms" Style="{StaticResource FormLabel}" Margin="0,6,14,6"/>
                   <TextBox x:Name="_interval" Grid.Row="6" Grid.Column="1" Text="500" Margin="0,4,0,4"/>
 
-                  <TextBlock Grid.Row="7" Grid.Column="0" Text="Timeout ms" Style="{StaticResource FormLabel}" Margin="0,6,14,6"/>
+                  <TextBlock x:Name="_timeoutLabel" Grid.Row="7" Grid.Column="0" Text="Timeout ms" Style="{StaticResource FormLabel}" Margin="0,6,14,6"/>
                   <TextBox x:Name="_timeout" Grid.Row="7" Grid.Column="1" Text="2000" Margin="0,4,0,4"/>
 
                   <TextBlock x:Name="_networkLabel" Grid.Row="8" Grid.Column="0" Text="Network" Style="{StaticResource FormLabel}" Margin="0,6,14,6"/>
@@ -383,64 +454,15 @@
     </Grid>
 
     <Grid x:Name="_qrView"
-          Grid.Row="1"
+          Grid.Row="2"
           Visibility="Collapsed"
           Background="{StaticResource QrStageBg}">
       <Grid.RowDefinitions>
-        <RowDefinition Height="Auto"/>
         <RowDefinition Height="*"/>
         <RowDefinition Height="Auto"/>
       </Grid.RowDefinitions>
 
-      <Border Grid.Row="0"
-              Background="{StaticResource HeaderBg}"
-              BorderBrush="{StaticResource BorderSoft}"
-              BorderThickness="0,0,0,1"
-              Padding="22,16">
-        <Grid>
-          <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="Auto"/>
-            <ColumnDefinition Width="*"/>
-            <ColumnDefinition Width="Auto"/>
-          </Grid.ColumnDefinitions>
-
-          <Button Grid.Column="0"
-                  Content="入力へ戻る"
-                  Style="{StaticResource AppButton}"
-                  Click="BackToEditor_Click"/>
-
-          <StackPanel Grid.Column="1"
-                      Orientation="Vertical"
-                      Margin="18,0,0,0"
-                      VerticalAlignment="Center">
-            <TextBlock Text="QR"
-                       FontSize="24"
-                       FontWeight="SemiBold"/>
-            <TextBlock x:Name="_pageLabel"
-                       Foreground="{StaticResource TextMuted}"
-                       Margin="0,4,0,0"
-                       TextTrimming="CharacterEllipsis"/>
-          </StackPanel>
-
-          <StackPanel Grid.Column="2"
-                      Orientation="Horizontal"
-                      VerticalAlignment="Center">
-            <Button Content="前へ"
-                    Style="{StaticResource AppButton}"
-                    Margin="0,0,8,0"
-                    Click="PrevQr_Click"/>
-            <Button Content="次へ"
-                    Style="{StaticResource AppButton}"
-                    Margin="0,0,8,0"
-                    Click="NextQr_Click"/>
-            <Button Content="PNG 保存"
-                    Style="{StaticResource AppButton}"
-                    Click="SaveQrImages_Click"/>
-          </StackPanel>
-        </Grid>
-      </Border>
-
-      <Grid Grid.Row="1" Margin="24">
+      <Grid Grid.Row="0" Margin="24">
         <Border Background="{StaticResource PanelBg}"
                 BorderBrush="{StaticResource BorderSoft}"
                 BorderThickness="1"
@@ -462,7 +484,7 @@
         </Border>
       </Grid>
 
-      <Border Grid.Row="2"
+      <Border Grid.Row="1"
               Background="{StaticResource HeaderBg}"
               BorderBrush="{StaticResource BorderSoft}"
               BorderThickness="0,1,0,0"
@@ -474,7 +496,8 @@
       </Border>
     </Grid>
 
-    <Border Grid.Row="2"
+    <!-- Row 3: ステータスバー -->
+    <Border Grid.Row="3"
             Background="{StaticResource HeaderBg}"
             BorderBrush="{StaticResource BorderSoft}"
             BorderThickness="0,1,0,0"

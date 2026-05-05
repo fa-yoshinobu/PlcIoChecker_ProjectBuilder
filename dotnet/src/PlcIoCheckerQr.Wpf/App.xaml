@@ -3,8 +3,12 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              StartupUri="MainWindow.xaml">
   <Application.Resources>
-    <SolidColorBrush x:Key="WindowBg" Color="#F4F7F6"/>
-    <SolidColorBrush x:Key="HeaderBg" Color="#FBFCFD"/>
+    <SolidColorBrush x:Key="NavBg"      Color="#0F172A"/>
+    <SolidColorBrush x:Key="NavFg"      Color="#F8FAFC"/>
+    <SolidColorBrush x:Key="NavFgMuted" Color="#94A3B8"/>
+    <SolidColorBrush x:Key="NavHover"   Color="#1E293B"/>
+    <SolidColorBrush x:Key="WindowBg" Color="#F1F5F9"/>
+    <SolidColorBrush x:Key="HeaderBg" Color="#FFFFFF"/>
     <SolidColorBrush x:Key="PanelBg" Color="#FFFFFF"/>
     <SolidColorBrush x:Key="PanelSoft" Color="#F8FBFA"/>
     <SolidColorBrush x:Key="BorderSoft" Color="#DDE7E3"/>
@@ -23,6 +27,72 @@
       <Setter Property="FontFamily" Value="Yu Gothic UI"/>
       <Setter Property="FontSize" Value="13"/>
       <Setter Property="Foreground" Value="{StaticResource TextMain}"/>
+    </Style>
+
+    <Style x:Key="NavOutlineButton" TargetType="Button">
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="BorderBrush" Value="{StaticResource NavFgMuted}"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="Foreground" Value="{StaticResource NavFg}"/>
+      <Setter Property="Padding" Value="12,5"/>
+      <Setter Property="MinHeight" Value="30"/>
+      <Setter Property="Cursor" Value="Hand"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="Button">
+            <Border x:Name="Bd"
+                    Background="{TemplateBinding Background}"
+                    BorderBrush="{TemplateBinding BorderBrush}"
+                    BorderThickness="{TemplateBinding BorderThickness}"
+                    CornerRadius="14"
+                    Padding="{TemplateBinding Padding}">
+              <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="Bd" Property="Background" Value="{StaticResource NavHover}"/>
+                <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource NavFg}"/>
+              </Trigger>
+              <Trigger Property="IsPressed" Value="True">
+                <Setter TargetName="Bd" Property="Background" Value="{StaticResource NavBg}"/>
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+
+    <Style x:Key="NavGhostButton" TargetType="Button">
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="BorderBrush" Value="Transparent"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="Foreground" Value="{StaticResource NavFgMuted}"/>
+      <Setter Property="Padding" Value="12,7"/>
+      <Setter Property="MinHeight" Value="34"/>
+      <Setter Property="Cursor" Value="Hand"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="Button">
+            <Border x:Name="Bd"
+                    Background="{TemplateBinding Background}"
+                    CornerRadius="6"
+                    Padding="{TemplateBinding Padding}">
+              <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="Bd" Property="Background" Value="{StaticResource NavHover}"/>
+                <Setter Property="Foreground" Value="{StaticResource NavFg}"/>
+              </Trigger>
+              <Trigger Property="IsPressed" Value="True">
+                <Setter TargetName="Bd" Property="Background" Value="{StaticResource NavBg}"/>
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
     </Style>
 
     <Style x:Key="AppButton" TargetType="Button">

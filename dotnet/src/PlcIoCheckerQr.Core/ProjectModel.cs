@@ -9,7 +9,6 @@ public sealed record PlcProject(
     IReadOnlyList<DeviceDefinition> Devices,
     IReadOnlyList<MonitorTargetDefinition> TimeChart,
     IReadOnlyList<TrapDefinition> Traps,
-    AppSettings Settings,
     long UpdatedAtEpochMs)
 {
     public IReadOnlyList<string> WatchItems { get; } = TimeChart.Select(target => target.Address).ToArray();
@@ -45,8 +44,6 @@ public sealed record TrapDefinition(
     long? LastTriggeredAtEpochMs,
     string? LastObservedValue);
 
-public sealed record AppSettings(string BlockDisplayDensity);
-
 public sealed record ProjectInput(
     string Name,
     string Vendor,
@@ -64,8 +61,7 @@ public sealed record ProjectInput(
     int Multidrop,
     string DevicesText,
     string WatchText,
-    string TrapsText,
-    string BlockDisplayDensity = "Compact");
+    string TrapsText);
 
 public static partial class ProjectFactory
 {
@@ -75,7 +71,6 @@ public static partial class ProjectFactory
     public static readonly string[] ConnectionModes = ["Real", "DemoMock"];
     public static readonly string[] KeyenceDeviceModes = ["Normal", "Xym"];
     public static readonly string[] TransportModes = ["Tcp", "Udp"];
-    public static readonly string[] BlockDisplayDensities = ["Compact", "Detailed"];
     public static readonly string[] DeviceDataTypes = ["Bit", "Int16", "UInt16", "Int32", "UInt32", "Float32"];
     public static readonly string[] MelsecCpuModels = ["iQ-R", "iQ-F", "iQ-L", "MX-R", "MX-F", "QnUDV", "QnU", "QCPU", "LCPU"];
     public static readonly string[] KeyenceCpuModels = ["KV-X500", "KV-8000", "KV-7000", "KV-5000"];
@@ -102,7 +97,6 @@ public static partial class ProjectFactory
         ValidateChoice(input.ConnectionMode, ConnectionModes, "connection mode");
         ValidateChoice(input.KeyenceDeviceMode, KeyenceDeviceModes, "Keyence device mode");
         ValidateChoice(input.TransportMode, TransportModes, "transport mode");
-        ValidateChoice(input.BlockDisplayDensity, BlockDisplayDensities, "block display density");
 
         var now = nowEpochMs ?? DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         var name = string.IsNullOrWhiteSpace(input.Name) ? "PLC QR Project" : input.Name.Trim();
@@ -208,7 +202,6 @@ public static partial class ProjectFactory
             Devices: devices,
             TimeChart: timeChart,
             Traps: traps,
-            Settings: new AppSettings(input.BlockDisplayDensity),
             UpdatedAtEpochMs: now);
     }
 

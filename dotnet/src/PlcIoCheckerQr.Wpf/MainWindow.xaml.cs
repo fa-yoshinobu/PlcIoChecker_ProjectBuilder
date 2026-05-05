@@ -166,12 +166,15 @@ public partial class MainWindow : Window
     private int _chunkSize = 800;
     private int _displaySize = 1000;
     private string _errorCorrection = "L";
+    private bool _useEnglish = true;
+
+    private static bool UseEnglishLabels { get; set; } = true;
 
     private static string TrapConditionDisplayText(string condition) => condition switch
     {
-        "Rise" => "立上り (OFF→ON)",
-        "Fall" => "立下り (ON→OFF)",
-        "Change" => "変化",
+        "Rise" => UseEnglishLabels ? "Rise (OFF->ON)" : "立上り (OFF->ON)",
+        "Fall" => UseEnglishLabels ? "Fall (ON->OFF)" : "立下り (ON->OFF)",
+        "Change" => UseEnglishLabels ? "Change" : "変化",
         "GreaterOrEqual" => ">=",
         "LessOrEqual" => "<=",
         "Equal" => "==",
@@ -185,6 +188,7 @@ public partial class MainWindow : Window
         SetupComboBoxes();
         SetupGrids();
         LoadDefaultRows();
+        ApplyLanguage();
 
         _vendor.SelectionChanged += (_, _) => ApplyVendorDefaults();
         _projectName.TextChanged += (_, _) => UpdateHeaderProjectName();
@@ -202,7 +206,6 @@ public partial class MainWindow : Window
         Fill(_transport, ProjectFactory.TransportModes, "Tcp");
         Fill(_model, ProjectFactory.MelsecCpuModels, "iQ-R");
         Fill(_keyenceMode, ProjectFactory.KeyenceDeviceModes, "Normal");
-        Fill(_density, ProjectFactory.BlockDisplayDensities, "Compact");
 
         static void Fill(ComboBox comboBox, string[] values, string selected)
         {
@@ -394,7 +397,7 @@ public partial class MainWindow : Window
             _lastJson = Encoding.UTF8.GetString(ProjectQrPayload.ProjectJsonBytes(project));
             ShowCurrentQr();
             SetSummary(project);
-            SetStatus($"QR 生成完了: {_chunks.Count} page(s)");
+            SetStatus(L($"QR 生成完了: {_chunks.Count} page(s)", $"QR generated: {_chunks.Count} page(s)"));
 
             if (showQrScreen)
             {
@@ -403,43 +406,52 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            SetStatus($"生成エラー: {ex.Message}", isError: true);
+            SetStatus(L($"生成エラー: {ex.Message}", $"Generation error: {ex.Message}"), isError: true);
             MessageBox.Show(this, ex.Message, Title, MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
-    private PlcProject BuildProject() => ProjectFactory.MakeProject(new ProjectInput(
-        Name: _projectName.Text,
-        Vendor: Selected(_vendor),
-        ConnectionMode: Selected(_connectionMode),
-        Host: _host.Text,
-        Port: ParseRange(_port, fallback: 1025, min: 1, max: 65535),
-        MonitorIntervalMs: ParseRange(_interval, fallback: 500, min: 50, max: 60000),
-        TimeoutMs: ParseRange(_timeout, fallback: 2000, min: 100, max: 60000),
-        MachineLabel: Selected(_model),
-        KeyenceDeviceMode: Selected(_keyenceMode),
-        TransportMode: Selected(_transport),
-        Network: ParseRange(_network, fallback: 0, min: 0, max: 255),
-        Station: ParseRange(_station, fallback: 255, min: 0, max: 255),
-        ModuleIo: ParseRange(_moduleIo, fallback: 1023, min: 0, max: 65535),
-        Multidrop: ParseRange(_multidrop, fallback: 0, min: 0, max: 255),
-        DevicesText: DevicesText(),
-        WatchText: WatchText(),
-        TrapsText: TrapsText(),
-        BlockDisplayDensity: Selected(_density)));
+    private PlcProject BuildProject()
+    {
+        NormalizeGridRows();
+
+        return ProjectFactory.MakeProject(new ProjectInput(
+            Name: _projectName.Text,
+            Vendor: Selected(_vendor),
+            ConnectionMode: Selected(_connectionMode),
+            Host: _host.Text,
+            Port: ParseRange(_port, fallback: 1025, min: 1, max: 65535),
+            MonitorIntervalMs: ParseRange(_interval, fallback: 500, min: 50, max: 60000),
+            TimeoutMs: ParseRange(_timeout, fallback: 2000, min: 100, max: 60000),
+            MachineLabel: Selected(_model),
+            KeyenceDeviceMode: Selected(_keyenceMode),
+            TransportMode: Selected(_transport),
+            Network: ParseRange(_network, fallback: 0, min: 0, max: 255),
+            Station: ParseRange(_station, fallback: 255, min: 0, max: 255),
+            ModuleIo: ParseRange(_moduleIo, fallback: 1023, min: 0, max: 65535),
+            Multidrop: ParseRange(_multidrop, fallback: 0, min: 0, max: 255),
+            DevicesText: DevicesText(),
+            WatchText: WatchText(),
+            TrapsText: TrapsText()));
+    }
 
     private void ShowCurrentQr()
     {
         if (_chunks.Count == 0)
         {
             _qrImage.Source = null;
-            _pageLabel.Text = "QR 未生成";
+            _pageLabel.Text = L("QR 未生成", "QR not generated");
             _qrMeta.Text = "";
+            _prevQrButton.Visibility = Visibility.Collapsed;
+            _nextQrButton.Visibility = Visibility.Collapsed;
             return;
         }
 
         var chunk = _chunks[_currentIndex];
-        _pageLabel.Text = $"{chunk.Index} / {chunk.Total} page";
+        _pageLabel.Text = $"QR {chunk.Index} / {chunk.Total}";
+        var pageButtonVisibility = chunk.Total > 1 ? Visibility.Visible : Visibility.Collapsed;
+        _prevQrButton.Visibility = pageButtonVisibility;
+        _nextQrButton.Visibility = pageButtonVisibility;
         _qrMeta.Text = $"payload {chunk.Payload.Length} chars / EC {_errorCorrection} / session {chunk.Session} / sha256 {chunk.Checksum[..12]}...";
 
         using var bitmap = MakeQrBitmap(chunk.Text);
@@ -541,13 +553,17 @@ public partial class MainWindow : Window
     private void ShowQrScreen()
     {
         _inputView.Visibility = Visibility.Collapsed;
+        _navInputArea.Visibility = Visibility.Collapsed;
         _qrView.Visibility = Visibility.Visible;
+        _navQrArea.Visibility = Visibility.Visible;
     }
 
     private void ShowInputScreen()
     {
         _qrView.Visibility = Visibility.Collapsed;
+        _navQrArea.Visibility = Visibility.Collapsed;
         _inputView.Visibility = Visibility.Visible;
+        _navInputArea.Visibility = Visibility.Visible;
     }
 
     private void CommitGridEdits()
@@ -557,6 +573,147 @@ public partial class MainWindow : Window
             grid.CommitEdit(DataGridEditingUnit.Cell, exitEditingMode: true);
             grid.CommitEdit(DataGridEditingUnit.Row, exitEditingMode: true);
         }
+    }
+
+    private string L(string ja, string en) => _useEnglish ? en : ja;
+
+    private void ApplyLanguage()
+    {
+        UseEnglishLabels = _useEnglish;
+        _langLabel.Text = _useEnglish ? "EN" : "JP";
+
+        _fileMenu.Header = L("ファイル", "File");
+        _loadJsonMenuItem.Header = L("JSON 読み込み", "Load JSON");
+        _saveJsonMenuItem.Header = L("JSON 保存", "Save JSON");
+        _showJsonMenuItem.Header = L("JSON 表示", "Show JSON");
+        _qrMenu.Header = "QR";
+        _qrMenu.ToolTip = L("QR の分割、表示サイズ、誤り訂正レベルを設定します。", "Configure QR chunking, display size, and error correction level.");
+        _qrChunkSizeMenu.Header = L("分割サイズ", "Chunk size");
+        _qrChunkSizeMenu.ToolTip = L("1つのQRに入れる文字数です。小さいほどページ数は増えますが、QRは粗くなり読み取りやすくなります。", "Characters per QR page. Smaller values create more pages but easier-to-read QR codes.");
+        _qrDisplaySizeMenu.Header = L("表示サイズ", "Display size");
+        _qrDisplaySizeMenu.ToolTip = L("画面上に表示するQR画像の大きさです。読み取り端末や画面サイズに合わせて変更します。", "QR image size on screen. Adjust for the scanner device and display size.");
+        _qrErrorCorrectionMenu.Header = L("誤り訂正", "Error correction");
+        _qrErrorCorrectionMenu.ToolTip = L("QRが一部欠けたり汚れたりしても復元できる強さです。強くするほど復元力は上がりますが、QRは細かくなります。", "Recovery strength when a QR code is partly damaged or dirty. Higher levels recover better but make the QR denser.");
+        _helpMenu.Header = L("ヘルプ", "Help");
+        _aboutMenuItem.Header = L("バージョン情報", "About");
+
+        _generateQrButton.Content = L("▦  QR 生成", "▦  Generate QR");
+        _backToEditorButton.Content = L("←  入力へ戻る", "←  Back to editor");
+        _prevQrButton.Content = L("←  前へ", "←  Previous");
+        _nextQrButton.Content = L("次へ  →", "Next  →");
+        _saveQrImagesButton.Content = L("↓  PNG 保存", "↓  Save PNG");
+
+        _devicesTab.Header = L("デバイス", "Devices");
+        _watchTab.Header = L("タイムチャート", "Time Chart");
+        _trapsTab.Header = L("トラップ", "Traps");
+        _projectTab.Header = L("プロジェクト/接続", "Project / Connection");
+
+        _devicesTitle.Text = L("デバイス", "Devices");
+        _devicesMeta.Text = L("アドレスとデータ型を編集します", "Edit addresses and data types.");
+        _watchTitle.Text = L("タイムチャート対象", "Time Chart Targets");
+        _watchMeta.Text = L($"Android のタイムチャートに表示するアドレスを指定します（最大{ProjectFactory.MaxTimeChartTargets}件）", $"Choose addresses shown in the Android time chart, up to {ProjectFactory.MaxTimeChartTargets}.");
+        _trapsTitle.Text = L("トラップ", "Traps");
+        _trapsMeta.Text = L("条件、しきい値、有効状態を編集します", "Edit conditions, thresholds, and enabled state.");
+
+        _moveDeviceUpButton.Content = _moveWatchUpButton.Content = _moveTrapUpButton.Content = L("↑  上へ", "↑  Up");
+        _moveDeviceDownButton.Content = _moveWatchDownButton.Content = _moveTrapDownButton.Content = L("↓  下へ", "↓  Down");
+        _addDeviceButton.Content = _addWatchButton.Content = _addTrapButton.Content = L("+  行を追加", "+  Add row");
+        _deleteDeviceButton.Content = _deleteWatchButton.Content = _deleteTrapButton.Content = L("−  削除", "−  Delete");
+
+        _moveDeviceUpButton.ToolTip = L("選択したデバイス行を上へ移動します。Alt+↑ でも移動できます。", "Move selected device rows up. Alt+Up also works.");
+        _moveDeviceDownButton.ToolTip = L("選択したデバイス行を下へ移動します。Alt+↓ でも移動できます。", "Move selected device rows down. Alt+Down also works.");
+        _moveWatchUpButton.ToolTip = L("選択したタイムチャート行を上へ移動します。Alt+↑ でも移動できます。", "Move selected time chart rows up. Alt+Up also works.");
+        _moveWatchDownButton.ToolTip = L("選択したタイムチャート行を下へ移動します。Alt+↓ でも移動できます。", "Move selected time chart rows down. Alt+Down also works.");
+        _moveTrapUpButton.ToolTip = L("選択したトラップ行を上へ移動します。Alt+↑ でも移動できます。", "Move selected trap rows up. Alt+Up also works.");
+        _moveTrapDownButton.ToolTip = L("選択したトラップ行を下へ移動します。Alt+↓ でも移動できます。", "Move selected trap rows down. Alt+Down also works.");
+
+        _projectSectionTitle.Text = L("プロジェクト", "Project");
+        _projectSectionMeta.Text = L("Android 側に渡す基本情報", "Basic information passed to Android.");
+        _projectNameLabel.Text = L("プロジェクト名", "Project name");
+        _vendorLabel.Text = L("メーカー", "Vendor");
+        _modelLabel.Text = "CPU model";
+        _keyenceModeLabel.Text = L("KEYENCE 表示", "KEYENCE display");
+
+        _connectionSectionTitle.Text = L("接続", "Connection");
+        _connectionSectionMeta.Text = L("PLC 通信設定", "PLC communication settings.");
+        _connectionModeLabel.Text = "Connection mode";
+        _hostLabel.Text = "IP address";
+        _portLabel.Text = "Port";
+        _transportLabel.Text = "Transport";
+        _intervalLabel.Text = L("監視周期 ms", "Polling interval ms");
+        _timeoutLabel.Text = "Timeout ms";
+
+        _devicesGrid.ToolTip = L("Excel とタブ区切りでコピー/貼り付けできます。列は アドレス / Data type です。", "Copy and paste tab-separated rows from Excel. Columns are Address / Data type.");
+        _watchGrid.ToolTip = L("Excel とタブ区切りでコピー/貼り付けできます。列は アドレス / Data type です。", "Copy and paste tab-separated rows from Excel. Columns are Address / Data type.");
+        _trapsGrid.ToolTip = L("Excel とタブ区切りでコピー/貼り付けできます。列は アドレス / Data type / 検知条件 / しきい値 / 有効 です。", "Copy and paste tab-separated rows from Excel. Columns are Address / Data type / Condition / Threshold / Enabled.");
+        if (_devicesGrid.Columns.Count >= 2)
+        {
+            _devicesGrid.Columns[0].Header = L("アドレス", "Address");
+            _devicesGrid.Columns[1].Header = "Data type";
+        }
+
+        if (_watchGrid.Columns.Count >= 2)
+        {
+            _watchGrid.Columns[0].Header = L("アドレス", "Address");
+            _watchGrid.Columns[1].Header = "Data type";
+        }
+
+        if (_trapsGrid.Columns.Count >= 5)
+        {
+            _trapsGrid.Columns[0].Header = L("アドレス", "Address");
+            _trapsGrid.Columns[1].Header = "Data type";
+            _trapsGrid.Columns[2].Header = L("検知条件", "Condition");
+            _trapsGrid.Columns[3].Header = L("しきい値", "Threshold");
+            _trapsGrid.Columns[4].Header = L("有効", "Enabled");
+        }
+
+        _trapsGrid.Items.Refresh();
+        if (_chunks.Count == 0)
+        {
+            _pageLabel.Text = L("QR 未生成", "QR not generated");
+        }
+        else
+        {
+            ShowCurrentQr();
+        }
+
+        if (string.IsNullOrWhiteSpace(_statusText.Text) || _statusText.Text is "準備完了" or "Ready")
+        {
+            _statusText.Text = L("準備完了", "Ready");
+        }
+    }
+
+    private void NormalizeGridRows()
+    {
+        foreach (var row in _devices.Where(row => !string.IsNullOrWhiteSpace(row.Address)))
+        {
+            row.Address = row.Address.Trim().ToUpperInvariant();
+            row.DataType = string.IsNullOrWhiteSpace(row.DataType)
+                ? ProjectFactory.GuessDataType(row.Address, Selected(_vendor))
+                : CoerceDataTypeForAddress(row.DataType, row.Address);
+        }
+
+        foreach (var row in _watches.Where(row => !string.IsNullOrWhiteSpace(row.Address)))
+        {
+            row.Address = row.Address.Trim().ToUpperInvariant();
+            row.DataType = string.IsNullOrWhiteSpace(row.DataType)
+                ? ProjectFactory.GuessDataType(row.Address, Selected(_vendor))
+                : CoerceDataTypeForAddress(row.DataType, row.Address);
+        }
+
+        foreach (var row in _traps.Where(row => !string.IsNullOrWhiteSpace(row.Address)))
+        {
+            row.SetVendor(Selected(_vendor));
+            row.Address = row.Address.Trim().ToUpperInvariant();
+            row.DataType = string.IsNullOrWhiteSpace(row.DataType)
+                ? ProjectFactory.GuessDataType(row.Address, Selected(_vendor))
+                : CoerceDataTypeForAddress(row.DataType, row.Address);
+            row.Condition = ProjectFactory.CoerceTrapConditionForAddress(row.Address, row.Condition, Selected(_vendor));
+        }
+
+        _devicesGrid.Items.Refresh();
+        _watchGrid.Items.Refresh();
+        _trapsGrid.Items.Refresh();
     }
 
     private void SetStatus(string message, bool isError = false)
@@ -569,18 +726,27 @@ public partial class MainWindow : Window
 
     private void SetSummary(PlcProject project)
     {
-        _summaryText.Text = $"{project.Connection.Vendor} {project.Connection.MachineLabel} / デバイス {project.Devices.Count} / タイムチャート {project.WatchItems.Count}/{ProjectFactory.MaxTimeChartTargets} / トラップ {project.Traps.Count}";
+        _summaryText.Text = _useEnglish
+            ? $"{project.Connection.Vendor} {project.Connection.MachineLabel} / Devices {project.Devices.Count} / Time Chart {project.WatchItems.Count}/{ProjectFactory.MaxTimeChartTargets} / Traps {project.Traps.Count}"
+            : $"{project.Connection.Vendor} {project.Connection.MachineLabel} / デバイス {project.Devices.Count} / タイムチャート {project.WatchItems.Count}/{ProjectFactory.MaxTimeChartTargets} / トラップ {project.Traps.Count}";
     }
 
     private void Generate_Click(object sender, RoutedEventArgs e) => Generate(showQrScreen: true);
 
-    private void AboutMenuItem_Click(object sender, RoutedEventArgs e) => new AboutWindow { Owner = this }.ShowDialog();
+    private void LangButton_Click(object sender, RoutedEventArgs e)
+    {
+        _useEnglish = !_useEnglish;
+        ApplyLanguage();
+        SetStatus(L("表示言語: 日本語", "Display language: English"));
+    }
+
+    private void AboutMenuItem_Click(object sender, RoutedEventArgs e) => new AboutWindow(_useEnglish) { Owner = this }.ShowDialog();
 
     private void BackToEditor_Click(object sender, RoutedEventArgs e) => ShowInputScreen();
 
     private void DevicesGrid_PreviewKeyDown(object sender, KeyEventArgs e)
     {
-        if (TryHandleMoveShortcut(e, _devicesGrid, _devices, "デバイス"))
+        if (TryHandleMoveShortcut(e, _devicesGrid, _devices, L("デバイス", "device")))
         {
             return;
         }
@@ -654,7 +820,7 @@ public partial class MainWindow : Window
 
         Clipboard.SetText(string.Join(Environment.NewLine, rows.Select(row =>
             $"{row.Address}\t{row.DataType}")));
-        SetStatus($"デバイス {rows.Count} 行をコピーしました");
+        SetStatus(L($"デバイス {rows.Count} 行をコピーしました", $"Copied {rows.Count} device row(s)"));
     }
 
     private void PasteDevicesFromClipboard()
@@ -667,7 +833,7 @@ public partial class MainWindow : Window
         var rows = ParseDeviceClipboardRows(Clipboard.GetText()).ToList();
         if (rows.Count == 0)
         {
-            SetStatus("貼り付けできるデバイス行がありません", isError: true);
+            SetStatus(L("貼り付けできるデバイス行がありません", "No device rows can be pasted"), isError: true);
             return;
         }
 
@@ -704,7 +870,9 @@ public partial class MainWindow : Window
         try
         {
             var count = TimeChartAddresses().Count;
-            SetStatus($"デバイス {rows.Count} 行を貼り付けました / タイムチャート {count}/{ProjectFactory.MaxTimeChartTargets}");
+            SetStatus(L(
+                $"デバイス {rows.Count} 行を貼り付けました / タイムチャート {count}/{ProjectFactory.MaxTimeChartTargets}",
+                $"Pasted {rows.Count} device row(s) / Time Chart {count}/{ProjectFactory.MaxTimeChartTargets}"));
         }
         catch (ArgumentException ex)
         {
@@ -798,7 +966,7 @@ public partial class MainWindow : Window
 
     private void WatchGrid_PreviewKeyDown(object sender, KeyEventArgs e)
     {
-        if (TryHandleMoveShortcut(e, _watchGrid, _watches, "タイムチャート"))
+        if (TryHandleMoveShortcut(e, _watchGrid, _watches, L("タイムチャート", "time chart")))
         {
             return;
         }
@@ -834,7 +1002,7 @@ public partial class MainWindow : Window
         }
 
         Clipboard.SetText(string.Join(Environment.NewLine, rows.Select(row => $"{row.Address}\t{row.DataType}")));
-        SetStatus($"タイムチャート {rows.Count} 行をコピーしました");
+        SetStatus(L($"タイムチャート {rows.Count} 行をコピーしました", $"Copied {rows.Count} time chart row(s)"));
     }
 
     private void PasteWatchItemsFromClipboard()
@@ -847,7 +1015,7 @@ public partial class MainWindow : Window
         var rows = ParseWatchClipboardRows(Clipboard.GetText()).ToList();
         if (rows.Count == 0)
         {
-            SetStatus("貼り付けできるタイムチャート行がありません", isError: true);
+            SetStatus(L("貼り付けできるタイムチャート行がありません", "No time chart rows can be pasted"), isError: true);
             return;
         }
 
@@ -860,13 +1028,18 @@ public partial class MainWindow : Window
         var uniqueCount = UniqueWatchAddressCount(candidate);
         if (uniqueCount > ProjectFactory.MaxTimeChartTargets)
         {
-            SetStatus($"タイムチャートに追加できるのは最大 {ProjectFactory.MaxTimeChartTargets} チャンネルです。", isError: true);
+            SetStatus(L(
+                $"タイムチャートに追加できるのは最大 {ProjectFactory.MaxTimeChartTargets} チャンネルです。",
+                $"Time chart can contain up to {ProjectFactory.MaxTimeChartTargets} channels."),
+                isError: true);
             return;
         }
 
         ApplyRows(_watches, startIndex, rows);
         SelectRows(_watchGrid, rows);
-        SetStatus($"タイムチャート {rows.Count} 行を貼り付けました / {uniqueCount}/{ProjectFactory.MaxTimeChartTargets}");
+        SetStatus(L(
+            $"タイムチャート {rows.Count} 行を貼り付けました / {uniqueCount}/{ProjectFactory.MaxTimeChartTargets}",
+            $"Pasted {rows.Count} time chart row(s) / {uniqueCount}/{ProjectFactory.MaxTimeChartTargets}"));
     }
 
     private IEnumerable<WatchRow> ParseWatchClipboardRows(string text)
@@ -907,7 +1080,7 @@ public partial class MainWindow : Window
 
     private void TrapsGrid_PreviewKeyDown(object sender, KeyEventArgs e)
     {
-        if (TryHandleMoveShortcut(e, _trapsGrid, _traps, "トラップ"))
+        if (TryHandleMoveShortcut(e, _trapsGrid, _traps, L("トラップ", "trap")))
         {
             return;
         }
@@ -944,7 +1117,7 @@ public partial class MainWindow : Window
 
         Clipboard.SetText(string.Join(Environment.NewLine, rows.Select(row =>
             $"{row.Address}\t{row.DataType}\t{row.ConditionDisplayText}\t{row.Threshold}\t{(row.Enabled ? "TRUE" : "FALSE")}")));
-        SetStatus($"トラップ {rows.Count} 行をコピーしました");
+        SetStatus(L($"トラップ {rows.Count} 行をコピーしました", $"Copied {rows.Count} trap row(s)"));
     }
 
     private void PasteTrapsFromClipboard()
@@ -957,7 +1130,7 @@ public partial class MainWindow : Window
         var rows = ParseTrapClipboardRows(Clipboard.GetText()).ToList();
         if (rows.Count == 0)
         {
-            SetStatus("貼り付けできるトラップ行がありません", isError: true);
+            SetStatus(L("貼り付けできるトラップ行がありません", "No trap rows can be pasted"), isError: true);
             return;
         }
 
@@ -967,7 +1140,7 @@ public partial class MainWindow : Window
         var startIndex = SelectedIndexOrAppend(_trapsGrid, _traps);
         ApplyRows(_traps, startIndex, rows);
         SelectRows(_trapsGrid, rows);
-        SetStatus($"トラップ {rows.Count} 行を貼り付けました");
+        SetStatus(L($"トラップ {rows.Count} 行を貼り付けました", $"Pasted {rows.Count} trap row(s)"));
     }
 
     private IEnumerable<TrapRow> ParseTrapClipboardRows(string text)
@@ -1129,7 +1302,9 @@ public partial class MainWindow : Window
         if ((direction < 0 && indices.Min() == 0) ||
             (direction > 0 && indices.Max() == source.Count - 1))
         {
-            SetStatus($"{label}行はこれ以上移動できません");
+            SetStatus(_useEnglish
+                ? $"{label} rows cannot be moved further"
+                : $"{label}行はこれ以上移動できません");
             return;
         }
 
@@ -1149,7 +1324,9 @@ public partial class MainWindow : Window
 
         SelectRows(grid, rows);
         grid.ScrollIntoView(rows[0]);
-        SetStatus($"{label} {rows.Count} 行を{(direction < 0 ? "上" : "下")}へ移動しました");
+        SetStatus(_useEnglish
+            ? $"Moved {rows.Count} {label} row(s) {(direction < 0 ? "up" : "down")}"
+            : $"{label} {rows.Count} 行を{(direction < 0 ? "上" : "下")}へ移動しました");
     }
 
     private static void SelectRows<T>(DataGrid grid, IEnumerable<T> rows)
@@ -1221,7 +1398,7 @@ public partial class MainWindow : Window
 
         _currentIndex = (_currentIndex + _chunks.Count - 1) % _chunks.Count;
         ShowCurrentQr();
-        SetStatus($"QR 表示: {_currentIndex + 1}/{_chunks.Count}");
+        SetStatus(L($"QR 表示: {_currentIndex + 1}/{_chunks.Count}", $"QR page: {_currentIndex + 1}/{_chunks.Count}"));
     }
 
     private void NextQr_Click(object sender, RoutedEventArgs e)
@@ -1233,14 +1410,21 @@ public partial class MainWindow : Window
 
         _currentIndex = (_currentIndex + 1) % _chunks.Count;
         ShowCurrentQr();
-        SetStatus($"QR 表示: {_currentIndex + 1}/{_chunks.Count}");
+        SetStatus(L($"QR 表示: {_currentIndex + 1}/{_chunks.Count}", $"QR page: {_currentIndex + 1}/{_chunks.Count}"));
     }
 
     private void ShowJson_Click(object sender, RoutedEventArgs e)
     {
-        if (string.IsNullOrEmpty(_lastJson))
+        try
         {
-            Generate(showQrScreen: false);
+            CommitGridEdits();
+            _lastJson = Encoding.UTF8.GetString(ProjectQrPayload.ProjectJsonBytes(BuildProject()));
+        }
+        catch (Exception ex)
+        {
+            SetStatus(L($"JSON 表示エラー: {ex.Message}", $"JSON display error: {ex.Message}"), isError: true);
+            MessageBox.Show(this, ex.Message, Title, MessageBoxButton.OK, MessageBoxImage.Error);
+            return;
         }
 
         var window = new Window
@@ -1259,7 +1443,9 @@ public partial class MainWindow : Window
 
         var meta = new TextBlock
         {
-            Text = $"文字数: {_lastJson.Length.ToString("N0", CultureInfo.InvariantCulture)} / UTF-8: {Encoding.UTF8.GetByteCount(_lastJson).ToString("N0", CultureInfo.InvariantCulture)} bytes",
+            Text = L(
+                $"文字数: {_lastJson.Length.ToString("N0", CultureInfo.InvariantCulture)} / UTF-8: {Encoding.UTF8.GetByteCount(_lastJson).ToString("N0", CultureInfo.InvariantCulture)} bytes",
+                $"Characters: {_lastJson.Length.ToString("N0", CultureInfo.InvariantCulture)} / UTF-8: {Encoding.UTF8.GetByteCount(_lastJson).ToString("N0", CultureInfo.InvariantCulture)} bytes"),
             Foreground = (Brush)FindResource("TextMuted"),
             Padding = new Thickness(14, 10, 14, 8),
         };
@@ -1300,11 +1486,11 @@ public partial class MainWindow : Window
             LoadProjectJson(File.ReadAllText(dialog.FileName));
             Generate(showQrScreen: false);
             ShowInputScreen();
-            SetStatus($"JSON 読み込み: {Path.GetFileName(dialog.FileName)}");
+            SetStatus(L($"JSON 読み込み: {Path.GetFileName(dialog.FileName)}", $"JSON loaded: {Path.GetFileName(dialog.FileName)}"));
         }
         catch (Exception ex)
         {
-            SetStatus($"JSON 読み込みエラー: {ex.Message}", isError: true);
+            SetStatus(L($"JSON 読み込みエラー: {ex.Message}", $"JSON load error: {ex.Message}"), isError: true);
             MessageBox.Show(this, ex.Message, Title, MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
@@ -1319,12 +1505,15 @@ public partial class MainWindow : Window
                 return;
             }
 
-            File.WriteAllBytes(dialog.FileName, ProjectQrPayload.ProjectJsonBytes(BuildProject()));
-            SetStatus($"JSON 保存: {Path.GetFileName(dialog.FileName)}");
+            CommitGridEdits();
+            var jsonBytes = ProjectQrPayload.ProjectJsonBytes(BuildProject());
+            _lastJson = Encoding.UTF8.GetString(jsonBytes);
+            File.WriteAllBytes(dialog.FileName, jsonBytes);
+            SetStatus(L($"JSON 保存: {Path.GetFileName(dialog.FileName)}", $"JSON saved: {Path.GetFileName(dialog.FileName)}"));
         }
         catch (Exception ex)
         {
-            SetStatus($"JSON 保存エラー: {ex.Message}", isError: true);
+            SetStatus(L($"JSON 保存エラー: {ex.Message}", $"JSON save error: {ex.Message}"), isError: true);
             MessageBox.Show(this, ex.Message, Title, MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
@@ -1333,17 +1522,19 @@ public partial class MainWindow : Window
     {
         try
         {
-            if (_chunks.Count == 0)
-            {
-                Generate(showQrScreen: false);
-            }
+            CommitGridEdits();
+            var project = BuildProject();
+            _chunks = ProjectQrPayload.EncodeProjectChunks(project, _chunkSize);
+            _currentIndex = 0;
+            _lastJson = Encoding.UTF8.GetString(ProjectQrPayload.ProjectJsonBytes(project));
+            ShowCurrentQr();
 
             if (_chunks.Count == 0)
             {
                 return;
             }
 
-            var dialog = new OpenFolderDialog { Title = "QR PNG の保存先フォルダーを選択" };
+            var dialog = new OpenFolderDialog { Title = L("QR PNG の保存先フォルダーを選択", "Select QR PNG output folder") };
             if (dialog.ShowDialog(this) != true)
             {
                 return;
@@ -1356,11 +1547,11 @@ public partial class MainWindow : Window
                 bitmap.Save(path, System.Drawing.Imaging.ImageFormat.Png);
             }
 
-            SetStatus($"QR PNG 保存: {_chunks.Count} file(s)");
+            SetStatus(L($"QR PNG 保存: {_chunks.Count} file(s)", $"QR PNG saved: {_chunks.Count} file(s)"));
         }
         catch (Exception ex)
         {
-            SetStatus($"QR PNG 保存エラー: {ex.Message}", isError: true);
+            SetStatus(L($"QR PNG 保存エラー: {ex.Message}", $"QR PNG save error: {ex.Message}"), isError: true);
             MessageBox.Show(this, ex.Message, Title, MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
@@ -1373,10 +1564,10 @@ public partial class MainWindow : Window
     }
 
     private void MoveDeviceUp_Click(object sender, RoutedEventArgs e) =>
-        MoveSelectedRows(_devicesGrid, _devices, -1, "デバイス");
+        MoveSelectedRows(_devicesGrid, _devices, -1, L("デバイス", "device"));
 
     private void MoveDeviceDown_Click(object sender, RoutedEventArgs e) =>
-        MoveSelectedRows(_devicesGrid, _devices, 1, "デバイス");
+        MoveSelectedRows(_devicesGrid, _devices, 1, L("デバイス", "device"));
 
     private void DeleteDevice_Click(object sender, RoutedEventArgs e) => RemoveSelectedRows(_devicesGrid, _devices);
 
@@ -1386,7 +1577,10 @@ public partial class MainWindow : Window
         {
             if (TimeChartAddresses().Count >= ProjectFactory.MaxTimeChartTargets)
             {
-                SetStatus($"タイムチャートに追加できるのは最大 {ProjectFactory.MaxTimeChartTargets} チャンネルです。", isError: true);
+                SetStatus(L(
+                    $"タイムチャートに追加できるのは最大 {ProjectFactory.MaxTimeChartTargets} チャンネルです。",
+                    $"Time chart can contain up to {ProjectFactory.MaxTimeChartTargets} channels."),
+                    isError: true);
                 return;
             }
         }
@@ -1402,10 +1596,10 @@ public partial class MainWindow : Window
     }
 
     private void MoveWatchUp_Click(object sender, RoutedEventArgs e) =>
-        MoveSelectedRows(_watchGrid, _watches, -1, "タイムチャート");
+        MoveSelectedRows(_watchGrid, _watches, -1, L("タイムチャート", "time chart"));
 
     private void MoveWatchDown_Click(object sender, RoutedEventArgs e) =>
-        MoveSelectedRows(_watchGrid, _watches, 1, "タイムチャート");
+        MoveSelectedRows(_watchGrid, _watches, 1, L("タイムチャート", "time chart"));
 
     private void DeleteWatch_Click(object sender, RoutedEventArgs e) => RemoveSelectedRows(_watchGrid, _watches);
 
@@ -1418,10 +1612,10 @@ public partial class MainWindow : Window
     }
 
     private void MoveTrapUp_Click(object sender, RoutedEventArgs e) =>
-        MoveSelectedRows(_trapsGrid, _traps, -1, "トラップ");
+        MoveSelectedRows(_trapsGrid, _traps, -1, L("トラップ", "trap"));
 
     private void MoveTrapDown_Click(object sender, RoutedEventArgs e) =>
-        MoveSelectedRows(_trapsGrid, _traps, 1, "トラップ");
+        MoveSelectedRows(_trapsGrid, _traps, 1, L("トラップ", "trap"));
 
     private void DeleteTrap_Click(object sender, RoutedEventArgs e) => RemoveSelectedRows(_trapsGrid, _traps);
 
