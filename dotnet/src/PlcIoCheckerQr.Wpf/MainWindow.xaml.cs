@@ -546,6 +546,11 @@ public partial class MainWindow : Window
 
     private void DevicesGrid_PreviewKeyDown(object sender, KeyEventArgs e)
     {
+        if (TryHandleMoveShortcut(e, _devicesGrid, _devices, "デバイス"))
+        {
+            return;
+        }
+
         if ((Keyboard.Modifiers & ModifierKeys.Control) != ModifierKeys.Control)
         {
             return;
@@ -563,6 +568,35 @@ public partial class MainWindow : Window
             PasteDevicesFromClipboard();
             e.Handled = true;
         }
+    }
+
+    private bool TryHandleMoveShortcut<T>(
+        KeyEventArgs e,
+        DataGrid grid,
+        ObservableCollection<T> source,
+        string label)
+    {
+        if ((Keyboard.Modifiers & ModifierKeys.Alt) != ModifierKeys.Alt)
+        {
+            return false;
+        }
+
+        var key = e.Key == Key.System ? e.SystemKey : e.Key;
+        if (key == Key.Up)
+        {
+            MoveSelectedRows(grid, source, -1, label);
+            e.Handled = true;
+            return true;
+        }
+
+        if (key == Key.Down)
+        {
+            MoveSelectedRows(grid, source, 1, label);
+            e.Handled = true;
+            return true;
+        }
+
+        return false;
     }
 
     private void CopySelectedDevicesToClipboard()
@@ -718,6 +752,11 @@ public partial class MainWindow : Window
 
     private void WatchGrid_PreviewKeyDown(object sender, KeyEventArgs e)
     {
+        if (TryHandleMoveShortcut(e, _watchGrid, _watches, "タイムチャート"))
+        {
+            return;
+        }
+
         if ((Keyboard.Modifiers & ModifierKeys.Control) != ModifierKeys.Control)
         {
             return;
@@ -818,6 +857,11 @@ public partial class MainWindow : Window
 
     private void TrapsGrid_PreviewKeyDown(object sender, KeyEventArgs e)
     {
+        if (TryHandleMoveShortcut(e, _trapsGrid, _traps, "トラップ"))
+        {
+            return;
+        }
+
         if ((Keyboard.Modifiers & ModifierKeys.Control) != ModifierKeys.Control)
         {
             return;
@@ -1001,7 +1045,59 @@ public partial class MainWindow : Window
         }
     }
 
-    private static void SelectRows(DataGrid grid, IEnumerable<object> rows)
+    private void MoveSelectedRows<T>(
+        DataGrid grid,
+        ObservableCollection<T> source,
+        int direction,
+        string label)
+    {
+        if (source.Count <= 1)
+        {
+            return;
+        }
+
+        grid.CommitEdit(DataGridEditingUnit.Cell, exitEditingMode: true);
+        grid.CommitEdit(DataGridEditingUnit.Row, exitEditingMode: true);
+
+        var rows = SelectedRows(grid, source);
+        if (rows.Count == 0)
+        {
+            return;
+        }
+
+        var indices = rows.Select(source.IndexOf).Where(index => index >= 0).ToArray();
+        if (indices.Length == 0)
+        {
+            return;
+        }
+
+        if ((direction < 0 && indices.Min() == 0) ||
+            (direction > 0 && indices.Max() == source.Count - 1))
+        {
+            SetStatus($"{label}行はこれ以上移動できません");
+            return;
+        }
+
+        var orderedRows = direction < 0
+            ? rows.OrderBy(source.IndexOf).ToList()
+            : rows.OrderByDescending(source.IndexOf).ToList();
+        foreach (var row in orderedRows)
+        {
+            var currentIndex = source.IndexOf(row);
+            if (currentIndex < 0)
+            {
+                continue;
+            }
+
+            source.Move(currentIndex, currentIndex + direction);
+        }
+
+        SelectRows(grid, rows);
+        grid.ScrollIntoView(rows[0]);
+        SetStatus($"{label} {rows.Count} 行を{(direction < 0 ? "上" : "下")}へ移動しました");
+    }
+
+    private static void SelectRows<T>(DataGrid grid, IEnumerable<T> rows)
     {
         grid.SelectedItems.Clear();
         foreach (var row in rows)
@@ -1221,6 +1317,12 @@ public partial class MainWindow : Window
         SelectNewRow(_devicesGrid, row);
     }
 
+    private void MoveDeviceUp_Click(object sender, RoutedEventArgs e) =>
+        MoveSelectedRows(_devicesGrid, _devices, -1, "デバイス");
+
+    private void MoveDeviceDown_Click(object sender, RoutedEventArgs e) =>
+        MoveSelectedRows(_devicesGrid, _devices, 1, "デバイス");
+
     private void DeleteDevice_Click(object sender, RoutedEventArgs e) => RemoveSelectedRows(_devicesGrid, _devices);
 
     private void AddWatch_Click(object sender, RoutedEventArgs e)
@@ -1244,6 +1346,12 @@ public partial class MainWindow : Window
         SelectNewRow(_watchGrid, row);
     }
 
+    private void MoveWatchUp_Click(object sender, RoutedEventArgs e) =>
+        MoveSelectedRows(_watchGrid, _watches, -1, "タイムチャート");
+
+    private void MoveWatchDown_Click(object sender, RoutedEventArgs e) =>
+        MoveSelectedRows(_watchGrid, _watches, 1, "タイムチャート");
+
     private void DeleteWatch_Click(object sender, RoutedEventArgs e) => RemoveSelectedRows(_watchGrid, _watches);
 
     private void AddTrap_Click(object sender, RoutedEventArgs e)
@@ -1253,6 +1361,12 @@ public partial class MainWindow : Window
         _traps.Add(row);
         SelectNewRow(_trapsGrid, row);
     }
+
+    private void MoveTrapUp_Click(object sender, RoutedEventArgs e) =>
+        MoveSelectedRows(_trapsGrid, _traps, -1, "トラップ");
+
+    private void MoveTrapDown_Click(object sender, RoutedEventArgs e) =>
+        MoveSelectedRows(_trapsGrid, _traps, 1, "トラップ");
 
     private void DeleteTrap_Click(object sender, RoutedEventArgs e) => RemoveSelectedRows(_trapsGrid, _traps);
 
