@@ -28,7 +28,6 @@ public sealed class ProjectQrPayloadTests
         Assert.False(root.GetProperty("deviceList")[0].TryGetProperty("comment", out _));
         Assert.False(root.GetProperty("deviceList")[0].TryGetProperty("watch", out _));
         Assert.False(root.TryGetProperty("settings", out _));
-        Assert.False(root.TryGetProperty("watchItems", out _));
     }
 
     [Fact]

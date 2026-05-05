@@ -12,7 +12,7 @@ public sealed record PlcProject(
     IReadOnlyList<TrapDefinition> Traps,
     long UpdatedAtEpochMs)
 {
-    public IReadOnlyList<string> WatchItems { get; } = TimeChart.Select(target => target.Address).ToArray();
+    public IReadOnlyList<string> TimeChartAddresses { get; } = TimeChart.Select(target => target.Address).ToArray();
 }
 
 public sealed record PlcConnection(

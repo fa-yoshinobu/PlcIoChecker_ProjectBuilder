@@ -894,8 +894,8 @@ public partial class MainWindow : Window
     private void SetSummary(PlcProject project)
     {
         _summaryText.Text = _useEnglish
-            ? $"{project.Connection.Vendor} {project.Connection.MachineLabel} / Devices {project.Devices.Count} / Time Chart {project.WatchItems.Count}/{ProjectFactory.MaxTimeChartTargets} / Traps {project.Traps.Count}"
-            : $"{project.Connection.Vendor} {project.Connection.MachineLabel} / デバイス {project.Devices.Count} / タイムチャート {project.WatchItems.Count}/{ProjectFactory.MaxTimeChartTargets} / トラップ {project.Traps.Count}";
+            ? $"{project.Connection.Vendor} {project.Connection.MachineLabel} / Devices {project.Devices.Count} / Time Chart {project.TimeChartAddresses.Count}/{ProjectFactory.MaxTimeChartTargets} / Traps {project.Traps.Count}"
+            : $"{project.Connection.Vendor} {project.Connection.MachineLabel} / デバイス {project.Devices.Count} / タイムチャート {project.TimeChartAddresses.Count}/{ProjectFactory.MaxTimeChartTargets} / トラップ {project.Traps.Count}";
     }
 
     private void Generate_Click(object sender, RoutedEventArgs e) => Generate(showQrScreen: true);
@@ -1140,19 +1140,19 @@ public partial class MainWindow : Window
 
         if (e.Key == Key.C)
         {
-            CopySelectedWatchItemsToClipboard();
+            CopySelectedTimeChartRowsToClipboard();
             e.Handled = true;
             return;
         }
 
         if (e.Key == Key.V)
         {
-            PasteWatchItemsFromClipboard();
+            PasteTimeChartRowsFromClipboard();
             e.Handled = true;
         }
     }
 
-    private void CopySelectedWatchItemsToClipboard()
+    private void CopySelectedTimeChartRowsToClipboard()
     {
         _watchGrid.CommitEdit(DataGridEditingUnit.Cell, exitEditingMode: true);
         _watchGrid.CommitEdit(DataGridEditingUnit.Row, exitEditingMode: true);
@@ -1167,7 +1167,7 @@ public partial class MainWindow : Window
         SetStatus(L($"タイムチャート {rows.Count} 行をコピーしました", $"Copied {rows.Count} time chart row(s)"));
     }
 
-    private void PasteWatchItemsFromClipboard()
+    private void PasteTimeChartRowsFromClipboard()
     {
         if (!Clipboard.ContainsText())
         {
