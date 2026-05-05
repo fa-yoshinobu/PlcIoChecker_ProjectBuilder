@@ -24,29 +24,11 @@ namespace PlcIoCheckerQr.Wpf;
 
 public partial class MainWindow : Window
 {
-    public sealed class DeviceRow
-    {
-        public string Address { get; set; } = "";
-        public string DataType { get; set; } = "Bit";
-    }
-
-    public sealed class WatchRow
-    {
-        public string Address { get; set; } = "";
-        public string DataType { get; set; } = "Bit";
-    }
-
-    public sealed class TrapConditionOption(string value)
-    {
-        public string Value { get; } = value;
-        public string DisplayText { get; } = MainWindow.TrapConditionDisplayText(value);
-    }
-
-    public sealed class TrapRow : INotifyPropertyChanged
+    public abstract class DataTypedAddressRow : INotifyPropertyChanged
     {
         private string _address = "";
-        private string _condition = "Change";
-        private string _threshold = "";
+        private string _dataType = "Bit";
+        private string _keyenceDeviceMode = "Normal";
         private string _vendor = "Melsec";
 
         public event PropertyChangedEventHandler? PropertyChanged;
@@ -56,30 +38,122 @@ public partial class MainWindow : Window
             get => _address;
             set
             {
-                if (_address == value)
+                var next = value;
+                if (_address == next)
                 {
                     return;
                 }
 
-                _address = value;
+                _address = next;
                 OnPropertyChanged();
-                OnPropertyChanged(nameof(AvailableConditionOptions));
-                CoerceCondition();
+                OnAddressChanged();
+                RefreshDataTypeOptions();
             }
         }
+
+        public string DataType
+        {
+            get => _dataType;
+            set
+            {
+                var next = NormalizeDataType(value);
+                if (_dataType == next)
+                {
+                    return;
+                }
+
+                _dataType = next;
+                OnPropertyChanged();
+            }
+        }
+
+        public IReadOnlyList<string> AvailableDataTypes =>
+            ProjectFactory.DeviceDataTypesForAddress(Address, Vendor, KeyenceDeviceMode);
+
+        protected string Vendor => _vendor;
+
+        protected string KeyenceDeviceMode => _keyenceDeviceMode;
+
+        public void SetVendor(string vendor) => SetDeviceContext(vendor, "Normal");
+
+        public void SetDeviceContext(string vendor, string keyenceDeviceMode)
+        {
+            var nextVendor = string.IsNullOrWhiteSpace(vendor) ? "Melsec" : vendor;
+            var nextMode = string.IsNullOrWhiteSpace(keyenceDeviceMode) ? "Normal" : keyenceDeviceMode;
+            if (_vendor == nextVendor && _keyenceDeviceMode == nextMode)
+            {
+                return;
+            }
+
+            _vendor = nextVendor;
+            _keyenceDeviceMode = nextMode;
+            OnDeviceContextChanged();
+            RefreshDataTypeOptions();
+        }
+
+        public void EnsureDataTypeAllowed() => DataType = NormalizeDataType(DataType);
+
+        protected virtual void OnAddressChanged()
+        {
+        }
+
+        protected virtual void OnDeviceContextChanged()
+        {
+        }
+
+        protected void OnPropertyChanged([CallerMemberName] string? propertyName = null) =>
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+
+        private void RefreshDataTypeOptions()
+        {
+            OnPropertyChanged(nameof(AvailableDataTypes));
+            EnsureDataTypeAllowed();
+        }
+
+        private string NormalizeDataType(string value)
+        {
+            var allowed = AvailableDataTypes;
+            var match = allowed.FirstOrDefault(dataType => dataType.Equals(value?.Trim(), StringComparison.OrdinalIgnoreCase));
+            if (match is not null)
+            {
+                return match;
+            }
+
+            return string.IsNullOrWhiteSpace(Address)
+                ? "Bit"
+                : ProjectFactory.GuessDataType(Address, Vendor, KeyenceDeviceMode);
+        }
+    }
+
+    public sealed class DeviceRow : DataTypedAddressRow
+    {
+    }
+
+    public sealed class WatchRow : DataTypedAddressRow
+    {
+    }
+
+    public sealed class TrapConditionOption(string value)
+    {
+        public string Value { get; } = value;
+        public string DisplayText { get; } = MainWindow.TrapConditionDisplayText(value);
+    }
+
+    public sealed class TrapRow : DataTypedAddressRow
+    {
+        private string _condition = "Change";
+        private string _threshold = "";
 
         public string Condition
         {
             get => _condition;
-            set => SetCondition(ProjectFactory.CoerceTrapConditionForAddress(Address, value, _vendor));
+            set => SetCondition(ProjectFactory.CoerceTrapConditionForAddress(Address, value, Vendor, KeyenceDeviceMode));
         }
 
         public string ConditionDisplayText => TrapConditionDisplayText(Condition);
 
-        public string DataType { get; set; } = "Bit";
-
         public IReadOnlyList<TrapConditionOption> AvailableConditionOptions =>
-            ProjectFactory.TrapConditionsForAddress(Address, _vendor)
+            ProjectFactory.TrapConditionsForAddress(Address, Vendor, KeyenceDeviceMode)
                 .Select(condition => new TrapConditionOption(condition))
                 .ToArray();
 
@@ -103,20 +177,19 @@ public partial class MainWindow : Window
 
         public bool Enabled { get; set; } = true;
 
-        public void SetVendor(string vendor)
+        protected override void OnAddressChanged()
         {
-            var next = string.IsNullOrWhiteSpace(vendor) ? "Melsec" : vendor;
-            if (_vendor == next)
-            {
-                return;
-            }
-
-            _vendor = next;
             OnPropertyChanged(nameof(AvailableConditionOptions));
             CoerceCondition();
         }
 
-        private void CoerceCondition() => SetCondition(ProjectFactory.CoerceTrapConditionForAddress(Address, Condition, _vendor));
+        protected override void OnDeviceContextChanged()
+        {
+            OnPropertyChanged(nameof(AvailableConditionOptions));
+            CoerceCondition();
+        }
+
+        private void CoerceCondition() => SetCondition(ProjectFactory.CoerceTrapConditionForAddress(Address, Condition, Vendor, KeyenceDeviceMode));
 
         private void SetCondition(string condition)
         {
@@ -151,8 +224,6 @@ public partial class MainWindow : Window
             }
         }
 
-        private void OnPropertyChanged([CallerMemberName] string? propertyName = null) =>
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     }
 
     private readonly ObservableCollection<DeviceRow> _devices = [];
@@ -191,6 +262,7 @@ public partial class MainWindow : Window
         ApplyLanguage();
 
         _vendor.SelectionChanged += (_, _) => ApplyVendorDefaults();
+        _keyenceMode.SelectionChanged += (_, _) => ApplyDeviceContextToRows();
         _projectName.TextChanged += (_, _) => UpdateHeaderProjectName();
 
         ApplyVendorDefaults();
@@ -225,13 +297,7 @@ public partial class MainWindow : Window
             Binding = new Binding(nameof(DeviceRow.Address)) { UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged },
             Width = new DataGridLength(1, DataGridLengthUnitType.Star),
         });
-        _devicesGrid.Columns.Add(new DataGridComboBoxColumn
-        {
-            Header = "Data type",
-            ItemsSource = ProjectFactory.DeviceDataTypes,
-            SelectedItemBinding = new Binding(nameof(DeviceRow.DataType)) { UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged },
-            Width = new DataGridLength(170),
-        });
+        _devicesGrid.Columns.Add(DeviceDataTypeColumn<DeviceRow>());
 
         _watchGrid.ItemsSource = _watches;
         _watchGrid.PreviewKeyDown += WatchGrid_PreviewKeyDown;
@@ -242,13 +308,7 @@ public partial class MainWindow : Window
             Binding = new Binding(nameof(WatchRow.Address)) { UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged },
             Width = new DataGridLength(1, DataGridLengthUnitType.Star),
         });
-        _watchGrid.Columns.Add(new DataGridComboBoxColumn
-        {
-            Header = "Data type",
-            ItemsSource = ProjectFactory.DeviceDataTypes,
-            SelectedItemBinding = new Binding(nameof(WatchRow.DataType)) { UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged },
-            Width = new DataGridLength(170),
-        });
+        _watchGrid.Columns.Add(DeviceDataTypeColumn<WatchRow>());
 
         _trapsGrid.ItemsSource = _traps;
         _trapsGrid.PreviewKeyDown += TrapsGrid_PreviewKeyDown;
@@ -259,13 +319,7 @@ public partial class MainWindow : Window
             Binding = new Binding(nameof(TrapRow.Address)) { UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged },
             Width = new DataGridLength(1, DataGridLengthUnitType.Star),
         });
-        _trapsGrid.Columns.Add(new DataGridComboBoxColumn
-        {
-            Header = "Data type",
-            ItemsSource = ProjectFactory.DeviceDataTypes,
-            SelectedItemBinding = new Binding(nameof(TrapRow.DataType)) { UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged },
-            Width = new DataGridLength(170),
-        });
+        _trapsGrid.Columns.Add(DeviceDataTypeColumn<TrapRow>());
         _trapsGrid.Columns.Add(new DataGridTemplateColumn
         {
             Header = "検知条件",
@@ -286,6 +340,35 @@ public partial class MainWindow : Window
             Binding = new Binding(nameof(TrapRow.Enabled)) { UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged },
             Width = new DataGridLength(90),
         });
+    }
+
+    private static DataGridTemplateColumn DeviceDataTypeColumn<T>() where T : DataTypedAddressRow =>
+        new()
+        {
+            Header = "Data type",
+            CellTemplate = DeviceDataTypeCellTemplate<T>(),
+            CellEditingTemplate = DeviceDataTypeEditingTemplate<T>(),
+            Width = new DataGridLength(170),
+        };
+
+    private static DataTemplate DeviceDataTypeCellTemplate<T>() where T : DataTypedAddressRow
+    {
+        var textBlock = new FrameworkElementFactory(typeof(TextBlock));
+        textBlock.SetBinding(TextBlock.TextProperty, new Binding(nameof(DataTypedAddressRow.DataType)));
+        textBlock.SetValue(FrameworkElement.VerticalAlignmentProperty, VerticalAlignment.Center);
+        return new DataTemplate { VisualTree = textBlock };
+    }
+
+    private static DataTemplate DeviceDataTypeEditingTemplate<T>() where T : DataTypedAddressRow
+    {
+        var comboBox = new FrameworkElementFactory(typeof(ComboBox));
+        comboBox.SetBinding(ItemsControl.ItemsSourceProperty, new Binding(nameof(DataTypedAddressRow.AvailableDataTypes)));
+        comboBox.SetBinding(Selector.SelectedItemProperty, new Binding(nameof(DataTypedAddressRow.DataType))
+        {
+            Mode = BindingMode.TwoWay,
+            UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged,
+        });
+        return new DataTemplate { VisualTree = comboBox };
     }
 
     private static DataTemplate TrapConditionCellTemplate()
@@ -334,17 +417,8 @@ public partial class MainWindow : Window
     private void LoadDefaultRows()
     {
         _devices.Clear();
-        _devices.Add(new DeviceRow { Address = "X000", DataType = "Bit" });
-        _devices.Add(new DeviceRow { Address = "Y000", DataType = "Bit" });
-        _devices.Add(new DeviceRow { Address = "D100", DataType = "Int16" });
-        _devices.Add(new DeviceRow { Address = "D102", DataType = "UInt32" });
-
         _watches.Clear();
-        _watches.Add(new WatchRow { Address = "X000" });
-        _watches.Add(new WatchRow { Address = "D100" });
         _traps.Clear();
-        _traps.Add(new TrapRow { Address = "D100", Condition = "GreaterOrEqual", Threshold = "100", Enabled = true });
-        _traps.Add(new TrapRow { Address = "D102", Condition = "Change", Enabled = true });
     }
 
     private void ApplyVendorDefaults()
@@ -372,10 +446,64 @@ public partial class MainWindow : Window
             SelectItem(_keyenceMode, "Normal");
         }
 
+        ApplyDeviceContextToRows();
+    }
+
+    private void ApplyDeviceContextToRows()
+    {
+        var vendor = Selected(_vendor);
+        var keyenceDeviceMode = SelectedKeyenceDeviceMode();
+
+        foreach (var row in _devices)
+        {
+            row.SetDeviceContext(vendor, keyenceDeviceMode);
+            if (string.IsNullOrWhiteSpace(row.Address))
+            {
+                continue;
+            }
+
+            row.Address = row.Address.Trim().ToUpperInvariant();
+            if (IsSupportedDeviceAddress(row.Address, vendor, keyenceDeviceMode))
+            {
+                row.EnsureDataTypeAllowed();
+            }
+        }
+
+        foreach (var row in _watches)
+        {
+            row.SetDeviceContext(vendor, keyenceDeviceMode);
+            if (string.IsNullOrWhiteSpace(row.Address))
+            {
+                continue;
+            }
+
+            row.Address = row.Address.Trim().ToUpperInvariant();
+            if (IsSupportedDeviceAddress(row.Address, vendor, keyenceDeviceMode))
+            {
+                row.EnsureDataTypeAllowed();
+            }
+        }
+
         foreach (var trap in _traps)
         {
-            trap.SetVendor(vendor);
+            trap.SetDeviceContext(vendor, keyenceDeviceMode);
+            if (string.IsNullOrWhiteSpace(trap.Address))
+            {
+                continue;
+            }
+
+            trap.Address = trap.Address.Trim().ToUpperInvariant();
+            if (IsSupportedDeviceAddress(trap.Address, vendor, keyenceDeviceMode))
+            {
+                trap.EnsureDataTypeAllowed();
+                trap.Condition = ProjectFactory.CoerceTrapConditionForAddress(trap.Address, trap.Condition, vendor, keyenceDeviceMode);
+            }
         }
+
+        _devicesGrid.Items.Refresh();
+        _watchGrid.Items.Refresh();
+        _trapsGrid.Items.Refresh();
+        UpdateDeviceValidationStatus();
     }
 
     private void UpdateHeaderProjectName()
@@ -499,7 +627,7 @@ public partial class MainWindow : Window
             {
                 var address = row.Address.Trim();
                 var dataType = string.IsNullOrWhiteSpace(row.DataType)
-                    ? ProjectFactory.GuessDataType(address, Selected(_vendor))
+                    ? ProjectFactory.GuessDataType(address, Selected(_vendor), SelectedKeyenceDeviceMode())
                     : CoerceDataTypeForAddress(row.DataType.Trim(), address);
                 return $"{address},{dataType}";
             }));
@@ -511,7 +639,7 @@ public partial class MainWindow : Window
             {
                 var address = row.Address.Trim();
                 var dataType = string.IsNullOrWhiteSpace(row.DataType)
-                    ? ProjectFactory.GuessDataType(address, Selected(_vendor))
+                    ? ProjectFactory.GuessDataType(address, Selected(_vendor), SelectedKeyenceDeviceMode())
                     : row.DataType.Trim();
                 return $"{address},{dataType}";
             }));
@@ -545,7 +673,7 @@ public partial class MainWindow : Window
             {
                 var address = row.Address.Trim();
                 var dataType = string.IsNullOrWhiteSpace(row.DataType)
-                    ? ProjectFactory.GuessDataType(address, Selected(_vendor))
+                    ? ProjectFactory.GuessDataType(address, Selected(_vendor), SelectedKeyenceDeviceMode())
                     : CoerceDataTypeForAddress(row.DataType.Trim(), address);
                 return $"{address},{dataType},{row.Condition.Trim()},{row.Threshold.Trim()},{(row.Enabled ? "true" : "false")}";
             }));
@@ -687,28 +815,30 @@ public partial class MainWindow : Window
     {
         foreach (var row in _devices.Where(row => !string.IsNullOrWhiteSpace(row.Address)))
         {
+            row.SetDeviceContext(Selected(_vendor), SelectedKeyenceDeviceMode());
             row.Address = row.Address.Trim().ToUpperInvariant();
             row.DataType = string.IsNullOrWhiteSpace(row.DataType)
-                ? ProjectFactory.GuessDataType(row.Address, Selected(_vendor))
+                ? ProjectFactory.GuessDataType(row.Address, Selected(_vendor), SelectedKeyenceDeviceMode())
                 : CoerceDataTypeForAddress(row.DataType, row.Address);
         }
 
         foreach (var row in _watches.Where(row => !string.IsNullOrWhiteSpace(row.Address)))
         {
+            row.SetDeviceContext(Selected(_vendor), SelectedKeyenceDeviceMode());
             row.Address = row.Address.Trim().ToUpperInvariant();
             row.DataType = string.IsNullOrWhiteSpace(row.DataType)
-                ? ProjectFactory.GuessDataType(row.Address, Selected(_vendor))
+                ? ProjectFactory.GuessDataType(row.Address, Selected(_vendor), SelectedKeyenceDeviceMode())
                 : CoerceDataTypeForAddress(row.DataType, row.Address);
         }
 
         foreach (var row in _traps.Where(row => !string.IsNullOrWhiteSpace(row.Address)))
         {
-            row.SetVendor(Selected(_vendor));
+            row.SetDeviceContext(Selected(_vendor), SelectedKeyenceDeviceMode());
             row.Address = row.Address.Trim().ToUpperInvariant();
             row.DataType = string.IsNullOrWhiteSpace(row.DataType)
-                ? ProjectFactory.GuessDataType(row.Address, Selected(_vendor))
+                ? ProjectFactory.GuessDataType(row.Address, Selected(_vendor), SelectedKeyenceDeviceMode())
                 : CoerceDataTypeForAddress(row.DataType, row.Address);
-            row.Condition = ProjectFactory.CoerceTrapConditionForAddress(row.Address, row.Condition, Selected(_vendor));
+            row.Condition = ProjectFactory.CoerceTrapConditionForAddress(row.Address, row.Condition, Selected(_vendor), SelectedKeyenceDeviceMode());
         }
 
         _devicesGrid.Items.Refresh();
@@ -722,6 +852,43 @@ public partial class MainWindow : Window
         _statusText.Foreground = isError
             ? (Brush)FindResource("ErrorFg")
             : (Brush)FindResource("TextMuted");
+    }
+
+    private void UpdateDeviceValidationStatus()
+    {
+        var vendor = Selected(_vendor);
+        var keyenceDeviceMode = SelectedKeyenceDeviceMode();
+        var invalidAddress = DeviceAddresses()
+            .FirstOrDefault(address => !IsSupportedDeviceAddress(address, vendor, keyenceDeviceMode));
+
+        if (invalidAddress is null)
+        {
+            SetStatus(L("Device check OK", "Device check OK"));
+            return;
+        }
+
+        var context = vendor == "Keyence" ? $"{vendor} {keyenceDeviceMode}" : vendor;
+        SetStatus($"Unsupported device for {context}: {invalidAddress}", isError: true);
+    }
+
+    private IEnumerable<string> DeviceAddresses() =>
+        _devices.Select(row => row.Address)
+            .Concat(_watches.Select(row => row.Address))
+            .Concat(_traps.Select(row => row.Address))
+            .Where(address => !string.IsNullOrWhiteSpace(address))
+            .Select(address => address.Trim().ToUpperInvariant());
+
+    private static bool IsSupportedDeviceAddress(string address, string vendor, string keyenceDeviceMode)
+    {
+        try
+        {
+            ProjectFactory.ValidateDeviceAddress(address, vendor, keyenceDeviceMode);
+            return true;
+        }
+        catch (ArgumentException)
+        {
+            return false;
+        }
     }
 
     private void SetSummary(PlcProject project)
@@ -907,8 +1074,12 @@ public partial class MainWindow : Window
 
             var dataType = fields.Length > 1
                 ? NormalizeDeviceDataType(fields[1], address)
-                : ProjectFactory.GuessDataType(address, Selected(_vendor));
-            yield return new DeviceRow { Address = address, DataType = dataType };
+                : ProjectFactory.GuessDataType(address, Selected(_vendor), SelectedKeyenceDeviceMode());
+            var row = new DeviceRow();
+            row.SetDeviceContext(Selected(_vendor), SelectedKeyenceDeviceMode());
+            row.Address = address;
+            row.DataType = dataType;
+            yield return row;
         }
     }
 
@@ -934,22 +1105,13 @@ public partial class MainWindow : Window
     private string NormalizeDeviceDataType(string text, string address)
     {
         var value = text.Trim();
-        return ProjectFactory.DeviceDataTypes.FirstOrDefault(dataType =>
+        return ProjectFactory.DeviceDataTypesForAddress(address, Selected(_vendor), SelectedKeyenceDeviceMode()).FirstOrDefault(dataType =>
                    dataType.Equals(value, StringComparison.OrdinalIgnoreCase))
-               ?? ProjectFactory.GuessDataType(address, Selected(_vendor));
+               ?? ProjectFactory.GuessDataType(address, Selected(_vendor), SelectedKeyenceDeviceMode());
     }
 
-    private string CoerceDataTypeForAddress(string dataType, string address)
-    {
-        var vendor = Selected(_vendor);
-        if (ProjectFactory.IsBitAddress(address, vendor))
-        {
-            return "Bit";
-        }
-
-        var normalized = NormalizeDeviceDataType(dataType, address);
-        return normalized == "Bit" ? ProjectFactory.GuessDataType(address, vendor) : normalized;
-    }
+    private string CoerceDataTypeForAddress(string dataType, string address) =>
+        NormalizeDeviceDataType(dataType, address);
 
     private static bool ParseClipboardBoolean(string text)
     {
@@ -1063,11 +1225,11 @@ public partial class MainWindow : Window
             var address = fields[0].Trim();
             if (!string.IsNullOrWhiteSpace(address))
             {
-                yield return new WatchRow
-                {
-                    Address = address,
-                    DataType = fields.Length > 1 ? CoerceDataTypeForAddress(fields[1], address) : ProjectFactory.GuessDataType(address, Selected(_vendor)),
-                };
+                var row = new WatchRow();
+                row.SetDeviceContext(Selected(_vendor), SelectedKeyenceDeviceMode());
+                row.Address = address;
+                row.DataType = fields.Length > 1 ? CoerceDataTypeForAddress(fields[1], address) : ProjectFactory.GuessDataType(address, Selected(_vendor), SelectedKeyenceDeviceMode());
+                yield return row;
             }
         }
     }
@@ -1168,16 +1330,16 @@ public partial class MainWindow : Window
             }
 
             var row = new TrapRow();
-            row.SetVendor(Selected(_vendor));
+            row.SetDeviceContext(Selected(_vendor), SelectedKeyenceDeviceMode());
             row.Address = address;
             var hasDataType = fields.Length > 2 && ProjectFactory.DeviceDataTypes.Any(dataType => dataType.Equals(fields[1].Trim(), StringComparison.OrdinalIgnoreCase));
-            row.DataType = hasDataType ? CoerceDataTypeForAddress(fields[1], address) : ProjectFactory.GuessDataType(address, Selected(_vendor));
+            row.DataType = hasDataType ? CoerceDataTypeForAddress(fields[1], address) : ProjectFactory.GuessDataType(address, Selected(_vendor), SelectedKeyenceDeviceMode());
             var conditionIndex = hasDataType ? 2 : 1;
             var thresholdIndex = hasDataType ? 3 : 2;
             var enabledIndex = hasDataType ? 4 : 3;
             row.Condition = fields.Length > conditionIndex
                 ? NormalizeTrapCondition(fields[conditionIndex], address)
-                : ProjectFactory.DefaultTrapConditionForAddress(address, Selected(_vendor));
+                : ProjectFactory.DefaultTrapConditionForAddress(address, Selected(_vendor), SelectedKeyenceDeviceMode());
             if (fields.Length > thresholdIndex && !string.IsNullOrWhiteSpace(fields[thresholdIndex]))
             {
                 row.Threshold = fields[thresholdIndex].Trim();
@@ -1203,9 +1365,9 @@ public partial class MainWindow : Window
                             "<=" or "≦" or "以下" or "lessorequal" => "LessOrEqual",
                             "==" or "=" or "等しい" or "equal" => "Equal",
                             "!=" or "<>" or "≠" or "不一致" or "notequal" => "NotEqual",
-                            _ => ProjectFactory.DefaultTrapConditionForAddress(address, Selected(_vendor)),
+                            _ => ProjectFactory.DefaultTrapConditionForAddress(address, Selected(_vendor), SelectedKeyenceDeviceMode()),
                         };
-        return ProjectFactory.CoerceTrapConditionForAddress(address, condition, Selected(_vendor));
+        return ProjectFactory.CoerceTrapConditionForAddress(address, condition, Selected(_vendor), SelectedKeyenceDeviceMode());
     }
 
     private static string[] SplitClipboardLine(string line) =>
@@ -1249,6 +1411,36 @@ public partial class MainWindow : Window
         }
 
         return rows;
+    }
+
+    private IEnumerable<DeviceRow> BuildDeviceBlockRows(TextBox startTextBox, TextBox countTextBox, int maxCount)
+    {
+        var vendor = Selected(_vendor);
+        var keyenceDeviceMode = SelectedKeyenceDeviceMode();
+        var count = ParseRange(countTextBox, fallback: 1, min: 1, max: maxCount);
+        foreach (var address in ProjectFactory.BuildDeviceBlock(startTextBox.Text, count, vendor, keyenceDeviceMode))
+        {
+            var row = new DeviceRow();
+            row.SetDeviceContext(vendor, keyenceDeviceMode);
+            row.Address = address;
+            row.DataType = ProjectFactory.GuessDataType(address, vendor, keyenceDeviceMode);
+            yield return row;
+        }
+    }
+
+    private IEnumerable<WatchRow> BuildWatchBlockRows(TextBox startTextBox, TextBox countTextBox, int maxCount)
+    {
+        var vendor = Selected(_vendor);
+        var keyenceDeviceMode = SelectedKeyenceDeviceMode();
+        var count = ParseRange(countTextBox, fallback: 1, min: 1, max: maxCount);
+        foreach (var address in ProjectFactory.BuildDeviceBlock(startTextBox.Text, count, vendor, keyenceDeviceMode))
+        {
+            var row = new WatchRow();
+            row.SetDeviceContext(vendor, keyenceDeviceMode);
+            row.Address = address;
+            row.DataType = ProjectFactory.GuessDataType(address, vendor, keyenceDeviceMode);
+            yield return row;
+        }
     }
 
     private static int SelectedIndexOrAppend<T>(DataGrid grid, ObservableCollection<T> source)
@@ -1559,8 +1751,31 @@ public partial class MainWindow : Window
     private void AddDevice_Click(object sender, RoutedEventArgs e)
     {
         var row = new DeviceRow { Address = "", DataType = "Bit" };
+        row.SetDeviceContext(Selected(_vendor), SelectedKeyenceDeviceMode());
         _devices.Add(row);
         SelectNewRow(_devicesGrid, row);
+    }
+
+    private void AddDeviceBlock_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            CommitGridEdits();
+            var rows = BuildDeviceBlockRows(_deviceBlockStart, _deviceBlockCount, maxCount: 1000).ToList();
+            foreach (var row in rows)
+            {
+                _devices.Add(row);
+            }
+
+            SelectRows(_devicesGrid, rows);
+            SetStatus(L(
+                $"Device block added: {rows.Count} point(s)",
+                $"Device block added: {rows.Count} point(s)"));
+        }
+        catch (Exception ex)
+        {
+            SetStatus(ex.Message, isError: true);
+        }
     }
 
     private void MoveDeviceUp_Click(object sender, RoutedEventArgs e) =>
@@ -1591,6 +1806,7 @@ public partial class MainWindow : Window
         }
 
         var row = new WatchRow();
+        row.SetDeviceContext(Selected(_vendor), SelectedKeyenceDeviceMode());
         _watches.Add(row);
         SelectNewRow(_watchGrid, row);
     }
@@ -1603,10 +1819,38 @@ public partial class MainWindow : Window
 
     private void DeleteWatch_Click(object sender, RoutedEventArgs e) => RemoveSelectedRows(_watchGrid, _watches);
 
+    private void AddWatchBlock_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            CommitGridEdits();
+            var rows = BuildWatchBlockRows(_watchBlockStart, _watchBlockCount, maxCount: ProjectFactory.MaxTimeChartTargets).ToList();
+            var candidate = _watches.Concat(rows).ToList();
+            var uniqueCount = UniqueWatchAddressCount(candidate);
+            if (uniqueCount > ProjectFactory.MaxTimeChartTargets)
+            {
+                SetStatus($"Time chart can contain up to {ProjectFactory.MaxTimeChartTargets} channels.", isError: true);
+                return;
+            }
+
+            foreach (var row in rows)
+            {
+                _watches.Add(row);
+            }
+
+            SelectRows(_watchGrid, rows);
+            SetStatus($"Time chart block added: {rows.Count} point(s) / {uniqueCount}/{ProjectFactory.MaxTimeChartTargets}");
+        }
+        catch (Exception ex)
+        {
+            SetStatus(ex.Message, isError: true);
+        }
+    }
+
     private void AddTrap_Click(object sender, RoutedEventArgs e)
     {
         var row = new TrapRow();
-        row.SetVendor(Selected(_vendor));
+        row.SetDeviceContext(Selected(_vendor), SelectedKeyenceDeviceMode());
         _traps.Add(row);
         SelectNewRow(_trapsGrid, row);
     }
@@ -1685,11 +1929,11 @@ public partial class MainWindow : Window
         foreach (var device in devicesElement.EnumerateArray())
         {
             var address = ReadRequiredString(device, "address");
-            _devices.Add(new DeviceRow
-            {
-                Address = address,
-                DataType = CoerceDataTypeForAddress(ToUiDataType(ReadRequiredString(device, "dataType")), address),
-            });
+            var row = new DeviceRow();
+            row.SetDeviceContext(Selected(_vendor), SelectedKeyenceDeviceMode());
+            row.Address = address;
+            row.DataType = CoerceDataTypeForAddress(ToUiDataType(ReadRequiredString(device, "dataType")), address);
+            _devices.Add(row);
         }
 
         var timeChartElement = ReadRequiredArray(root, "timeChart");
@@ -1697,11 +1941,11 @@ public partial class MainWindow : Window
         foreach (var target in timeChartElement.EnumerateArray())
         {
             var address = ReadRequiredString(target, "address");
-            _watches.Add(new WatchRow
-            {
-                Address = address,
-                DataType = CoerceDataTypeForAddress(ToUiDataType(ReadRequiredString(target, "dataType")), address),
-            });
+            var row = new WatchRow();
+            row.SetDeviceContext(Selected(_vendor), SelectedKeyenceDeviceMode());
+            row.Address = address;
+            row.DataType = CoerceDataTypeForAddress(ToUiDataType(ReadRequiredString(target, "dataType")), address);
+            _watches.Add(row);
         }
 
         var trapsElement = ReadRequiredArray(root, "traps");
@@ -1720,7 +1964,7 @@ public partial class MainWindow : Window
             }
 
             var row = new TrapRow();
-            row.SetVendor(Selected(_vendor));
+            row.SetDeviceContext(Selected(_vendor), SelectedKeyenceDeviceMode());
             row.Address = ReadRequiredString(trap, "address");
             row.DataType = CoerceDataTypeForAddress(ToUiDataType(ReadRequiredString(trap, "dataType")), row.Address);
             row.Condition = ToUiTrapCondition(ReadRequiredString(trap, "condition"));
@@ -1782,6 +2026,9 @@ public partial class MainWindow : Window
     };
 
     private static string Selected(ComboBox comboBox) => comboBox.SelectedItem?.ToString() ?? "";
+
+    private string SelectedKeyenceDeviceMode() =>
+        Selected(_vendor) == "Keyence" ? Selected(_keyenceMode) : "Normal";
 
     private static void SelectItem(ComboBox comboBox, string value)
     {
