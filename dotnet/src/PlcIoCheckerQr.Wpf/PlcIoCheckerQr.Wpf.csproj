@@ -15,11 +15,18 @@
     <AssemblyInformationalVersion>0.2.0</AssemblyInformationalVersion>
     <InformationalVersion>0.2.0</InformationalVersion>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
-    <ApplicationIcon />
+    <ApplicationIcon>..\..\..\icon.ico</ApplicationIcon>
     <StartupObject />
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\PlcIoCheckerQr.Core\PlcIoCheckerQr.Core.csproj" />
     <PackageReference Include="QRCoder" Version="1.6.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="..\..\..\icon.ico" Link="icon.ico" />
+    <Content Include="Languages\*.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
   </ItemGroup>
 </Project>

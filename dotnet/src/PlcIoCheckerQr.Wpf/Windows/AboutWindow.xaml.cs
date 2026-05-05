@@ -1,3 +1,4 @@
+using PlcIoCheckerQr.Wpf.Localization;
 using QRCoder;
 using System.Reflection;
 using System.Windows;
@@ -6,15 +7,18 @@ namespace PlcIoCheckerQr.Wpf.Windows;
 
 internal sealed partial class AboutWindow : Window
 {
-    public AboutWindow(bool useEnglish = true)
+    private readonly LanguageCatalog _language;
+
+    public AboutWindow(LanguageCatalog? language = null)
     {
         InitializeComponent();
+        _language = language ?? LanguageCatalog.Load("en");
 
         var appVersion = GetAssemblyVersionText(Assembly.GetExecutingAssembly());
-        Title = useEnglish ? "About" : "バージョン情報";
+        Title = _language.Text("about.title");
         VersionTextBlock.Text = $"Version: {appVersion}";
-        LibrariesTitleTextBlock.Text = useEnglish ? "Libraries" : "使用ライブラリ";
-        CloseButton.Content = useEnglish ? "×  Close" : "×  閉じる";
+        LibrariesTitleTextBlock.Text = _language.Text("about.libraries");
+        CloseButton.Content = _language.Text("about.close");
 
         LibrariesListView.ItemsSource = new[]
         {
@@ -40,6 +44,10 @@ internal sealed partial class AboutWindow : Window
                 "Microsoft Corporation",
                 "https://dotnet.microsoft.com/"),
         };
+    }
+
+    public AboutWindow(bool useEnglish) : this(LanguageCatalog.Load(useEnglish ? "en" : "ja"))
+    {
     }
 
     private void Close_Click(object sender, RoutedEventArgs e) => Close();

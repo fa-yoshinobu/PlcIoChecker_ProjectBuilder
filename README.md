@@ -1,6 +1,9 @@
 # PLC IO Checker Project Builder
 
+![PLC IO Checker Project Builder logo](logo.png)
+
 [![.NET 8](https://img.shields.io/badge/.NET-8.0-512BD4?logo=dotnet)](https://dotnet.microsoft.com/)
+[![.NET CI](https://github.com/fa-yoshinobu/PlcIoChecker_QR/actions/workflows/dotnet-ci.yml/badge.svg)](https://github.com/fa-yoshinobu/PlcIoChecker_QR/actions/workflows/dotnet-ci.yml)
 ![Windows WPF](https://img.shields.io/badge/platform-Windows%20WPF-0078D4?logo=windows)
 ![Project JSON v2](https://img.shields.io/badge/project%20JSON-v2-2ea44f)
 ![QR raw deflate](https://img.shields.io/badge/QR-raw%20deflate-f97316)

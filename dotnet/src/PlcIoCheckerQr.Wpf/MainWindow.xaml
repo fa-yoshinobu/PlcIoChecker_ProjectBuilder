@@ -5,6 +5,7 @@
         Title="PLC IO Checker Project Builder"
         Width="1320"
         Height="900"
+        Icon="/icon.ico"
         MinWidth="1120"
         MinHeight="760"
         WindowStartupLocation="CenterScreen"
@@ -100,6 +101,11 @@
 
           <StackPanel Grid.Column="0" Orientation="Horizontal"
                       VerticalAlignment="Center" Margin="24,0,0,0">
+            <Image Source="/icon.ico"
+                   Width="24"
+                   Height="24"
+                   Margin="0,0,10,0"
+                   RenderOptions.BitmapScalingMode="HighQuality"/>
             <TextBlock Text="PLC IO Checker"
                        Foreground="{StaticResource NavFg}"
                        FontWeight="SemiBold" FontSize="15"/>

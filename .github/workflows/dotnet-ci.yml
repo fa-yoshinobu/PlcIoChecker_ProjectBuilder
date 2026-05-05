@@ -1,0 +1,69 @@
+name: .NET CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+  DOTNET_NOLOGO: "true"
+  SOLUTION: dotnet/PlcIoCheckerQr.sln
+  WPF_PROJECT: dotnet/src/PlcIoCheckerQr.Wpf/PlcIoCheckerQr.Wpf.csproj
+
+jobs:
+  build-test:
+    name: Build and test
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore
+        run: dotnet restore $env:SOLUTION
+
+      - name: Build
+        run: dotnet build $env:SOLUTION --configuration Release --no-restore
+
+      - name: Test
+        run: dotnet test $env:SOLUTION --configuration Release --no-build --verbosity normal
+
+      - name: Publish WPF smoke test
+        run: >
+          dotnet publish $env:WPF_PROJECT
+          --configuration Release
+          --runtime win-x64
+          --self-contained true
+          --output "$env:RUNNER_TEMP\plcio-publish"
+          /p:PublishSingleFile=true
+          /p:IncludeNativeLibrariesForSelfExtract=true
+          /p:EnableCompressionInSingleFile=true
+          /p:DebugType=None
+          /p:DebugSymbols=false
+
+      - name: Verify publish output
+        shell: pwsh
+        run: |
+          $publishDir = Join-Path $env:RUNNER_TEMP "plcio-publish"
+          $exe = Join-Path $publishDir "PlcIoCheckerProjectBuilder.exe"
+          $en = Join-Path $publishDir "Languages\en.json"
+          $ja = Join-Path $publishDir "Languages\ja.json"
+
+          foreach ($path in @($exe, $en, $ja)) {
+            if (-not (Test-Path -LiteralPath $path)) {
+              throw "Expected publish output is missing: $path"
+            }
+          }
