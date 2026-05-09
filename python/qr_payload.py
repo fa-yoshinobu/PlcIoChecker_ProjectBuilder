@@ -2,16 +2,19 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import io
 import json
 import re
 import time
 import uuid
-import zlib
 from dataclasses import dataclass
 from typing import Iterable
 
+import zstandard as zstd
 
-QR_PREFIX = "PLCIOC2D"
+
+QR_PREFIX = "PLCIOC3"
+QR_ALGORITHM = "ZSTD"
 PROJECT_SCHEMA = "plc-io-checker-project"
 PROJECT_SCHEMA_VERSION = 2
 MAX_TIME_CHART_CHANNELS = 20
@@ -41,7 +44,7 @@ class QrChunk:
     payload: str
 
     def text(self) -> str:
-        return f"{QR_PREFIX}|{self.session}|{self.index}|{self.total}|{self.checksum}|{self.payload}"
+        return f"{QR_PREFIX}|{QR_ALGORITHM}|{self.session}|{self.index}|{self.total}|{self.checksum}|{self.payload}"
 
 
 def slugify(text: str, fallback: str = "plc-project") -> str:
@@ -81,7 +84,9 @@ def make_project(
     project_id = f"{slugify(project_name)}-{now_ms}"
     normalized_vendor = validate_value(vendor, VALID_VENDORS, "vendor")
     device_list = parse_device_list(device_list_text, normalized_vendor)
-    device_types = {item["address"]: item["dataType"] for item in device_list}
+    device_types: dict[str, str] = {}
+    for item in device_list:
+        device_types.setdefault(item["address"], item["dataType"])
     time_chart = parse_time_chart(time_chart_text, device_types, normalized_vendor)
     traps = parse_traps(traps_text, device_types, normalized_vendor)
 
@@ -123,19 +128,47 @@ def make_project(
 
 
 def parse_device_list(text: str, vendor: str) -> list[dict[str, str]]:
-    result: list[dict[str, str]] = []
-    seen: set[str] = set()
+    parsed: list[dict[str, str]] = []
+    comments_by_address: dict[str, str] = {}
     for line in parse_lines(text):
         parts = [part.strip() for part in line.split(",")]
         if not parts or not parts[0]:
             continue
         address = normalize_address(parts[0])
-        if address in seen:
-            continue
-        data_type = normalize_data_type(parts[1] if len(parts) > 1 and parts[1] else guess_data_type(address, vendor), address, vendor)
-        result.append({"address": address, "dataType": data_type})
-        seen.add(address)
+        has_data_type = len(parts) > 1 and is_data_type_field(parts[1])
+        data_type = normalize_data_type(
+            parts[1] if has_data_type else guess_data_type(address, vendor),
+            address,
+            vendor,
+        )
+        comment_index = 2 if has_data_type else 2 if len(parts) > 2 and not parts[1] else 1
+        comment = comment_from_parts(parts, comment_index)
+        if comment and address not in comments_by_address:
+            comments_by_address[address] = comment
+        parsed.append({"address": address, "dataType": data_type, "comment": comment})
+
+    result: list[dict[str, str]] = []
+    for item in parsed:
+        common_comment = comments_by_address.get(item["address"], "")
+        if common_comment:
+            result.append({**item, "comment": common_comment})
+        else:
+            result.append({"address": item["address"], "dataType": item["dataType"]})
     return result
+
+
+def is_data_type_field(text: str) -> bool:
+    return text.strip().upper() in VALID_DATA_TYPES
+
+
+def comment_from_parts(parts: list[str], start_index: int) -> str:
+    if start_index >= len(parts):
+        return ""
+    return normalize_comment(",".join(parts[start_index:]))
+
+
+def normalize_comment(text: str) -> str:
+    return text.replace("\r", " ").replace("\n", " ").strip()
 
 
 def parse_time_chart(text: str, device_types: dict[str, str], vendor: str) -> list[dict[str, str]]:
@@ -228,9 +261,7 @@ def without_none(value: object) -> object:
 
 
 def project_qr_bytes(project: dict) -> bytes:
-    compressor = zlib.compressobj(level=9, wbits=-15)
-    data = project_qr_json_bytes(project)
-    return compressor.compress(data) + compressor.flush()
+    return zstd.ZstdCompressor(level=19).compress(project_qr_json_bytes(project))
 
 
 def encode_project_chunks(project: dict, chunk_size: int) -> list[QrChunk]:
@@ -260,7 +291,8 @@ def decode_chunks(chunks: Iterable[QrChunk]) -> bytes:
     encoded = "".join(chunk.payload for chunk in chunk_list)
     padding = "=" * (-len(encoded) % 4)
     compressed_data = base64.urlsafe_b64decode(encoded + padding)
-    data = zlib.decompress(compressed_data, wbits=-15)
+    with zstd.ZstdDecompressor().stream_reader(io.BytesIO(compressed_data)) as reader:
+        data = reader.read()
     if hashlib.sha256(data).hexdigest() != first.checksum:
         raise ValueError("QR checksum mismatch")
     return data

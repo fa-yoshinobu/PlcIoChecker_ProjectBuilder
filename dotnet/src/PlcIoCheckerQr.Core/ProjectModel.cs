@@ -30,7 +30,7 @@ public sealed record PlcConnection(
     int ModuleIo,
     int Multidrop);
 
-public sealed record DeviceDefinition(string Address, string DataType);
+public sealed record DeviceDefinition(string Address, string DataType, string Comment = "");
 
 public sealed record MonitorTargetDefinition(string Address, string DataType);
 
@@ -165,7 +165,7 @@ public static partial class ProjectFactory
 
         var now = nowEpochMs ?? DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         var name = string.IsNullOrWhiteSpace(input.Name) ? "PLC QR Project" : input.Name.Trim();
-        var devices = new List<DeviceDefinition>();
+        var parsedDevices = new List<DeviceDefinition>();
 
         foreach (var line in ParseLines(input.DevicesText))
         {
@@ -177,13 +177,26 @@ public static partial class ProjectFactory
 
             var address = parts[0].ToUpperInvariant();
             ValidateDeviceAddress(address, input.Vendor, input.KeyenceDeviceMode, input.MachineLabel);
-            var dataType = parts.Length > 1 && !string.IsNullOrWhiteSpace(parts[1])
-                ? parts[1]
-                : GuessDataType(address, input.Vendor, input.KeyenceDeviceMode, input.MachineLabel);
+            var hasDataType = false;
+            var dataType = GuessDataType(address, input.Vendor, input.KeyenceDeviceMode, input.MachineLabel);
+            if (parts.Length > 1 && TryNormalizeDeviceDataType(parts[1], out var parsedDataType))
+            {
+                hasDataType = true;
+                dataType = parsedDataType;
+            }
             ValidateChoice(dataType, DeviceDataTypes, "device data type");
             dataType = ValidateDataTypeForAddress(address, dataType, input.Vendor, input.KeyenceDeviceMode, input.MachineLabel, "device data type");
-            devices.Add(new DeviceDefinition(address, dataType));
+            var commentIndex = hasDataType ? 2 : parts.Length > 2 && string.IsNullOrWhiteSpace(parts[1]) ? 2 : 1;
+            parsedDevices.Add(new DeviceDefinition(address, dataType, DeviceCommentFromParts(parts, commentIndex)));
         }
+
+        var commentsByAddress = parsedDevices
+            .Where(device => !string.IsNullOrWhiteSpace(device.Comment))
+            .GroupBy(device => device.Address, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.First().Comment, StringComparer.OrdinalIgnoreCase);
+        var devices = parsedDevices
+            .Select(device => device with { Comment = commentsByAddress.GetValueOrDefault(device.Address, "") })
+            .ToList();
 
         var deviceTypesByAddress = devices
             .GroupBy(device => device.Address, StringComparer.OrdinalIgnoreCase)
@@ -306,6 +319,23 @@ public static partial class ProjectFactory
 
         throw new ArgumentException($"Invalid {name} for {address}: {dataType}. Use one of: {string.Join(", ", allowed)}");
     }
+
+    private static bool TryNormalizeDeviceDataType(string text, out string dataType)
+    {
+        var value = text.Trim();
+        dataType = DeviceDataTypes.FirstOrDefault(candidate => candidate.Equals(value, StringComparison.OrdinalIgnoreCase)) ?? "";
+        return dataType.Length > 0;
+    }
+
+    private static string DeviceCommentFromParts(IReadOnlyList<string> parts, int startIndex) =>
+        startIndex >= parts.Count
+            ? ""
+            : NormalizeDeviceComment(string.Join(",", parts.Skip(startIndex)));
+
+    private static string NormalizeDeviceComment(string text) =>
+        text.Replace("\r", " ", StringComparison.Ordinal)
+            .Replace("\n", " ", StringComparison.Ordinal)
+            .Trim();
 
     public static string Slugify(string text, string fallback = "plc-project")
     {

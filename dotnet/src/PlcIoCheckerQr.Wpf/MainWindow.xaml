@@ -43,7 +43,7 @@
                   Click="ShowJson_Click"/>
       </MenuItem>
       <MenuItem x:Name="_qrMenu" Header="QR" AutomationProperties.AutomationId="QrMenu"
-                ToolTip="QR の分割、表示サイズ、誤り訂正レベルを設定します。">
+                ToolTip="QR の分割、表示サイズ、誤り訂正レベルを設定します。圧縮方式は Zstd 固定です。">
         <MenuItem x:Name="_qrChunkSizeMenu" Header="分割サイズ"
                   AutomationProperties.AutomationId="QrChunkSizeMenu"
                   ToolTip="1つのQRに入れる文字数です。小さいほどページ数は増えますが、QRは粗くなり読み取りやすくなります。">

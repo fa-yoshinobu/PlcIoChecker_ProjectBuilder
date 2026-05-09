@@ -12,7 +12,11 @@ public sealed class ProjectQrPayloadTests
         var project = SampleProject();
         var chunks = ProjectQrPayload.EncodeProjectChunks(project, chunkSize: 220);
 
-        Assert.All(chunks, chunk => Assert.StartsWith("PLCIOC2D|", chunk.Text));
+        Assert.All(chunks, chunk =>
+        {
+            Assert.StartsWith("PLCIOC3|ZSTD|", chunk.Text);
+            Assert.Equal(chunk, ProjectQrPayload.ParseChunkText(chunk.Text));
+        });
         Assert.True(chunks.Count >= 1);
 
         var decoded = ProjectQrPayload.DecodeChunks(chunks);
@@ -25,7 +29,7 @@ public sealed class ProjectQrPayloadTests
         Assert.Equal("unit-project-123", root.GetProperty("projectId").GetString());
         Assert.Equal("MELSEC", root.GetProperty("plc").GetProperty("vendor").GetString());
         Assert.Equal("GREATER_OR_EQUAL", root.GetProperty("traps")[0].GetProperty("condition").GetString());
-        Assert.False(root.GetProperty("deviceList")[0].TryGetProperty("comment", out _));
+        Assert.Equal("Start input", root.GetProperty("deviceList")[0].GetProperty("comment").GetString());
         Assert.False(root.GetProperty("deviceList")[0].TryGetProperty("watch", out _));
         Assert.False(root.TryGetProperty("settings", out _));
     }
@@ -59,6 +63,31 @@ public sealed class ProjectQrPayloadTests
         Assert.Contains("\"deviceMode\":\"NORMAL\"", json);
         Assert.Contains("\"timeChart\":[{\"address\":\"R000\",\"dataType\":\"BIT\"}]", json);
         Assert.DoesNotContain("\"melsec\"", json);
+    }
+
+    [Fact]
+    public void LegacyDeflateQrFormatIsRejected()
+    {
+        Assert.Throws<ArgumentException>(() =>
+            ProjectQrPayload.ParseChunkText("PLCIOC2D|session|1|1|0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef|payload"));
+    }
+
+    [Fact]
+    public void ProjectFactoryCommonizesDeviceCommentsByAddress()
+    {
+        var project = ProjectFactory.MakeProject(TestInput(
+            DevicesText: "D100,Int16,Speed word\r\nD100,UInt16,Ignored duplicate\r\nD101,Alarm word",
+            WatchText: "",
+            TrapsText: ""));
+
+        Assert.Equal(["Speed word", "Speed word", "Alarm word"], project.Devices.Select(device => device.Comment).ToArray());
+
+        var json = Encoding.UTF8.GetString(ProjectQrPayload.ProjectJsonBytes(project));
+        using var document = JsonDocument.Parse(json);
+        var deviceList = document.RootElement.GetProperty("deviceList");
+        Assert.Equal("Speed word", deviceList[0].GetProperty("comment").GetString());
+        Assert.Equal("Speed word", deviceList[1].GetProperty("comment").GetString());
+        Assert.Equal("Alarm word", deviceList[2].GetProperty("comment").GetString());
     }
 
     [Fact]
@@ -311,7 +340,7 @@ public sealed class ProjectQrPayloadTests
         Station: 255,
         ModuleIo: 1023,
         Multidrop: 0,
-        DevicesText: "X000,Bit\r\nD100,Int16",
+        DevicesText: "X000,Bit,Start input\r\nD100,Int16,Speed word",
         WatchText: "X000\r\nD100",
         TrapsText: "D100,GreaterOrEqual,100,true"),
         nowEpochMs: 123);

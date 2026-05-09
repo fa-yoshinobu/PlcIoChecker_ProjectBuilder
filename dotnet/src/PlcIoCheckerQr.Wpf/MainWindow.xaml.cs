@@ -128,6 +128,23 @@ public partial class MainWindow : Window
 
     public sealed class DeviceRow : DataTypedAddressRow
     {
+        private string _comment = "";
+
+        public string Comment
+        {
+            get => _comment;
+            set
+            {
+                var next = value ?? "";
+                if (_comment == next)
+                {
+                    return;
+                }
+
+                _comment = next;
+                OnPropertyChanged();
+            }
+        }
     }
 
     public sealed class WatchRow : DataTypedAddressRow
@@ -308,7 +325,7 @@ public partial class MainWindow : Window
     {
         _devicesGrid.ItemsSource = _devices;
         _devicesGrid.PreviewKeyDown += DevicesGrid_PreviewKeyDown;
-        _devicesGrid.ToolTip = "Excel とタブ区切りでコピー/貼り付けできます。列は アドレス / Data type です。";
+        _devicesGrid.ToolTip = "Excel とタブ区切りでコピー/貼り付けできます。列は アドレス / Data type / Comment です。";
         _devicesGrid.Columns.Add(new DataGridTextColumn
         {
             Header = "アドレス",
@@ -316,6 +333,12 @@ public partial class MainWindow : Window
             Width = new DataGridLength(1, DataGridLengthUnitType.Star),
         });
         _devicesGrid.Columns.Add(DeviceDataTypeColumn<DeviceRow>());
+        _devicesGrid.Columns.Add(new DataGridTextColumn
+        {
+            Header = "Comment",
+            Binding = new Binding(nameof(DeviceRow.Comment)) { UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged },
+            Width = new DataGridLength(1.4, DataGridLengthUnitType.Star),
+        });
 
         _watchGrid.ItemsSource = _watches;
         _watchGrid.PreviewKeyDown += WatchGrid_PreviewKeyDown;
@@ -601,7 +624,7 @@ public partial class MainWindow : Window
         var pageButtonVisibility = chunk.Total > 1 ? Visibility.Visible : Visibility.Collapsed;
         _prevQrButton.Visibility = pageButtonVisibility;
         _nextQrButton.Visibility = pageButtonVisibility;
-        _qrMeta.Text = $"payload {chunk.Payload.Length} chars / EC {_errorCorrection} / session {chunk.Session} / sha256 {chunk.Checksum[..12]}...";
+        _qrMeta.Text = $"payload {chunk.Payload.Length} chars / Zstd / EC {_errorCorrection} / session {chunk.Session} / sha256 {chunk.Checksum[..12]}...";
 
         using var bitmap = MakeQrBitmap(chunk.Text);
         _qrImage.Width = _displaySize;
@@ -650,7 +673,10 @@ public partial class MainWindow : Window
                 var dataType = string.IsNullOrWhiteSpace(row.DataType)
                     ? ProjectFactory.GuessDataType(address, Selected(_vendor), SelectedKeyenceDeviceMode())
                     : CoerceDataTypeForAddress(row.DataType.Trim(), address);
-                return $"{address},{dataType}";
+                var comment = NormalizeDeviceComment(row.Comment);
+                return string.IsNullOrWhiteSpace(comment)
+                    ? $"{address},{dataType}"
+                    : $"{address},{dataType},{comment}";
             }));
 
     private string WatchText() => string.Join(Environment.NewLine,
@@ -806,10 +832,11 @@ public partial class MainWindow : Window
         _devicesGrid.ToolTip = T("tooltip.devicesGrid");
         _watchGrid.ToolTip = T("tooltip.watchGrid");
         _trapsGrid.ToolTip = T("tooltip.trapsGrid");
-        if (_devicesGrid.Columns.Count >= 2)
+        if (_devicesGrid.Columns.Count >= 3)
         {
             _devicesGrid.Columns[0].Header = T("column.address");
             _devicesGrid.Columns[1].Header = T("column.dataType");
+            _devicesGrid.Columns[2].Header = T("column.comment");
         }
 
         if (_watchGrid.Columns.Count >= 2)
@@ -853,7 +880,9 @@ public partial class MainWindow : Window
             row.DataType = string.IsNullOrWhiteSpace(row.DataType)
                 ? ProjectFactory.GuessDataType(row.Address, Selected(_vendor), SelectedKeyenceDeviceMode())
                 : CoerceDataTypeForAddress(row.DataType, row.Address);
+            row.Comment = NormalizeDeviceComment(row.Comment);
         }
+        CommonizeDeviceComments();
 
         foreach (var row in _watches.Where(row => !string.IsNullOrWhiteSpace(row.Address)))
         {
@@ -877,6 +906,28 @@ public partial class MainWindow : Window
         _devicesGrid.Items.Refresh();
         _watchGrid.Items.Refresh();
         _trapsGrid.Items.Refresh();
+    }
+
+    private void CommonizeDeviceComments()
+    {
+        var commentsByAddress = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var row in _devices.Where(row => !string.IsNullOrWhiteSpace(row.Address)))
+        {
+            var comment = NormalizeDeviceComment(row.Comment);
+            row.Comment = comment;
+            if (!string.IsNullOrWhiteSpace(comment) && !commentsByAddress.ContainsKey(row.Address))
+            {
+                commentsByAddress[row.Address] = comment;
+            }
+        }
+
+        foreach (var row in _devices.Where(row => !string.IsNullOrWhiteSpace(row.Address)))
+        {
+            if (commentsByAddress.TryGetValue(row.Address, out var comment))
+            {
+                row.Comment = comment;
+            }
+        }
     }
 
     private void SetStatus(string message, bool isError = false)
@@ -1029,7 +1080,7 @@ public partial class MainWindow : Window
         }
 
         Clipboard.SetText(string.Join(Environment.NewLine, rows.Select(row =>
-            $"{row.Address}\t{row.DataType}")));
+            $"{row.Address}\t{row.DataType}\t{NormalizeDeviceComment(row.Comment)}")));
         SetStatus(Tf("status.copiedDeviceRows", rows.Count));
     }
 
@@ -1113,13 +1164,16 @@ public partial class MainWindow : Window
                 continue;
             }
 
-            var dataType = fields.Length > 1
+            var hasDataType = fields.Length > 1 && IsDeviceDataTypeField(fields[1]);
+            var dataType = hasDataType
                 ? NormalizeDeviceDataType(fields[1], address)
                 : ProjectFactory.GuessDataType(address, Selected(_vendor), SelectedKeyenceDeviceMode());
+            var commentIndex = hasDataType ? 2 : fields.Length > 2 && string.IsNullOrWhiteSpace(fields[1]) ? 2 : 1;
             var row = new DeviceRow();
             row.SetDeviceContext(Selected(_vendor), SelectedKeyenceDeviceMode());
             row.Address = address;
             row.DataType = dataType;
+            row.Comment = DeviceCommentFromFields(fields, commentIndex);
             yield return row;
         }
     }
@@ -1143,6 +1197,14 @@ public partial class MainWindow : Window
                second.Equals("Data type", StringComparison.OrdinalIgnoreCase);
     }
 
+    private static bool IsDeviceDataTypeField(string text) =>
+        ProjectFactory.DeviceDataTypes.Any(dataType => dataType.Equals(text.Trim(), StringComparison.OrdinalIgnoreCase));
+
+    private static string DeviceCommentFromFields(IReadOnlyList<string> fields, int startIndex) =>
+        startIndex >= fields.Count
+            ? ""
+            : NormalizeDeviceComment(string.Join(",", fields.Skip(startIndex)));
+
     private string NormalizeDeviceDataType(string text, string address)
     {
         var value = text.Trim();
@@ -1153,6 +1215,11 @@ public partial class MainWindow : Window
 
     private string CoerceDataTypeForAddress(string dataType, string address) =>
         NormalizeDeviceDataType(dataType, address);
+
+    private static string NormalizeDeviceComment(string text) =>
+        text.Replace("\r", " ", StringComparison.Ordinal)
+            .Replace("\n", " ", StringComparison.Ordinal)
+            .Trim();
 
     private static bool ParseClipboardBoolean(string text)
     {
@@ -1967,6 +2034,7 @@ public partial class MainWindow : Window
             row.SetDeviceContext(Selected(_vendor), SelectedKeyenceDeviceMode());
             row.Address = address;
             row.DataType = CoerceDataTypeForAddress(ToUiDataType(ReadRequiredString(device, "dataType")), address);
+            row.Comment = ReadOptionalString(device, "comment");
             _devices.Add(row);
         }
 
@@ -2006,6 +2074,8 @@ public partial class MainWindow : Window
             row.Enabled = ReadRequiredBool(trap, "enabled");
             _traps.Add(row);
         }
+
+        CommonizeDeviceComments();
     }
 
     private static string ToUiVendor(string value) => value.Trim().ToUpperInvariant() switch
@@ -2126,6 +2196,23 @@ public partial class MainWindow : Window
         }
 
         return value;
+    }
+
+    private static string ReadOptionalString(System.Text.Json.JsonElement element, string name)
+    {
+        if (!element.TryGetProperty(name, out var value) ||
+            value.ValueKind is System.Text.Json.JsonValueKind.Null or System.Text.Json.JsonValueKind.Undefined)
+        {
+            return "";
+        }
+
+        if (value.ValueKind == System.Text.Json.JsonValueKind.String &&
+            value.GetString() is { } result)
+        {
+            return result;
+        }
+
+        throw new InvalidOperationException($"Project JSON value '{name}' must be a string.");
     }
 
     private static string ReadRequiredString(System.Text.Json.JsonElement element, string name)
