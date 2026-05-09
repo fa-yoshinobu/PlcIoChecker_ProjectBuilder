@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Reflection;
 using System.Windows;
 using System.Windows.Navigation;
+using ZstdSharp;
 
 namespace PlcIoCheckerQr.Wpf.Windows;
 
@@ -38,6 +39,13 @@ internal sealed partial class AboutWindow : Window
                 "MIT License",
                 "Raffael Herrmann",
                 "https://github.com/codebude/QRCoder/"),
+            new LibraryInfo(
+                "ZstdSharp.Port",
+                GetAssemblyVersionText(typeof(Compressor).Assembly),
+                "Zstandard compression",
+                "MIT License",
+                "Oleg Stepanischev",
+                "https://github.com/oleg-st/ZstdSharp"),
             new LibraryInfo(
                 ".NET Runtime",
                 Environment.Version.ToString(),

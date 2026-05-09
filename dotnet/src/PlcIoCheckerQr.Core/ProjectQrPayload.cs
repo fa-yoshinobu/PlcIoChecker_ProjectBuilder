@@ -1,20 +1,28 @@
-using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using ZstdSharp;
 
 namespace PlcIoCheckerQr.Core;
 
-public sealed record QrChunk(string Session, int Index, int Total, string Checksum, string Payload)
+public sealed record QrChunk(
+    string Session,
+    int Index,
+    int Total,
+    string Checksum,
+    string Payload)
 {
-    public const string Prefix = "PLCIOC2D";
+    public const string Prefix = "PLCIOC3";
+    public const string ZstdAlgorithm = "ZSTD";
 
-    public string Text => $"{Prefix}|{Session}|{Index}|{Total}|{Checksum}|{Payload}";
+    public string Text => $"{Prefix}|{ZstdAlgorithm}|{Session}|{Index}|{Total}|{Checksum}|{Payload}";
 }
 
 public static class ProjectQrPayload
 {
+    private const int ZstdCompressionLevel = 19;
+
     private static readonly JsonSerializerOptions PrettyJsonOptions = new()
     {
         WriteIndented = true,
@@ -35,13 +43,14 @@ public static class ProjectQrPayload
     public static byte[] ProjectQrJsonBytes(PlcProject project) =>
         JsonSerializer.SerializeToUtf8Bytes(ToJsonShape(project), MinifiedJsonOptions);
 
-    public static byte[] ProjectQrBytes(PlcProject project) => RawDeflate(ProjectQrJsonBytes(project));
+    public static byte[] ProjectQrBytes(PlcProject project) =>
+        ZstdCompress(ProjectQrJsonBytes(project));
 
     public static IReadOnlyList<QrChunk> EncodeProjectChunks(PlcProject project, int chunkSize)
     {
         var safeChunkSize = Math.Max(200, chunkSize);
         var data = ProjectQrJsonBytes(project);
-        var compressedData = RawDeflate(data);
+        var compressedData = ZstdCompress(data);
         var checksum = Sha256Hex(data);
         var encoded = Base64UrlEncode(compressedData);
         var session = Guid.NewGuid().ToString("N")[..12];
@@ -66,13 +75,16 @@ public static class ProjectQrPayload
             throw new ArgumentException("Missing QR chunks");
         }
 
-        if (chunkList.Any(chunk => chunk.Session != first.Session || chunk.Total != first.Total || chunk.Checksum != first.Checksum))
+        if (chunkList.Any(chunk =>
+                chunk.Session != first.Session ||
+                chunk.Total != first.Total ||
+                chunk.Checksum != first.Checksum))
         {
             throw new ArgumentException("QR chunks do not belong to the same project");
         }
 
         var encoded = string.Concat(chunkList.Select(chunk => chunk.Payload));
-        var data = RawInflate(Base64UrlDecode(encoded));
+        var data = ZstdDecompress(Base64UrlDecode(encoded));
         if (!string.Equals(Sha256Hex(data), first.Checksum, StringComparison.OrdinalIgnoreCase))
         {
             throw new ArgumentException("QR checksum mismatch");
@@ -84,19 +96,43 @@ public static class ProjectQrPayload
     public static QrChunk ParseChunkText(string text)
     {
         var parts = text.Trim().Split('|');
-        if (parts.Length != 6 || parts[0] != QrChunk.Prefix)
+        if (parts.Length == 7 &&
+            parts[0] == QrChunk.Prefix &&
+            parts[1].Equals(QrChunk.ZstdAlgorithm, StringComparison.OrdinalIgnoreCase))
         {
-            throw new ArgumentException("Invalid project QR text");
+            return ParseChunkParts(parts[2], parts[3], parts[4], parts[5], parts[6]);
         }
 
-        var index = int.Parse(parts[2]);
-        var total = int.Parse(parts[3]);
+        throw new ArgumentException("Invalid project QR text");
+    }
+
+    private static QrChunk ParseChunkParts(
+        string session,
+        string indexText,
+        string totalText,
+        string checksum,
+        string payload)
+    {
+        var index = int.Parse(indexText);
+        var total = int.Parse(totalText);
         if (index < 1 || index > total || total <= 0)
         {
             throw new ArgumentException("Invalid project QR index");
         }
 
-        return new QrChunk(parts[1], index, total, parts[4].ToLowerInvariant(), parts[5]);
+        return new QrChunk(session, index, total, checksum.ToLowerInvariant(), payload);
+    }
+
+    private static byte[] ZstdCompress(byte[] data)
+    {
+        using var compressor = new Compressor(ZstdCompressionLevel);
+        return compressor.Wrap(data).ToArray();
+    }
+
+    private static byte[] ZstdDecompress(byte[] data)
+    {
+        using var decompressor = new Decompressor();
+        return decompressor.Unwrap(data).ToArray();
     }
 
     private static object ToJsonShape(PlcProject project) => new
@@ -138,6 +174,7 @@ public static class ProjectQrPayload
         {
             address = device.Address,
             dataType = FormatDataType(device.DataType),
+            comment = string.IsNullOrWhiteSpace(device.Comment) ? null : device.Comment,
         }),
         timeChart = project.TimeChart.Select(target => new
         {
@@ -209,27 +246,6 @@ public static class ProjectQrPayload
         "NotEqual" => "NOT_EQUAL",
         _ => throw new ArgumentException($"Unsupported trap condition: {value}"),
     };
-
-    private static byte[] RawDeflate(byte[] data)
-    {
-        using var output = new MemoryStream();
-        // DeflateStream emits raw deflate bytes on modern .NET. Android reads this with Inflater(true).
-        using (var stream = new DeflateStream(output, CompressionLevel.SmallestSize, leaveOpen: true))
-        {
-            stream.Write(data, 0, data.Length);
-        }
-
-        return output.ToArray();
-    }
-
-    private static byte[] RawInflate(byte[] data)
-    {
-        using var input = new MemoryStream(data);
-        using var stream = new DeflateStream(input, CompressionMode.Decompress);
-        using var output = new MemoryStream();
-        stream.CopyTo(output);
-        return output.ToArray();
-    }
 
     private static string Sha256Hex(byte[] data) =>
         Convert.ToHexString(SHA256.HashData(data)).ToLowerInvariant();

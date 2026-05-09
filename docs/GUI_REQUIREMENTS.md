@@ -9,6 +9,8 @@ JSON v2 and QR codes for Android and iOS.
 The main screen should prioritize:
 
 - Devices
+  - Device rows should allow an optional comment. Duplicate rows with the same
+    address share one comment.
 - Time chart targets
 - Traps
 
@@ -37,7 +39,7 @@ JSON structure and selection values:
 - `timeChart`
 - `traps`
 - `updatedAtEpochMs`
-- `PLCIOC2D` QR import format
+- `PLCIOC3|ZSTD` QR import format for Zstd-compressed QR payloads
 
 Do not emit removed project keys, UI-only preferences, or runtime trap values.
 

@@ -11,6 +11,10 @@ by Android and iOS.
 Generated project JSON includes only shared v2 schema fields. UI-only
 preferences and runtime observation values are not emitted.
 
+ProjectBuilder may emit `deviceList[].comment` when a device comment is set.
+If the same device address is registered more than once, the first non-empty
+comment for that address is copied to each matching `deviceList` entry.
+
 Top-level fields:
 
 - `schema`
@@ -22,6 +26,9 @@ Top-level fields:
 - `timeChart`
 - `traps`
 - `updatedAtEpochMs`
+
+`deviceList` entries contain `address` and `dataType`. They may also contain
+`comment` when a ProjectBuilder device comment is set.
 
 ## Value Sets
 
@@ -37,24 +44,19 @@ Top-level fields:
 Each QR contains:
 
 ```text
-PLCIOC2D|<session>|<index>|<total>|<sha256>|<payload-chunk>
+PLCIOC3|ZSTD|<session>|<index>|<total>|<sha256>|<payload-chunk>
 ```
 
 - `index` is 1-based.
 - `sha256` is calculated from the minified JSON bytes after decompression.
-- `payload-chunk` is a slice of base64url-encoded raw-deflate-compressed JSON without padding.
+- `payload-chunk` is a slice of base64url-encoded Zstd-compressed JSON without padding.
 - QR count is not fixed.
 - Readers must join all chunks first, then decompress the combined compressed bytes.
 
-## Raw Deflate Requirement
+## Compression Requirements
 
-Android reads this with `Inflater(true)` and iOS reads it with zlib raw inflate
-(`inflateInit2(..., -MAX_WBITS)`). The .NET app therefore uses raw deflate, not
-zlib or gzip containers.
-
-Do not replace the app-side decoder with a normal zlib/gzip container decoder.
-Raw deflate is intentional; otherwise QR payloads can scan successfully but fail
-during import or checksum validation.
+`PLCIOC3|ZSTD` uses a Zstandard frame and requires Zstd support in the importing
+app. Older `PLCIOC2D` raw-deflate QR payloads are intentionally unsupported.
 
 ## Compatibility Policy
 

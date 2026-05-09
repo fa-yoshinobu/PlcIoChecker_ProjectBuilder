@@ -6,7 +6,7 @@
 [![.NET CI](https://github.com/fa-yoshinobu/PlcIoChecker_ProjectBuilder/actions/workflows/dotnet-ci.yml/badge.svg)](https://github.com/fa-yoshinobu/PlcIoChecker_ProjectBuilder/actions/workflows/dotnet-ci.yml)
 ![Windows WPF](https://img.shields.io/badge/platform-Windows%20WPF-0078D4?logo=windows)
 ![Project JSON v2](https://img.shields.io/badge/project%20JSON-v2-2ea44f)
-![QR raw deflate](https://img.shields.io/badge/QR-raw%20deflate-f97316)
+![QR Zstd](https://img.shields.io/badge/QR-Zstd-f97316)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 [![C#](https://img.shields.io/badge/C%23-239120?logo=csharp&logoColor=white)](https://learn.microsoft.com/dotnet/csharp/)
@@ -38,7 +38,7 @@ This repository contains only the PC-side project builder and QR export tool. Th
    - IP address, port, and transport
 3. Register monitored addresses in `Devices`.
    - Rows can be pasted from Excel.
-   - Columns are `Address / Data type`.
+   - Columns are `Address / Data type / Comment`.
 4. Register graph targets in `Time Chart`.
    - Up to 20 channels can be imported.
 5. Register trigger rules in `Traps`.

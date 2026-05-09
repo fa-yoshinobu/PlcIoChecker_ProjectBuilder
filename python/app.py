@@ -65,8 +65,8 @@ class PlcQrApp(tk.Tk):
 
         self.device_list_text = self._text_box(
             text_area,
-            "deviceList: address,dataType",
-            "X000,BIT\nY000,BIT\nD100,INT16\nD102,UINT32\n",
+            "deviceList: address,dataType,comment",
+            "X000,BIT,Start input\nY000,BIT,Run output\nD100,INT16,Speed\nD102,UINT32,Counter\n",
             0,
         )
         self.time_chart_text = self._text_box(
@@ -187,7 +187,7 @@ class PlcQrApp(tk.Tk):
         chunk = self.chunks[self.current_index]
         self.qr_label.configure(image=self.qr_images[self.current_index])
         self.page_label.configure(
-            text=f"{chunk.index}/{chunk.total}  chars={len(chunk.payload)}  ec={self.qr_error_correction.get()}  session={chunk.session}"
+            text=f"{chunk.index}/{chunk.total}  chars={len(chunk.payload)}  zstd  ec={self.qr_error_correction.get()}  session={chunk.session}"
         )
         self.qr_text.delete("1.0", tk.END)
         self.qr_text.insert("1.0", chunk.text())
