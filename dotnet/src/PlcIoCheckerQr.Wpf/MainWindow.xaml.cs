@@ -283,6 +283,7 @@ public partial class MainWindow : Window
         LoadDefaultRows();
         ApplyLanguage();
 
+        PreviewKeyDown += MainWindow_PreviewKeyDown;
         _vendor.SelectionChanged += (_, _) => ApplyVendorDefaults();
         _keyenceMode.SelectionChanged += (_, _) => ApplyDeviceContextToRows();
         _model.SelectionChanged += (_, _) => UpdateDeviceValidationStatus();
@@ -1005,6 +1006,25 @@ public partial class MainWindow : Window
 
     private void BackToEditor_Click(object sender, RoutedEventArgs e) => ShowInputScreen();
 
+    private void MainWindow_PreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (_qrView.Visibility != Visibility.Visible || e.Handled)
+        {
+            return;
+        }
+
+        if (e.Key == Key.Left)
+        {
+            NavigateQr(offset: -1);
+            e.Handled = true;
+        }
+        else if (e.Key == Key.Right)
+        {
+            NavigateQr(offset: 1);
+            e.Handled = true;
+        }
+    }
+
     private void DevicesGrid_PreviewKeyDown(object sender, KeyEventArgs e)
     {
         if (TryHandleMoveShortcut(e, _devicesGrid, _devices, T("noun.device")))
@@ -1684,24 +1704,22 @@ public partial class MainWindow : Window
 
     private void PrevQr_Click(object sender, RoutedEventArgs e)
     {
-        if (_chunks.Count == 0)
-        {
-            return;
-        }
-
-        _currentIndex = (_currentIndex + _chunks.Count - 1) % _chunks.Count;
-        ShowCurrentQr();
-        SetStatus(Tf("status.qrPage", _currentIndex + 1, _chunks.Count));
+        NavigateQr(offset: -1);
     }
 
     private void NextQr_Click(object sender, RoutedEventArgs e)
+    {
+        NavigateQr(offset: 1);
+    }
+
+    private void NavigateQr(int offset)
     {
         if (_chunks.Count == 0)
         {
             return;
         }
 
-        _currentIndex = (_currentIndex + 1) % _chunks.Count;
+        _currentIndex = (_currentIndex + offset + _chunks.Count) % _chunks.Count;
         ShowCurrentQr();
         SetStatus(Tf("status.qrPage", _currentIndex + 1, _chunks.Count));
     }
