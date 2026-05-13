@@ -42,16 +42,3 @@ dotnet\publish\win-x64\PlcIoCheckerProjectBuilder.exe
 
 Language resources are embedded in the executable. The release package should not
 require a separate `Languages` folder.
-
-## Python Reference
-
-The Python app is an earlier prototype and regression reference. Keep it aligned
-with the .NET WPF app when changing QR payload behavior.
-
-```powershell
-cd D:\github\PlcIoChecker_ProjectBuilder\python
-python -m venv .venv
-.\.venv\Scripts\activate
-pip install -r requirements.txt
-python app.py
-```

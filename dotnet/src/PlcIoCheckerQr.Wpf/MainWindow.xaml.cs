@@ -281,6 +281,7 @@ public partial class MainWindow : Window
         SetupComboBoxes();
         SetupGrids();
         LoadDefaultRows();
+        _traps.CollectionChanged += (_, _) => UpdateTrapLimitUi();
         ApplyLanguage();
 
         _qrView.Focusable = true;
@@ -715,10 +716,18 @@ public partial class MainWindow : Window
         return addresses;
     }
 
-    private string TrapsText() => string.Join(Environment.NewLine,
-        _traps
+    private string TrapsText()
+    {
+        var rows = _traps
             .Where(row => !string.IsNullOrWhiteSpace(row.Address) && !string.IsNullOrWhiteSpace(row.Condition))
-            .Select(row =>
+            .ToList();
+        if (rows.Count > ProjectFactory.MaxTrapDefinitions)
+        {
+            throw new ArgumentException(Tf("status.trapMax", ProjectFactory.MaxTrapDefinitions));
+        }
+
+        return string.Join(Environment.NewLine,
+            rows.Select(row =>
             {
                 var address = row.Address.Trim();
                 var dataType = string.IsNullOrWhiteSpace(row.DataType)
@@ -726,6 +735,7 @@ public partial class MainWindow : Window
                     : CoerceDataTypeForAddress(row.DataType.Trim(), address);
                 return $"{address},{dataType},{row.Condition.Trim()},{row.Threshold.Trim()},{(row.Enabled ? "true" : "false")}";
             }));
+    }
 
     private void ShowQrScreen()
     {
@@ -795,7 +805,7 @@ public partial class MainWindow : Window
         _watchTitle.Text = T("section.watch.title");
         _watchMeta.Text = Tf("section.watch.meta", ProjectFactory.MaxTimeChartTargets);
         _trapsTitle.Text = T("section.traps.title");
-        _trapsMeta.Text = T("section.traps.meta");
+        _trapsMeta.Text = Tf("section.traps.meta", ProjectFactory.MaxTrapDefinitions);
 
         _moveDeviceUpButton.Content = _moveWatchUpButton.Content = _moveTrapUpButton.Content = T("button.up");
         _moveDeviceDownButton.Content = _moveWatchDownButton.Content = _moveTrapDownButton.Content = T("button.down");
@@ -859,6 +869,7 @@ public partial class MainWindow : Window
         }
 
         _trapsGrid.Items.Refresh();
+        UpdateTrapLimitUi();
         UpdateSupportedDeviceNames();
         if (_chunks.Count == 0)
         {
@@ -993,7 +1004,8 @@ public partial class MainWindow : Window
             project.Devices.Count,
             project.TimeChartAddresses.Count,
             ProjectFactory.MaxTimeChartTargets,
-            project.Traps.Count);
+            project.Traps.Count,
+            ProjectFactory.MaxTrapDefinitions);
     }
 
     private void Generate_Click(object sender, RoutedEventArgs e) => Generate(showQrScreen: true);
@@ -1427,6 +1439,13 @@ public partial class MainWindow : Window
         _trapsGrid.CommitEdit(DataGridEditingUnit.Row, exitEditingMode: true);
 
         var startIndex = SelectedIndexOrAppend(_trapsGrid, _traps);
+        var finalCount = Math.Max(_traps.Count, startIndex + rows.Count);
+        if (finalCount > ProjectFactory.MaxTrapDefinitions)
+        {
+            SetStatus(Tf("status.trapMax", ProjectFactory.MaxTrapDefinitions), isError: true);
+            return;
+        }
+
         ApplyRows(_traps, startIndex, rows);
         SelectRows(_trapsGrid, rows);
         SetStatus(Tf("status.pastedTrapRows", rows.Count));
@@ -1972,10 +1991,25 @@ public partial class MainWindow : Window
 
     private void AddTrap_Click(object sender, RoutedEventArgs e)
     {
+        if (_traps.Count >= ProjectFactory.MaxTrapDefinitions)
+        {
+            SetStatus(Tf("status.trapMax", ProjectFactory.MaxTrapDefinitions), isError: true);
+            return;
+        }
+
         var row = new TrapRow();
         row.SetDeviceContext(Selected(_vendor), SelectedKeyenceDeviceMode());
         _traps.Add(row);
         SelectNewRow(_trapsGrid, row);
+    }
+
+    private void UpdateTrapLimitUi()
+    {
+        var limitReached = _traps.Count >= ProjectFactory.MaxTrapDefinitions;
+        _addTrapButton.IsEnabled = !limitReached;
+        _addTrapButton.ToolTip = limitReached
+            ? Tf("status.trapMax", ProjectFactory.MaxTrapDefinitions)
+            : T("button.addRow");
     }
 
     private void MoveTrapUp_Click(object sender, RoutedEventArgs e) =>

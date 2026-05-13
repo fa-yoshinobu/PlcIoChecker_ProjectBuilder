@@ -67,6 +67,7 @@ public sealed record ProjectInput(
 public static partial class ProjectFactory
 {
     public const int MaxTimeChartTargets = 20;
+    public const int MaxTrapDefinitions = 20;
 
     public static readonly string[] Vendors = ["Melsec", "Keyence"];
     public static readonly string[] ConnectionModes = ["Real", "DemoMock"];
@@ -247,6 +248,11 @@ public static partial class ProjectFactory
             if (parts.Length > enabledIndex && !string.IsNullOrWhiteSpace(parts[enabledIndex]))
             {
                 enabled = parts[enabledIndex].ToLowerInvariant() is not ("0" or "false" or "off" or "no");
+            }
+
+            if (traps.Count >= MaxTrapDefinitions)
+            {
+                throw new ArgumentException($"トラップに追加できるのは最大 {MaxTrapDefinitions} 件です。");
             }
 
             traps.Add(new TrapDefinition(

@@ -103,6 +103,18 @@ public sealed class ProjectQrPayloadTests
     }
 
     [Fact]
+    public void ProjectFactoryLimitsTrapDefinitionsToMobileMaximum()
+    {
+        var input = TestInput(
+            DevicesText: "",
+            WatchText: "",
+            TrapsText: string.Join("\n", Enumerable.Range(0, ProjectFactory.MaxTrapDefinitions + 1).Select(index => $"D{index},Change,,true")));
+
+        var exception = Assert.Throws<ArgumentException>(() => ProjectFactory.MakeProject(input));
+        Assert.Contains($"最大 {ProjectFactory.MaxTrapDefinitions}", exception.Message);
+    }
+
+    [Fact]
     public void ProjectFactoryUsesVendorAwareTrapConditions()
     {
         var melsecProject = ProjectFactory.MakeProject(TestInput(

@@ -11,7 +11,6 @@
 
 [![C#](https://img.shields.io/badge/C%23-239120?logo=csharp&logoColor=white)](https://learn.microsoft.com/dotnet/csharp/)
 [![Windows](https://img.shields.io/badge/Windows-0078D4?logo=windows&logoColor=white)](https://learn.microsoft.com/windows/)
-[![Python](https://img.shields.io/badge/Python-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 
 [![Release](https://github.com/fa-yoshinobu/PlcIoChecker_ProjectBuilder/actions/workflows/release.yml/badge.svg)](https://github.com/fa-yoshinobu/PlcIoChecker_ProjectBuilder/actions/workflows/release.yml)
 
@@ -43,6 +42,7 @@ This repository contains only the PC-side project builder and QR export tool. Th
    - Up to 20 channels can be imported.
 5. Register trigger rules in `Traps`.
    - Examples: rising edge, change, greater than or equal.
+   - Up to 20 traps can be imported.
 6. Save JSON or generate QR pages.
 7. In the Android/iOS app, open `QR Import` and scan the displayed QR pages in order.
 

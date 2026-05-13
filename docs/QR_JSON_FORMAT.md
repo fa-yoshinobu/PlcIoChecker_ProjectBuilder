@@ -30,6 +30,9 @@ Top-level fields:
 `deviceList` entries contain `address` and `dataType`. They may also contain
 `comment` when a ProjectBuilder device comment is set.
 
+ProjectBuilder enforces the mobile app registration limits: up to 20 time chart
+targets and up to 20 trap definitions.
+
 ## Value Sets
 
 - `plc.vendor`: `MELSEC`, `KEYENCE`
