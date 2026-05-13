@@ -28,6 +28,8 @@ class PlcQrApp(tk.Tk):
         self.qr_images = []
         self.current_index = 0
         self._build_ui()
+        self.bind_all("<Left>", self._handle_qr_page_key, add="+")
+        self.bind_all("<Right>", self._handle_qr_page_key, add="+")
 
     def _build_ui(self) -> None:
         root = ttk.PanedWindow(self, orient=tk.HORIZONTAL)
@@ -137,6 +139,21 @@ class PlcQrApp(tk.Tk):
 
     def _qr_error_correction(self) -> int:
         return QR_ERROR_CORRECTION_LEVELS.get(self.qr_error_correction.get(), qrcode.constants.ERROR_CORRECT_L)
+
+    def _handle_qr_page_key(self, event: tk.Event) -> str | None:
+        if not self.chunks or self._is_text_input(event.widget):
+            return None
+        if event.keysym == "Left":
+            self.prev_qr()
+            return "break"
+        if event.keysym == "Right":
+            self.next_qr()
+            return "break"
+        return None
+
+    @staticmethod
+    def _is_text_input(widget: tk.Misc) -> bool:
+        return widget.winfo_class() in {"Entry", "TEntry", "Text", "Combobox", "TCombobox", "Spinbox", "TSpinbox"}
 
     def build_project(self) -> dict:
         return make_project(

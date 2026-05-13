@@ -283,7 +283,8 @@ public partial class MainWindow : Window
         LoadDefaultRows();
         ApplyLanguage();
 
-        PreviewKeyDown += MainWindow_PreviewKeyDown;
+        _qrView.Focusable = true;
+        AddHandler(Keyboard.PreviewKeyDownEvent, new KeyEventHandler(MainWindow_PreviewKeyDown), handledEventsToo: true);
         _vendor.SelectionChanged += (_, _) => ApplyVendorDefaults();
         _keyenceMode.SelectionChanged += (_, _) => ApplyDeviceContextToRows();
         _model.SelectionChanged += (_, _) => UpdateDeviceValidationStatus();
@@ -732,6 +733,8 @@ public partial class MainWindow : Window
         _navInputArea.Visibility = Visibility.Collapsed;
         _qrView.Visibility = Visibility.Visible;
         _navQrArea.Visibility = Visibility.Visible;
+        _qrView.Focus();
+        Keyboard.Focus(_qrView);
     }
 
     private void ShowInputScreen()
@@ -1008,17 +1011,18 @@ public partial class MainWindow : Window
 
     private void MainWindow_PreviewKeyDown(object sender, KeyEventArgs e)
     {
-        if (_qrView.Visibility != Visibility.Visible || e.Handled)
+        if (_qrView.Visibility != Visibility.Visible || Keyboard.Modifiers != ModifierKeys.None)
         {
             return;
         }
 
-        if (e.Key == Key.Left)
+        var key = e.Key == Key.System ? e.SystemKey : e.Key;
+        if (key == Key.Left)
         {
             NavigateQr(offset: -1);
             e.Handled = true;
         }
-        else if (e.Key == Key.Right)
+        else if (key == Key.Right)
         {
             NavigateQr(offset: 1);
             e.Handled = true;
