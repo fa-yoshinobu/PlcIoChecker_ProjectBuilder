@@ -12,7 +12,9 @@ The main screen should prioritize:
   - Device rows should allow an optional comment. Duplicate rows with the same
     address share one comment.
 - Time chart targets
+  - Limit registration to 20 targets to match the mobile apps.
 - Traps
+  - Limit registration to 20 definitions to match the mobile apps.
 
 These are the project settings users need to enter and edit most often.
 

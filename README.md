@@ -27,6 +27,8 @@ Primary configuration areas:
 
 This repository contains only the PC-side project builder and QR export tool. The Android and iOS PLC IO Checker apps are separate paid products, and their source code is not included in this repository.
 
+The supported desktop implementation is the .NET WPF app. The older Python prototype has been removed.
+
 ## Usage
 
 1. Start `PlcIoCheckerProjectBuilder.exe`.
