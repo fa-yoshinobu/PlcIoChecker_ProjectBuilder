@@ -255,12 +255,38 @@ public partial class MainWindow : Window
     private int _chunkSize = 800;
     private int _displaySize = 1000;
     private string _errorCorrection = "L";
-    private bool _useEnglish = true;
+    private string _languageCode = "en";
+    private bool _statusIsReady = true;
 
     private static LanguageCatalog CurrentLanguage { get; set; } = LanguageCatalog.Load("en");
-    private LanguageCatalog _language = LanguageCatalog.Load("en");
+    private static readonly string[] ImportAliasKeys =
+    [
+        "import.alias.boolean.true",
+        "import.alias.header.address",
+        "import.alias.header.condition",
+        "import.alias.header.watch",
+        "import.alias.trap.change",
+        "import.alias.trap.equal",
+        "import.alias.trap.fall",
+        "import.alias.trap.greaterOrEqual",
+        "import.alias.trap.lessOrEqual",
+        "import.alias.trap.notEqual",
+        "import.alias.trap.rise",
+    ];
 
-    private string LanguageCode => _useEnglish ? "en" : "ja";
+    private static readonly (string Key, string Condition)[] TrapConditionAliasKeys =
+    [
+        ("import.alias.trap.rise", "Rise"),
+        ("import.alias.trap.fall", "Fall"),
+        ("import.alias.trap.change", "Change"),
+        ("import.alias.trap.greaterOrEqual", "GreaterOrEqual"),
+        ("import.alias.trap.lessOrEqual", "LessOrEqual"),
+        ("import.alias.trap.equal", "Equal"),
+        ("import.alias.trap.notEqual", "NotEqual"),
+    ];
+
+    private static readonly Lazy<IReadOnlyDictionary<string, string[]>> ImportAliases = new(LoadImportAliases);
+    private LanguageCatalog _language = LanguageCatalog.Load("en");
 
     private static string TrapConditionDisplayText(string condition) => condition switch
     {
@@ -273,6 +299,54 @@ public partial class MainWindow : Window
         "NotEqual" => "!=",
         _ => condition,
     };
+
+    private static IReadOnlyDictionary<string, string[]> LoadImportAliases()
+    {
+        var aliases = ImportAliasKeys.ToDictionary(
+            key => key,
+            _ => new List<string>(),
+            StringComparer.Ordinal);
+
+        foreach (var code in LanguageCatalog.Codes())
+        {
+            var catalog = LanguageCatalog.Load(code);
+            foreach (var key in ImportAliasKeys)
+            {
+                var text = catalog.Text(key);
+                if (text.Equals(key, StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                aliases[key].AddRange(text.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+            }
+        }
+
+        return aliases.ToDictionary(
+            pair => pair.Key,
+            pair => pair.Value.Distinct(StringComparer.OrdinalIgnoreCase).ToArray(),
+            StringComparer.Ordinal);
+    }
+
+    private static bool MatchesImportAlias(string text, string key)
+    {
+        var value = text.Trim();
+        return ImportAliases.Value.TryGetValue(key, out var aliases) &&
+               aliases.Any(alias => alias.Equals(value, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static bool MatchesNormalizedImportAlias(string normalizedText, string key) =>
+        ImportAliases.Value.TryGetValue(key, out var aliases) &&
+        aliases.Any(alias => NormalizeAlias(alias).Equals(normalizedText, StringComparison.OrdinalIgnoreCase));
+
+    private static string NormalizeAlias(string text) =>
+        text.Replace(" ", "", StringComparison.Ordinal).ToLowerInvariant();
+
+    private static string? ImportTrapConditionAlias(string normalizedText) =>
+        TrapConditionAliasKeys
+            .Where(item => MatchesNormalizedImportAlias(normalizedText, item.Key))
+            .Select(item => item.Condition)
+            .FirstOrDefault();
 
     public MainWindow()
     {
@@ -328,10 +402,10 @@ public partial class MainWindow : Window
     {
         _devicesGrid.ItemsSource = _devices;
         _devicesGrid.PreviewKeyDown += DevicesGrid_PreviewKeyDown;
-        _devicesGrid.ToolTip = "Excel とタブ区切りでコピー/貼り付けできます。列は アドレス / Data type / Comment です。";
+        _devicesGrid.ToolTip = "Copy and paste tab-separated rows from Excel. Columns are Address / Data type / Comment.";
         _devicesGrid.Columns.Add(new DataGridTextColumn
         {
-            Header = "アドレス",
+            Header = "Address",
             Binding = new Binding(nameof(DeviceRow.Address)) { UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged },
             Width = new DataGridLength(1, DataGridLengthUnitType.Star),
         });
@@ -345,10 +419,10 @@ public partial class MainWindow : Window
 
         _watchGrid.ItemsSource = _watches;
         _watchGrid.PreviewKeyDown += WatchGrid_PreviewKeyDown;
-        _watchGrid.ToolTip = "Excel とタブ区切りでコピー/貼り付けできます。列は アドレス です。";
+        _watchGrid.ToolTip = "Copy and paste tab-separated rows from Excel. Columns are Address.";
         _watchGrid.Columns.Add(new DataGridTextColumn
         {
-            Header = "アドレス",
+            Header = "Address",
             Binding = new Binding(nameof(WatchRow.Address)) { UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged },
             Width = new DataGridLength(1, DataGridLengthUnitType.Star),
         });
@@ -356,31 +430,31 @@ public partial class MainWindow : Window
 
         _trapsGrid.ItemsSource = _traps;
         _trapsGrid.PreviewKeyDown += TrapsGrid_PreviewKeyDown;
-        _trapsGrid.ToolTip = "Excel とタブ区切りでコピー/貼り付けできます。列は アドレス / 検知条件 / しきい値 / 有効 です。";
+        _trapsGrid.ToolTip = "Copy and paste tab-separated rows from Excel. Columns are Address / Data type / Condition / Threshold / Enabled.";
         _trapsGrid.Columns.Add(new DataGridTextColumn
         {
-            Header = "アドレス",
+            Header = "Address",
             Binding = new Binding(nameof(TrapRow.Address)) { UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged },
             Width = new DataGridLength(1, DataGridLengthUnitType.Star),
         });
         _trapsGrid.Columns.Add(DeviceDataTypeColumn<TrapRow>());
         _trapsGrid.Columns.Add(new DataGridTemplateColumn
         {
-            Header = "検知条件",
+            Header = "Condition",
             CellTemplate = TrapConditionCellTemplate(),
             CellEditingTemplate = TrapConditionEditingTemplate(),
             Width = new DataGridLength(220),
         });
         _trapsGrid.Columns.Add(new DataGridTemplateColumn
         {
-            Header = "しきい値",
+            Header = "Threshold",
             CellTemplate = TrapThresholdCellTemplate(),
             CellEditingTemplate = TrapThresholdEditingTemplate(),
             Width = new DataGridLength(140),
         });
         _trapsGrid.Columns.Add(new DataGridCheckBoxColumn
         {
-            Header = "有効",
+            Header = "Enabled",
             Binding = new Binding(nameof(TrapRow.Enabled)) { UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged },
             Width = new DataGridLength(90),
         });
@@ -623,11 +697,11 @@ public partial class MainWindow : Window
         }
 
         var chunk = _chunks[_currentIndex];
-        _pageLabel.Text = $"QR {chunk.Index} / {chunk.Total}";
+        _pageLabel.Text = Tf("qr.page", chunk.Index, chunk.Total);
         var pageButtonVisibility = chunk.Total > 1 ? Visibility.Visible : Visibility.Collapsed;
         _prevQrButton.Visibility = pageButtonVisibility;
         _nextQrButton.Visibility = pageButtonVisibility;
-        _qrMeta.Text = $"payload {chunk.Payload.Length} chars / Zstd / EC {_errorCorrection} / session {chunk.Session} / sha256 {chunk.Checksum[..12]}...";
+        _qrMeta.Text = Tf("qr.meta", chunk.Payload.Length, _errorCorrection, chunk.Session, chunk.Checksum[..12]);
 
         using var bitmap = MakeQrBitmap(chunk.Text);
         _qrImage.Width = _displaySize;
@@ -770,15 +844,17 @@ public partial class MainWindow : Window
 
     private void ApplyLanguage()
     {
-        _language = LanguageCatalog.Load(LanguageCode);
+        _language = LanguageCatalog.Load(_languageCode);
+        _languageCode = _language.Code;
         CurrentLanguage = _language;
-        _langLabel.Text = _useEnglish ? "EN" : "JP";
+        _langLabel.Text = T("language.buttonLabel");
+        _langButton.ToolTip = T("language.switchTooltip");
 
         _fileMenu.Header = T("menu.file");
         _loadJsonMenuItem.Header = T("menu.loadJson");
         _saveJsonMenuItem.Header = T("menu.saveJson");
         _showJsonMenuItem.Header = T("menu.showJson");
-        _qrMenu.Header = "QR";
+        _qrMenu.Header = T("menu.qr");
         _qrMenu.ToolTip = T("menu.qr.tooltip");
         _qrChunkSizeMenu.Header = T("menu.qrChunkSize");
         _qrChunkSizeMenu.ToolTip = T("menu.qrChunkSize.tooltip");
@@ -788,6 +864,7 @@ public partial class MainWindow : Window
         _qrErrorCorrectionMenu.ToolTip = T("menu.errorCorrection.tooltip");
         _helpMenu.Header = T("menu.help");
         _aboutMenuItem.Header = T("menu.about");
+        ApplyQrOptionTooltips();
 
         _generateQrButton.Content = T("button.generateQr");
         _backToEditorButton.Content = T("button.backToEditor");
@@ -880,9 +957,31 @@ public partial class MainWindow : Window
             ShowCurrentQr();
         }
 
-        if (string.IsNullOrWhiteSpace(_statusText.Text) || _statusText.Text is "準備完了" or "Ready")
+        if (_statusIsReady)
         {
             _statusText.Text = T("status.ready");
+        }
+    }
+
+    private void ApplyQrOptionTooltips()
+    {
+        ApplyTaggedMenuTooltips(_qrChunkSizeMenu.Items, "menu.qrChunkSize.option");
+        ApplyTaggedMenuTooltips(_qrDisplaySizeMenu.Items, "menu.qrDisplaySize.option");
+        ApplyTaggedMenuTooltips(_qrErrorCorrectionMenu.Items, "menu.errorCorrection.option");
+    }
+
+    private void ApplyTaggedMenuTooltips(ItemCollection items, string keyPrefix)
+    {
+        foreach (var menuItem in items.OfType<MenuItem>())
+        {
+            if (menuItem.Tag is string tag)
+            {
+                var separatorIndex = tag.IndexOf(':', StringComparison.Ordinal);
+                var option = separatorIndex >= 0 ? tag[(separatorIndex + 1)..] : tag;
+                menuItem.ToolTip = T($"{keyPrefix}.{option}.tooltip");
+            }
+
+            ApplyTaggedMenuTooltips(menuItem.Items, keyPrefix);
         }
     }
 
@@ -947,6 +1046,7 @@ public partial class MainWindow : Window
 
     private void SetStatus(string message, bool isError = false)
     {
+        _statusIsReady = message == T("status.ready");
         _statusText.Text = message;
         _statusText.Foreground = isError
             ? (Brush)FindResource("ErrorFg")
@@ -1012,7 +1112,10 @@ public partial class MainWindow : Window
 
     private void LangButton_Click(object sender, RoutedEventArgs e)
     {
-        _useEnglish = !_useEnglish;
+        var nextCode = T("language.next");
+        _languageCode = LanguageCatalog.HasLanguage(nextCode)
+            ? nextCode
+            : LanguageCatalog.NextCode(_language.Code);
         ApplyLanguage();
         SetStatus(T("status.languageChanged"));
     }
@@ -1228,8 +1331,7 @@ public partial class MainWindow : Window
 
         var first = fields[0].Trim();
         var second = fields.Count > 1 ? fields[1].Trim() : "";
-        return first.Equals("アドレス", StringComparison.OrdinalIgnoreCase) ||
-               first.Equals("Address", StringComparison.OrdinalIgnoreCase) ||
+        return MatchesImportAlias(first, "import.alias.header.address") ||
                second.Equals("Data type", StringComparison.OrdinalIgnoreCase);
     }
 
@@ -1265,9 +1367,7 @@ public partial class MainWindow : Window
                value.Equals("yes", StringComparison.OrdinalIgnoreCase) ||
                value.Equals("on", StringComparison.OrdinalIgnoreCase) ||
                value.Equals("checked", StringComparison.OrdinalIgnoreCase) ||
-               value.Equals("有効", StringComparison.OrdinalIgnoreCase) ||
-               value.Equals("○", StringComparison.OrdinalIgnoreCase) ||
-               value.Equals("〇", StringComparison.OrdinalIgnoreCase);
+               MatchesImportAlias(value, "import.alias.boolean.true");
     }
 
     private void WatchGrid_PreviewKeyDown(object sender, KeyEventArgs e)
@@ -1499,20 +1599,11 @@ public partial class MainWindow : Window
     private string NormalizeTrapCondition(string text, string address)
     {
         var value = text.Trim();
-        var normalized = value.Replace(" ", "", StringComparison.Ordinal).ToLowerInvariant();
+        var normalized = NormalizeAlias(value);
         var condition = ProjectFactory.TrapConditions.FirstOrDefault(item =>
                             item.Equals(value, StringComparison.OrdinalIgnoreCase))
-                        ?? normalized switch
-                        {
-                            "立上り(off→on)" or "立上り(off->on)" or "立上り" or "立ち上がり" or "risingedge" => "Rise",
-                            "立下り(on→off)" or "立下り(on->off)" or "立下り" or "立ち下がり" or "fallingedge" => "Fall",
-                            "変化" or "change" => "Change",
-                            ">=" or "≧" or "以上" or "greaterorequal" => "GreaterOrEqual",
-                            "<=" or "≦" or "以下" or "lessorequal" => "LessOrEqual",
-                            "==" or "=" or "等しい" or "equal" => "Equal",
-                            "!=" or "<>" or "≠" or "不一致" or "notequal" => "NotEqual",
-                            _ => ProjectFactory.DefaultTrapConditionForAddress(address, Selected(_vendor), SelectedKeyenceDeviceMode()),
-                        };
+                        ?? ImportTrapConditionAlias(normalized)
+                        ?? ProjectFactory.DefaultTrapConditionForAddress(address, Selected(_vendor), SelectedKeyenceDeviceMode());
         return ProjectFactory.CoerceTrapConditionForAddress(address, condition, Selected(_vendor), SelectedKeyenceDeviceMode());
     }
 
@@ -1524,10 +1615,8 @@ public partial class MainWindow : Window
     private static bool IsAddressClipboardHeader(IReadOnlyList<string> fields)
     {
         var first = fields[0].Trim();
-        return first.Equals("アドレス", StringComparison.OrdinalIgnoreCase) ||
-               first.Equals("Address", StringComparison.OrdinalIgnoreCase) ||
-               first.Equals("タイムチャート", StringComparison.OrdinalIgnoreCase) ||
-               first.Equals("Time chart", StringComparison.OrdinalIgnoreCase);
+        return MatchesImportAlias(first, "import.alias.header.address") ||
+               MatchesImportAlias(first, "import.alias.header.watch");
     }
 
     private static bool IsTrapClipboardHeader(IReadOnlyList<string> fields)
@@ -1539,10 +1628,8 @@ public partial class MainWindow : Window
 
         var first = fields[0].Trim();
         var second = fields.Count > 1 ? fields[1].Trim() : "";
-        return first.Equals("アドレス", StringComparison.OrdinalIgnoreCase) ||
-               first.Equals("Address", StringComparison.OrdinalIgnoreCase) ||
-               second.Equals("検知条件", StringComparison.OrdinalIgnoreCase) ||
-               second.Equals("Condition", StringComparison.OrdinalIgnoreCase);
+        return MatchesImportAlias(first, "import.alias.header.address") ||
+               MatchesImportAlias(second, "import.alias.header.condition");
     }
 
     private static List<T> SelectedRows<T>(DataGrid grid, ObservableCollection<T> source)
@@ -1763,7 +1850,7 @@ public partial class MainWindow : Window
 
         var window = new Window
         {
-            Title = $"Project JSON - {_lastJson.Length.ToString("N0", CultureInfo.InvariantCulture)} chars",
+            Title = Tf("dialog.jsonTitle", _lastJson.Length.ToString("N0", CultureInfo.InvariantCulture)),
             Width = 720,
             Height = 680,
             Owner = this,
@@ -1812,7 +1899,7 @@ public partial class MainWindow : Window
     {
         try
         {
-            var dialog = new OpenFileDialog { Filter = "JSON (*.json)|*.json|All files (*.*)|*.*" };
+            var dialog = new OpenFileDialog { Filter = T("dialog.openJsonFilter") };
             if (dialog.ShowDialog(this) != true)
             {
                 return;
@@ -1834,7 +1921,7 @@ public partial class MainWindow : Window
     {
         try
         {
-            var dialog = new SaveFileDialog { Filter = "JSON (*.json)|*.json", DefaultExt = "json" };
+            var dialog = new SaveFileDialog { Filter = T("dialog.saveJsonFilter"), DefaultExt = "json" };
             if (dialog.ShowDialog(this) != true)
             {
                 return;

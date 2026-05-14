@@ -40,5 +40,7 @@ The executable is written to:
 dotnet\publish\win-x64\PlcIoCheckerProjectBuilder.exe
 ```
 
-Language resources are embedded in the executable. The release package should not
-require a separate `Languages` folder.
+Language resources are published to `dotnet\publish\win-x64\Languages\*.json`
+so UI text can be edited without rebuilding. The same resources are also
+embedded in the executable as a fallback when the external language files are
+missing.

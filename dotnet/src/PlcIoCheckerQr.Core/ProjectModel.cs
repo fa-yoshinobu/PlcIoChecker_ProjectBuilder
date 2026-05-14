@@ -209,7 +209,7 @@ public static partial class ProjectFactory
             .ToList();
         if (timeChart.Count > MaxTimeChartTargets)
         {
-            throw new ArgumentException($"タイムチャートに追加できるのは最大 {MaxTimeChartTargets} チャンネルです。");
+            throw new ArgumentException($"Time chart can contain up to {MaxTimeChartTargets} channels.");
         }
 
         var traps = new List<TrapDefinition>();
@@ -252,7 +252,7 @@ public static partial class ProjectFactory
 
             if (traps.Count >= MaxTrapDefinitions)
             {
-                throw new ArgumentException($"トラップに追加できるのは最大 {MaxTrapDefinitions} 件です。");
+                throw new ArgumentException($"Traps can contain up to {MaxTrapDefinitions} rows.");
             }
 
             traps.Add(new TrapDefinition(
