@@ -65,6 +65,13 @@ jobs:
             throw "Expected publish output is missing: $exe"
           }
 
-          if (Test-Path -LiteralPath $languagesDir) {
-            throw "Language JSON files should be embedded in the EXE, not published beside it: $languagesDir"
+          if (-not (Test-Path -LiteralPath $languagesDir)) {
+            throw "Expected language JSON output directory is missing: $languagesDir"
+          }
+
+          foreach ($languageFileName in @("en.json", "ja.json")) {
+            $languageFile = Join-Path $languagesDir $languageFileName
+            if (-not (Test-Path -LiteralPath $languageFile)) {
+              throw "Expected language JSON file is missing: $languageFile"
+            }
           }
