@@ -28,6 +28,10 @@
   </ItemGroup>
   <ItemGroup>
     <Resource Include="..\..\..\icon.ico" Link="icon.ico" />
+    <Content Include="Languages\*.json"
+             CopyToOutputDirectory="PreserveNewest"
+             CopyToPublishDirectory="PreserveNewest"
+             ExcludeFromSingleFile="true" />
     <EmbeddedResource Include="Languages\*.json" LogicalName="PlcIoCheckerQr.Wpf.Languages.%(Filename)%(Extension)" />
   </ItemGroup>
 </Project>

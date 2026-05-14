@@ -17,9 +17,9 @@ internal sealed partial class AboutWindow : Window
         InitializeComponent();
         _language = language ?? LanguageCatalog.Load("en");
 
-        var appVersion = GetAssemblyVersionText(Assembly.GetExecutingAssembly());
+        var appVersion = GetAssemblyVersionText(Assembly.GetExecutingAssembly(), _language);
         Title = _language.Text("about.title");
-        VersionTextBlock.Text = $"Version: {appVersion}";
+        VersionTextBlock.Text = _language.Format("about.version", appVersion);
         LibrariesTitleTextBlock.Text = _language.Text("about.libraries");
         CloseButton.Content = _language.Text("about.close");
 
@@ -28,36 +28,36 @@ internal sealed partial class AboutWindow : Window
             new LibraryInfo(
                 "PLC IO Checker Project Builder",
                 appVersion,
-                "Application",
+                _language.Text("about.library.application"),
                 "MIT License",
                 "FA Labo(fa_yoshinobu)",
-                "https://github.com/fa-yoshinobu/PlcIoChecker_ProjectBuilder"),
+                "https://github.com/fa-yoshinobu/PlcIoChecker_ProjectBuilder",
+                _language.Format("about.libraryDetails", "MIT License", "FA Labo(fa_yoshinobu)")),
             new LibraryInfo(
                 "QRCoder",
-                GetAssemblyVersionText(typeof(QRCodeGenerator).Assembly),
-                "QR code generation",
+                GetAssemblyVersionText(typeof(QRCodeGenerator).Assembly, _language),
+                _language.Text("about.library.qrcode"),
                 "MIT License",
                 "Raffael Herrmann",
-                "https://github.com/codebude/QRCoder/"),
+                "https://github.com/codebude/QRCoder/",
+                _language.Format("about.libraryDetails", "MIT License", "Raffael Herrmann")),
             new LibraryInfo(
                 "ZstdSharp.Port",
-                GetAssemblyVersionText(typeof(Compressor).Assembly),
-                "Zstandard compression",
+                GetAssemblyVersionText(typeof(Compressor).Assembly, _language),
+                _language.Text("about.library.zstd"),
                 "MIT License",
                 "Oleg Stepanischev",
-                "https://github.com/oleg-st/ZstdSharp"),
+                "https://github.com/oleg-st/ZstdSharp",
+                _language.Format("about.libraryDetails", "MIT License", "Oleg Stepanischev")),
             new LibraryInfo(
                 ".NET Runtime",
                 Environment.Version.ToString(),
-                "Application runtime",
+                _language.Text("about.library.runtime"),
                 "MIT License",
                 "Microsoft Corporation",
-                "https://dotnet.microsoft.com/"),
+                "https://dotnet.microsoft.com/",
+                _language.Format("about.libraryDetails", "MIT License", "Microsoft Corporation")),
         };
-    }
-
-    public AboutWindow(bool useEnglish) : this(LanguageCatalog.Load(useEnglish ? "en" : "ja"))
-    {
     }
 
     private void Close_Click(object sender, RoutedEventArgs e) => Close();
@@ -75,7 +75,7 @@ internal sealed partial class AboutWindow : Window
         }
     }
 
-    private static string GetAssemblyVersionText(Assembly assembly)
+    private static string GetAssemblyVersionText(Assembly assembly, LanguageCatalog language)
     {
         var info = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
         if (!string.IsNullOrWhiteSpace(info))
@@ -85,7 +85,7 @@ internal sealed partial class AboutWindow : Window
         }
 
         var version = assembly.GetName().Version;
-        return version?.ToString() ?? "Unknown";
+        return version?.ToString() ?? language.Text("about.unknownVersion");
     }
 
     private sealed record LibraryInfo(
@@ -94,8 +94,6 @@ internal sealed partial class AboutWindow : Window
         string Notes,
         string License,
         string Author,
-        string Url)
-    {
-        public string Details => $"License: {License}\nAuthor: {Author}";
-    }
+        string Url,
+        string Details);
 }

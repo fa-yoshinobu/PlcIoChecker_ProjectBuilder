@@ -135,7 +135,7 @@
                     Click="LangButton_Click">
               <StackPanel Orientation="Horizontal">
                 <TextBlock Text="&#x1F310; " FontSize="12" VerticalAlignment="Center"/>
-                <TextBlock x:Name="_langLabel" Text="JP" FontSize="12" VerticalAlignment="Center"/>
+                <TextBlock x:Name="_langLabel" Text="EN" FontSize="12" VerticalAlignment="Center"/>
               </StackPanel>
             </Button>
             <Button x:Name="_generateQrButton"

@@ -255,12 +255,11 @@ public partial class MainWindow : Window
     private int _chunkSize = 800;
     private int _displaySize = 1000;
     private string _errorCorrection = "L";
-    private bool _useEnglish = true;
+    private string _languageCode = "en";
+    private bool _statusIsReady = true;
 
     private static LanguageCatalog CurrentLanguage { get; set; } = LanguageCatalog.Load("en");
     private LanguageCatalog _language = LanguageCatalog.Load("en");
-
-    private string LanguageCode => _useEnglish ? "en" : "ja";
 
     private static string TrapConditionDisplayText(string condition) => condition switch
     {
@@ -623,11 +622,11 @@ public partial class MainWindow : Window
         }
 
         var chunk = _chunks[_currentIndex];
-        _pageLabel.Text = $"QR {chunk.Index} / {chunk.Total}";
+        _pageLabel.Text = Tf("qr.page", chunk.Index, chunk.Total);
         var pageButtonVisibility = chunk.Total > 1 ? Visibility.Visible : Visibility.Collapsed;
         _prevQrButton.Visibility = pageButtonVisibility;
         _nextQrButton.Visibility = pageButtonVisibility;
-        _qrMeta.Text = $"payload {chunk.Payload.Length} chars / Zstd / EC {_errorCorrection} / session {chunk.Session} / sha256 {chunk.Checksum[..12]}...";
+        _qrMeta.Text = Tf("qr.meta", chunk.Payload.Length, _errorCorrection, chunk.Session, chunk.Checksum[..12]);
 
         using var bitmap = MakeQrBitmap(chunk.Text);
         _qrImage.Width = _displaySize;
@@ -770,15 +769,17 @@ public partial class MainWindow : Window
 
     private void ApplyLanguage()
     {
-        _language = LanguageCatalog.Load(LanguageCode);
+        _language = LanguageCatalog.Load(_languageCode);
+        _languageCode = _language.Code;
         CurrentLanguage = _language;
-        _langLabel.Text = _useEnglish ? "EN" : "JP";
+        _langLabel.Text = T("language.buttonLabel");
+        _langButton.ToolTip = T("language.switchTooltip");
 
         _fileMenu.Header = T("menu.file");
         _loadJsonMenuItem.Header = T("menu.loadJson");
         _saveJsonMenuItem.Header = T("menu.saveJson");
         _showJsonMenuItem.Header = T("menu.showJson");
-        _qrMenu.Header = "QR";
+        _qrMenu.Header = T("menu.qr");
         _qrMenu.ToolTip = T("menu.qr.tooltip");
         _qrChunkSizeMenu.Header = T("menu.qrChunkSize");
         _qrChunkSizeMenu.ToolTip = T("menu.qrChunkSize.tooltip");
@@ -788,6 +789,7 @@ public partial class MainWindow : Window
         _qrErrorCorrectionMenu.ToolTip = T("menu.errorCorrection.tooltip");
         _helpMenu.Header = T("menu.help");
         _aboutMenuItem.Header = T("menu.about");
+        ApplyQrOptionTooltips();
 
         _generateQrButton.Content = T("button.generateQr");
         _backToEditorButton.Content = T("button.backToEditor");
@@ -880,9 +882,31 @@ public partial class MainWindow : Window
             ShowCurrentQr();
         }
 
-        if (string.IsNullOrWhiteSpace(_statusText.Text) || _statusText.Text is "準備完了" or "Ready")
+        if (_statusIsReady)
         {
             _statusText.Text = T("status.ready");
+        }
+    }
+
+    private void ApplyQrOptionTooltips()
+    {
+        ApplyTaggedMenuTooltips(_qrChunkSizeMenu.Items, "menu.qrChunkSize.option");
+        ApplyTaggedMenuTooltips(_qrDisplaySizeMenu.Items, "menu.qrDisplaySize.option");
+        ApplyTaggedMenuTooltips(_qrErrorCorrectionMenu.Items, "menu.errorCorrection.option");
+    }
+
+    private void ApplyTaggedMenuTooltips(ItemCollection items, string keyPrefix)
+    {
+        foreach (var menuItem in items.OfType<MenuItem>())
+        {
+            if (menuItem.Tag is string tag)
+            {
+                var separatorIndex = tag.IndexOf(':', StringComparison.Ordinal);
+                var option = separatorIndex >= 0 ? tag[(separatorIndex + 1)..] : tag;
+                menuItem.ToolTip = T($"{keyPrefix}.{option}.tooltip");
+            }
+
+            ApplyTaggedMenuTooltips(menuItem.Items, keyPrefix);
         }
     }
 
@@ -947,6 +971,7 @@ public partial class MainWindow : Window
 
     private void SetStatus(string message, bool isError = false)
     {
+        _statusIsReady = message == T("status.ready");
         _statusText.Text = message;
         _statusText.Foreground = isError
             ? (Brush)FindResource("ErrorFg")
@@ -1012,7 +1037,10 @@ public partial class MainWindow : Window
 
     private void LangButton_Click(object sender, RoutedEventArgs e)
     {
-        _useEnglish = !_useEnglish;
+        var nextCode = T("language.next");
+        _languageCode = LanguageCatalog.HasLanguage(nextCode)
+            ? nextCode
+            : LanguageCatalog.NextCode(_language.Code);
         ApplyLanguage();
         SetStatus(T("status.languageChanged"));
     }
@@ -1763,7 +1791,7 @@ public partial class MainWindow : Window
 
         var window = new Window
         {
-            Title = $"Project JSON - {_lastJson.Length.ToString("N0", CultureInfo.InvariantCulture)} chars",
+            Title = Tf("dialog.jsonTitle", _lastJson.Length.ToString("N0", CultureInfo.InvariantCulture)),
             Width = 720,
             Height = 680,
             Owner = this,
@@ -1812,7 +1840,7 @@ public partial class MainWindow : Window
     {
         try
         {
-            var dialog = new OpenFileDialog { Filter = "JSON (*.json)|*.json|All files (*.*)|*.*" };
+            var dialog = new OpenFileDialog { Filter = T("dialog.openJsonFilter") };
             if (dialog.ShowDialog(this) != true)
             {
                 return;
@@ -1834,7 +1862,7 @@ public partial class MainWindow : Window
     {
         try
         {
-            var dialog = new SaveFileDialog { Filter = "JSON (*.json)|*.json", DefaultExt = "json" };
+            var dialog = new SaveFileDialog { Filter = T("dialog.saveJsonFilter"), DefaultExt = "json" };
             if (dialog.ShowDialog(this) != true)
             {
                 return;
