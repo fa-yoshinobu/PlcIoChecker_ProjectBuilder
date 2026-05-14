@@ -45,6 +45,8 @@ internal sealed class LanguageCatalog
     public static bool HasLanguage(string code) =>
         AvailableCodes().Contains(code, StringComparer.OrdinalIgnoreCase);
 
+    public static IReadOnlyList<string> Codes() => AvailableCodes();
+
     public static string NextCode(string currentCode)
     {
         var codes = AvailableCodes();

@@ -26,73 +26,73 @@
       <RowDefinition Height="38"/>
     </Grid.RowDefinitions>
 
-    <!-- Row 0: 標準メニュー -->
+    <!-- Row 0: standard menu -->
     <Menu Grid.Row="0"
           Background="{StaticResource HeaderBg}"
           Foreground="{StaticResource TextMain}"
           AutomationProperties.AutomationId="MainMenu">
-      <MenuItem x:Name="_fileMenu" Header="ファイル" AutomationProperties.AutomationId="FileMenu">
-        <MenuItem x:Name="_loadJsonMenuItem" Header="JSON 読み込み"
+      <MenuItem x:Name="_fileMenu" Header="File" AutomationProperties.AutomationId="FileMenu">
+        <MenuItem x:Name="_loadJsonMenuItem" Header="Load JSON"
                   AutomationProperties.AutomationId="LoadJsonMenuItem"
                   Click="LoadJson_Click"/>
-        <MenuItem x:Name="_saveJsonMenuItem" Header="JSON 保存"
+        <MenuItem x:Name="_saveJsonMenuItem" Header="Save JSON"
                   AutomationProperties.AutomationId="SaveJsonMenuItem"
                   Click="SaveJson_Click"/>
-        <MenuItem x:Name="_showJsonMenuItem" Header="JSON 表示"
+        <MenuItem x:Name="_showJsonMenuItem" Header="Show JSON"
                   AutomationProperties.AutomationId="ShowJsonMenuItem"
                   Click="ShowJson_Click"/>
       </MenuItem>
       <MenuItem x:Name="_qrMenu" Header="QR" AutomationProperties.AutomationId="QrMenu"
-                ToolTip="QR の分割、表示サイズ、誤り訂正レベルを設定します。圧縮方式は Zstd 固定です。">
-        <MenuItem x:Name="_qrChunkSizeMenu" Header="分割サイズ"
+                ToolTip="Configure QR chunking, display size, and error correction level. Compression is fixed to Zstd.">
+        <MenuItem x:Name="_qrChunkSizeMenu" Header="Chunk size"
                   AutomationProperties.AutomationId="QrChunkSizeMenu"
-                  ToolTip="1つのQRに入れる文字数です。小さいほどページ数は増えますが、QRは粗くなり読み取りやすくなります。">
+                  ToolTip="Characters per QR page. Smaller values create more pages but easier-to-read QR codes.">
           <MenuItem Header="350 chars/page" Tag="chunk:350" IsCheckable="True" Click="QrOptionMenuItem_Click"
-                    ToolTip="読み取り優先です。ページ数は増えますが、QRが粗くなります。"/>
+                    ToolTip="Prioritizes scan reliability. Creates more pages, but each QR code is coarser."/>
           <MenuItem Header="500 chars/page" Tag="chunk:500" IsCheckable="True" Click="QrOptionMenuItem_Click"
-                    ToolTip="読み取りやすさ寄りです。ページ数を少し増やして、QRを粗めにします。"/>
+                    ToolTip="Leans toward easier scanning. Uses slightly more pages with coarser QR codes."/>
           <MenuItem Header="800 chars/page" Tag="chunk:800" IsCheckable="True" Click="QrOptionMenuItem_Click"
-                    ToolTip="標準設定です。ページ数と読み取りやすさのバランスを取ります。"/>
+                    ToolTip="Default setting. Balances page count and scan readability."/>
           <MenuItem Header="1200 chars/page" Tag="chunk:1200" IsCheckable="True" Click="QrOptionMenuItem_Click"
-                    ToolTip="ページ数を最小化したい場合向けです。QRが細かくなり、読み取りにくくなる場合があります。"/>
+                    ToolTip="For minimizing page count. QR codes become denser and may be harder to scan."/>
         </MenuItem>
-        <MenuItem x:Name="_qrDisplaySizeMenu" Header="表示サイズ"
+        <MenuItem x:Name="_qrDisplaySizeMenu" Header="Display size"
                   AutomationProperties.AutomationId="QrDisplaySizeMenu"
-                  ToolTip="画面上に表示するQR画像の大きさです。読み取り端末や画面サイズに合わせて変更します。">
+                  ToolTip="QR image size on screen. Adjust for the scanner device and display size.">
           <MenuItem Header="600 px" Tag="size:600" IsCheckable="True" Click="QrOptionMenuItem_Click"
-                    ToolTip="小さめの表示です。画面が狭い場合に使います。"/>
+                    ToolTip="Small display size. Use when screen space is limited."/>
           <MenuItem Header="800 px" Tag="size:800" IsCheckable="True" Click="QrOptionMenuItem_Click"
-                    ToolTip="中くらいの表示です。通常のノートPC画面向けです。"/>
+                    ToolTip="Medium display size. Suitable for typical laptop screens."/>
           <MenuItem Header="1000 px" Tag="size:1000" IsCheckable="True" Click="QrOptionMenuItem_Click"
-                    ToolTip="標準設定です。読み取りやすさを優先した表示サイズです。"/>
+                    ToolTip="Default setting. Prioritizes scan readability."/>
           <MenuItem Header="1200 px" Tag="size:1200" IsCheckable="True" Click="QrOptionMenuItem_Click"
-                    ToolTip="大きめの表示です。離れた位置から読み取る場合に使います。"/>
+                    ToolTip="Large display size. Use when scanning from farther away."/>
         </MenuItem>
-        <MenuItem x:Name="_qrErrorCorrectionMenu" Header="誤り訂正"
+        <MenuItem x:Name="_qrErrorCorrectionMenu" Header="Error correction"
                   AutomationProperties.AutomationId="QrErrorCorrectionMenu"
-                  ToolTip="QRが一部欠けたり汚れたりしても復元できる強さです。強くするほど復元力は上がりますが、QRは細かくなります。">
+                  ToolTip="Recovery strength when a QR code is partly damaged or dirty. Higher levels recover better but make the QR denser.">
           <MenuItem Header="L" Tag="ec:L" IsCheckable="True" Click="QrOptionMenuItem_Click"
-                    ToolTip="約7%まで復元できます。画面表示向けで、QRは最も粗く読み取りやすい設定です。"/>
+                    ToolTip="Recovers up to about 7%. Best for screen display, with the coarsest and easiest-to-scan QR code."/>
           <MenuItem Header="M" Tag="ec:M" IsCheckable="True" Click="QrOptionMenuItem_Click"
-                    ToolTip="約15%まで復元できます。通常運用でバランスのよい設定です。"/>
+                    ToolTip="Recovers up to about 15%. Balanced for normal use."/>
           <MenuItem Header="Q" Tag="ec:Q" IsCheckable="True" Click="QrOptionMenuItem_Click"
-                    ToolTip="約25%まで復元できます。印刷や多少の汚れを想定する場合に使います。"/>
+                    ToolTip="Recovers up to about 25%. Use for printing or when some dirt is expected."/>
           <MenuItem Header="H" Tag="ec:H" IsCheckable="True" Click="QrOptionMenuItem_Click"
-                    ToolTip="約30%まで復元できます。復元力は高いですが、QRが細かくなり読み取りにくくなる場合があります。"/>
+                    ToolTip="Recovers up to about 30%. Stronger recovery, but the QR code becomes denser and may be harder to scan."/>
         </MenuItem>
       </MenuItem>
-      <MenuItem x:Name="_helpMenu" Header="ヘルプ" AutomationProperties.AutomationId="HelpMenu">
-        <MenuItem x:Name="_aboutMenuItem" Header="バージョン情報"
+      <MenuItem x:Name="_helpMenu" Header="Help" AutomationProperties.AutomationId="HelpMenu">
+        <MenuItem x:Name="_aboutMenuItem" Header="About"
                   AutomationProperties.AutomationId="AboutMenuItem"
                   Click="AboutMenuItem_Click"/>
       </MenuItem>
     </Menu>
 
-    <!-- Row 1: ダークナビバー -->
+    <!-- Row 1: navigation bar -->
     <Border Grid.Row="1" Background="{StaticResource NavBg}">
       <Grid Height="88">
 
-        <!-- 入力画面ナビ -->
+        <!-- Editor navigation -->
         <Grid x:Name="_navInputArea">
           <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*"/>
@@ -139,13 +139,13 @@
               </StackPanel>
             </Button>
             <Button x:Name="_generateQrButton"
-                    Content="▦  QR 生成"
+                    Content="QR  Generate QR"
                     Style="{StaticResource PrimaryButton}"
                     Click="Generate_Click"/>
           </StackPanel>
         </Grid>
 
-        <!-- QR画面ナビ -->
+        <!-- QR navigation -->
         <Grid x:Name="_navQrArea" Visibility="Collapsed">
           <Grid.ColumnDefinitions>
             <ColumnDefinition Width="Auto"/>
@@ -155,7 +155,7 @@
 
           <Button x:Name="_backToEditorButton"
                   Grid.Column="0"
-                  Content="← 入力へ戻る"
+                  Content="&lt;-  Back to editor"
                   Style="{StaticResource NavGhostButton}"
                   Margin="12,0,0,0"
                   Click="BackToEditor_Click"/>
@@ -175,17 +175,17 @@
           <StackPanel Grid.Column="2" Orientation="Horizontal"
                       VerticalAlignment="Center" Margin="0,0,20,0">
             <Button x:Name="_prevQrButton"
-                    Content="←  前へ"
+                    Content="&lt;-  Previous"
                     Style="{StaticResource NavGhostButton}"
                     Margin="0,0,4,0"
                     Click="PrevQr_Click"/>
             <Button x:Name="_nextQrButton"
-                    Content="次へ  →"
+                    Content="Next  -&gt;"
                     Style="{StaticResource NavGhostButton}"
                     Margin="0,0,12,0"
                     Click="NextQr_Click"/>
             <Button x:Name="_saveQrImagesButton"
-                    Content="↓  PNG 保存"
+                    Content="v  Save PNG"
                     Style="{StaticResource AppButton}"
                     Click="SaveQrImages_Click"/>
           </StackPanel>
@@ -194,10 +194,10 @@
       </Grid>
     </Border>
 
-    <!-- Row 2: コンテンツ -->
+    <!-- Row 2: content -->
     <Grid x:Name="_inputView" Grid.Row="2">
       <TabControl x:Name="_mainTabs">
-        <TabItem x:Name="_devicesTab" Header="デバイス">
+        <TabItem x:Name="_devicesTab" Header="Devices">
           <Border Style="{StaticResource PanelBorder}">
             <Grid>
               <Grid.RowDefinitions>
@@ -212,27 +212,27 @@
                   <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <StackPanel Grid.Column="0" Orientation="Vertical" Margin="0,0,20,0">
-                  <TextBlock x:Name="_devicesTitle" Text="デバイス" Style="{StaticResource SectionTitle}"/>
-                  <TextBlock x:Name="_devicesMeta" Text="アドレスとデータ型を編集します" Style="{StaticResource SectionMeta}"/>
+                  <TextBlock x:Name="_devicesTitle" Text="Devices" Style="{StaticResource SectionTitle}"/>
+                  <TextBlock x:Name="_devicesMeta" Text="Edit addresses and data types." Style="{StaticResource SectionMeta}"/>
                 </StackPanel>
                 <StackPanel Grid.Column="1"
                             Orientation="Horizontal"
                             HorizontalAlignment="Right"
                             VerticalAlignment="Center">
                   <Button x:Name="_moveDeviceUpButton"
-                          Content="↑  上へ"
+                          Content="^  Up"
                           Style="{StaticResource GhostButton}"
-                          ToolTip="選択したデバイス行を上へ移動します。Alt+↑ でも移動できます。"
+                          ToolTip="Move selected device rows up. Alt+Up also works."
                           Margin="0,0,8,0"
                           Click="MoveDeviceUp_Click"/>
                   <Button x:Name="_moveDeviceDownButton"
-                          Content="↓  下へ"
+                          Content="v  Down"
                           Style="{StaticResource GhostButton}"
-                          ToolTip="選択したデバイス行を下へ移動します。Alt+↓ でも移動できます。"
+                          ToolTip="Move selected device rows down. Alt+Down also works."
                           Margin="0,0,8,0"
                           Click="MoveDeviceDown_Click"/>
                   <Button x:Name="_addDeviceButton"
-                          Content="+  行を追加"
+                          Content="+  Add row"
                           Style="{StaticResource AppButton}"
                           Margin="0,0,8,0"
                           Click="AddDevice_Click"/>
@@ -252,7 +252,7 @@
                           Margin="0,0,8,0"
                           Click="AddDeviceBlock_Click"/>
                   <Button x:Name="_deleteDeviceButton"
-                          Content="−  削除"
+                          Content="-  Delete"
                           Style="{StaticResource GhostButton}"
                           Click="DeleteDevice_Click"/>
                 </StackPanel>
@@ -265,7 +265,7 @@
           </Border>
         </TabItem>
 
-        <TabItem x:Name="_watchTab" Header="タイムチャート">
+        <TabItem x:Name="_watchTab" Header="Time Chart">
           <Border Style="{StaticResource PanelBorder}">
             <Grid>
               <Grid.RowDefinitions>
@@ -280,27 +280,27 @@
                   <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <StackPanel Grid.Column="0" Orientation="Vertical" Margin="0,0,20,0">
-                  <TextBlock x:Name="_watchTitle" Text="タイムチャート対象" Style="{StaticResource SectionTitle}"/>
-                  <TextBlock x:Name="_watchMeta" Text="モバイルアプリのタイムチャートに表示するアドレスを指定します（最大20件）" Style="{StaticResource SectionMeta}"/>
+                  <TextBlock x:Name="_watchTitle" Text="Time Chart Targets" Style="{StaticResource SectionTitle}"/>
+                  <TextBlock x:Name="_watchMeta" Text="Choose addresses shown in the mobile app time chart, up to 20." Style="{StaticResource SectionMeta}"/>
                 </StackPanel>
                 <StackPanel Grid.Column="1"
                             Orientation="Horizontal"
                             HorizontalAlignment="Right"
                             VerticalAlignment="Center">
                   <Button x:Name="_moveWatchUpButton"
-                          Content="↑  上へ"
+                          Content="^  Up"
                           Style="{StaticResource GhostButton}"
-                          ToolTip="選択したタイムチャート行を上へ移動します。Alt+↑ でも移動できます。"
+                          ToolTip="Move selected time chart rows up. Alt+Up also works."
                           Margin="0,0,8,0"
                           Click="MoveWatchUp_Click"/>
                   <Button x:Name="_moveWatchDownButton"
-                          Content="↓  下へ"
+                          Content="v  Down"
                           Style="{StaticResource GhostButton}"
-                          ToolTip="選択したタイムチャート行を下へ移動します。Alt+↓ でも移動できます。"
+                          ToolTip="Move selected time chart rows down. Alt+Down also works."
                           Margin="0,0,8,0"
                           Click="MoveWatchDown_Click"/>
                   <Button x:Name="_addWatchButton"
-                          Content="+  行を追加"
+                          Content="+  Add row"
                           Style="{StaticResource AppButton}"
                           Margin="0,0,8,0"
                           Click="AddWatch_Click"/>
@@ -320,7 +320,7 @@
                           Margin="0,0,8,0"
                           Click="AddWatchBlock_Click"/>
                   <Button x:Name="_deleteWatchButton"
-                          Content="−  削除"
+                          Content="-  Delete"
                           Style="{StaticResource GhostButton}"
                           Click="DeleteWatch_Click"/>
                 </StackPanel>
@@ -333,7 +333,7 @@
           </Border>
         </TabItem>
 
-        <TabItem x:Name="_trapsTab" Header="トラップ">
+        <TabItem x:Name="_trapsTab" Header="Traps">
           <Border Style="{StaticResource PanelBorder}">
             <Grid>
               <Grid.RowDefinitions>
@@ -348,32 +348,32 @@
                   <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <StackPanel Grid.Column="0" Orientation="Vertical" Margin="0,0,20,0">
-                  <TextBlock x:Name="_trapsTitle" Text="トラップ" Style="{StaticResource SectionTitle}"/>
-                  <TextBlock x:Name="_trapsMeta" Text="条件、しきい値、有効状態を編集します" Style="{StaticResource SectionMeta}"/>
+                  <TextBlock x:Name="_trapsTitle" Text="Traps" Style="{StaticResource SectionTitle}"/>
+                  <TextBlock x:Name="_trapsMeta" Text="Edit conditions, thresholds, and enabled state." Style="{StaticResource SectionMeta}"/>
                 </StackPanel>
                 <StackPanel Grid.Column="1"
                             Orientation="Horizontal"
                             HorizontalAlignment="Right"
                             VerticalAlignment="Center">
                   <Button x:Name="_moveTrapUpButton"
-                          Content="↑  上へ"
+                          Content="^  Up"
                           Style="{StaticResource GhostButton}"
-                          ToolTip="選択したトラップ行を上へ移動します。Alt+↑ でも移動できます。"
+                          ToolTip="Move selected trap rows up. Alt+Up also works."
                           Margin="0,0,8,0"
                           Click="MoveTrapUp_Click"/>
                   <Button x:Name="_moveTrapDownButton"
-                          Content="↓  下へ"
+                          Content="v  Down"
                           Style="{StaticResource GhostButton}"
-                          ToolTip="選択したトラップ行を下へ移動します。Alt+↓ でも移動できます。"
+                          ToolTip="Move selected trap rows down. Alt+Down also works."
                           Margin="0,0,8,0"
                           Click="MoveTrapDown_Click"/>
                   <Button x:Name="_addTrapButton"
-                          Content="+  行を追加"
+                          Content="+  Add row"
                           Style="{StaticResource AppButton}"
                           Margin="0,0,8,0"
                           Click="AddTrap_Click"/>
                   <Button x:Name="_deleteTrapButton"
-                          Content="−  削除"
+                          Content="-  Delete"
                           Style="{StaticResource GhostButton}"
                           Click="DeleteTrap_Click"/>
                 </StackPanel>
@@ -386,7 +386,7 @@
           </Border>
         </TabItem>
 
-        <TabItem x:Name="_projectTab" Header="プロジェクト/接続">
+        <TabItem x:Name="_projectTab" Header="Project / Connection">
           <ScrollViewer VerticalScrollBarVisibility="Auto">
             <Grid>
               <Grid.ColumnDefinitions>
@@ -412,20 +412,20 @@
                   </Grid.ColumnDefinitions>
 
                   <StackPanel Grid.Row="0" Grid.ColumnSpan="2">
-                    <TextBlock x:Name="_projectSectionTitle" Text="プロジェクト" Style="{StaticResource SectionTitle}"/>
-                    <TextBlock x:Name="_projectSectionMeta" Text="モバイルアプリに渡す基本情報" Style="{StaticResource SectionMeta}"/>
+                    <TextBlock x:Name="_projectSectionTitle" Text="Project" Style="{StaticResource SectionTitle}"/>
+                    <TextBlock x:Name="_projectSectionMeta" Text="Basic information passed to the mobile app." Style="{StaticResource SectionMeta}"/>
                   </StackPanel>
 
-                  <TextBlock x:Name="_projectNameLabel" Grid.Row="2" Grid.Column="0" Text="プロジェクト名" Style="{StaticResource FormLabel}" Margin="0,6,14,6"/>
+                  <TextBlock x:Name="_projectNameLabel" Grid.Row="2" Grid.Column="0" Text="Project name" Style="{StaticResource FormLabel}" Margin="0,6,14,6"/>
                   <TextBox x:Name="_projectName" Grid.Row="2" Grid.Column="1" Text="PLC QR Project" Margin="0,4,0,4"/>
 
-                  <TextBlock x:Name="_vendorLabel" Grid.Row="3" Grid.Column="0" Text="メーカー" Style="{StaticResource FormLabel}" Margin="0,6,14,6"/>
+                  <TextBlock x:Name="_vendorLabel" Grid.Row="3" Grid.Column="0" Text="Vendor" Style="{StaticResource FormLabel}" Margin="0,6,14,6"/>
                   <ComboBox x:Name="_vendor" Grid.Row="3" Grid.Column="1" Margin="0,4,0,4" ItemTemplate="{StaticResource UppercaseComboBoxItemTemplate}"/>
 
                   <TextBlock x:Name="_modelLabel" Grid.Row="4" Grid.Column="0" Text="CPU model" Style="{StaticResource FormLabel}" Margin="0,6,14,6"/>
                   <ComboBox x:Name="_model" Grid.Row="4" Grid.Column="1" Margin="0,4,0,4"/>
 
-                  <TextBlock x:Name="_keyenceModeLabel" Grid.Row="5" Grid.Column="0" Text="KEYENCE 表示" Style="{StaticResource FormLabel}" Margin="0,6,14,6"/>
+                  <TextBlock x:Name="_keyenceModeLabel" Grid.Row="5" Grid.Column="0" Text="KEYENCE display" Style="{StaticResource FormLabel}" Margin="0,6,14,6"/>
                   <ComboBox x:Name="_keyenceMode" Grid.Row="5" Grid.Column="1" Margin="0,4,0,4" ItemTemplate="{StaticResource UppercaseComboBoxItemTemplate}"/>
 
                   <TextBlock x:Name="_supportedDevicesLabel" Grid.Row="6" Grid.Column="0" Text="Supported devices" Style="{StaticResource FormLabel}" Margin="0,6,14,6"/>
@@ -460,8 +460,8 @@
                   </Grid.ColumnDefinitions>
 
                   <StackPanel Grid.Row="0" Grid.ColumnSpan="2">
-                    <TextBlock x:Name="_connectionSectionTitle" Text="接続" Style="{StaticResource SectionTitle}"/>
-                    <TextBlock x:Name="_connectionSectionMeta" Text="PLC 通信設定" Style="{StaticResource SectionMeta}"/>
+                    <TextBlock x:Name="_connectionSectionTitle" Text="Connection" Style="{StaticResource SectionTitle}"/>
+                    <TextBlock x:Name="_connectionSectionMeta" Text="PLC communication settings." Style="{StaticResource SectionMeta}"/>
                   </StackPanel>
 
                   <TextBlock x:Name="_connectionModeLabel" Grid.Row="2" Grid.Column="0" Text="Connection mode" Style="{StaticResource FormLabel}" Margin="0,6,14,6"/>
@@ -476,7 +476,7 @@
                   <TextBlock x:Name="_transportLabel" Grid.Row="5" Grid.Column="0" Text="Transport" Style="{StaticResource FormLabel}" Margin="0,6,14,6"/>
                   <ComboBox x:Name="_transport" Grid.Row="5" Grid.Column="1" Margin="0,4,0,4" ItemTemplate="{StaticResource UppercaseComboBoxItemTemplate}"/>
 
-                  <TextBlock x:Name="_intervalLabel" Grid.Row="6" Grid.Column="0" Text="監視周期 ms" Style="{StaticResource FormLabel}" Margin="0,6,14,6"/>
+                  <TextBlock x:Name="_intervalLabel" Grid.Row="6" Grid.Column="0" Text="Polling interval ms" Style="{StaticResource FormLabel}" Margin="0,6,14,6"/>
                   <TextBox x:Name="_interval" Grid.Row="6" Grid.Column="1" Text="500" Margin="0,4,0,4"/>
 
                   <TextBlock x:Name="_timeoutLabel" Grid.Row="7" Grid.Column="0" Text="Timeout ms" Style="{StaticResource FormLabel}" Margin="0,6,14,6"/>
@@ -544,7 +544,7 @@
       </Border>
     </Grid>
 
-    <!-- Row 3: ステータスバー -->
+    <!-- Row 3: status bar -->
     <Border Grid.Row="3"
             Background="{StaticResource HeaderBg}"
             BorderBrush="{StaticResource BorderSoft}"
@@ -557,7 +557,7 @@
                    VerticalAlignment="Center"
                    Margin="20,0,0,0"/>
         <TextBlock x:Name="_statusText"
-                   Text="準備完了"
+                   Text="Ready"
                    Foreground="{StaticResource TextMuted}"
                    VerticalAlignment="Center"/>
       </DockPanel>
