@@ -28,6 +28,7 @@ public sealed class ProjectQrPayloadTests
         Assert.Equal(2, root.GetProperty("schemaVersion").GetInt32());
         Assert.Equal("unit-project-123", root.GetProperty("projectId").GetString());
         Assert.Equal("MELSEC", root.GetProperty("plc").GetProperty("vendor").GetString());
+        Assert.Equal("secret1", root.GetProperty("plc").GetProperty("melsec").GetProperty("remotePassword").GetString());
         Assert.Equal("GREATER_OR_EQUAL", root.GetProperty("traps")[0].GetProperty("condition").GetString());
         Assert.Equal("Start input", root.GetProperty("deviceList")[0].GetProperty("comment").GetString());
         Assert.False(root.GetProperty("deviceList")[0].TryGetProperty("watch", out _));
@@ -52,6 +53,7 @@ public sealed class ProjectQrPayloadTests
             Station: 255,
             ModuleIo: 1023,
             Multidrop: 0,
+            RemotePassword: "ignored",
             DevicesText: "R000\r\nDM100,UInt16",
             WatchText: "R000",
             TrapsText: "DM100,Change,,true"),
@@ -63,6 +65,7 @@ public sealed class ProjectQrPayloadTests
         Assert.Contains("\"deviceMode\":\"NORMAL\"", json);
         Assert.Contains("\"timeChart\":[{\"address\":\"R000\",\"dataType\":\"BIT\"}]", json);
         Assert.DoesNotContain("\"melsec\"", json);
+        Assert.DoesNotContain("\"remotePassword\"", json);
     }
 
     [Fact]
@@ -352,6 +355,7 @@ public sealed class ProjectQrPayloadTests
         Station: 255,
         ModuleIo: 1023,
         Multidrop: 0,
+        RemotePassword: "secret1",
         DevicesText: "X000,Bit,Start input\r\nD100,Int16,Speed word",
         WatchText: "X000\r\nD100",
         TrapsText: "D100,GreaterOrEqual,100,true"),
@@ -361,6 +365,7 @@ public sealed class ProjectQrPayloadTests
         string Vendor = "Melsec",
         string KeyenceDeviceMode = "Normal",
         string? MachineLabel = null,
+        string RemotePassword = "secret1",
         string DevicesText = "D100",
         string WatchText = "",
         string TrapsText = "") => new(
@@ -378,6 +383,7 @@ public sealed class ProjectQrPayloadTests
         Station: 255,
         ModuleIo: 1023,
         Multidrop: 0,
+        RemotePassword: Vendor == "Melsec" ? RemotePassword : "",
         DevicesText: DevicesText,
         WatchText: WatchText,
         TrapsText: TrapsText);

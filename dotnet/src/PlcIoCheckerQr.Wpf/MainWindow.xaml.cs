@@ -559,9 +559,15 @@ public partial class MainWindow : Window
         _moduleIo.Visibility = melsecRoutingVisibility;
         _multidropLabel.Visibility = melsecRoutingVisibility;
         _multidrop.Visibility = melsecRoutingVisibility;
+        _remotePasswordLabel.Visibility = melsecRoutingVisibility;
+        _remotePassword.Visibility = melsecRoutingVisibility;
         if (vendor != "Keyence")
         {
             SelectItem(_keyenceMode, "Normal");
+        }
+        else
+        {
+            _remotePassword.Password = "";
         }
 
         ApplyDeviceContextToRows();
@@ -679,6 +685,7 @@ public partial class MainWindow : Window
             Station: ParseRange(_station, fallback: 255, min: 0, max: 255),
             ModuleIo: ParseRange(_moduleIo, fallback: 1023, min: 0, max: 65535),
             Multidrop: ParseRange(_multidrop, fallback: 0, min: 0, max: 255),
+            RemotePassword: Selected(_vendor) == "Melsec" ? _remotePassword.Password : "",
             DevicesText: DevicesText(),
             WatchText: WatchText(),
             TrapsText: TrapsText()));
@@ -919,6 +926,7 @@ public partial class MainWindow : Window
         _stationLabel.Text = T("field.station");
         _moduleIoLabel.Text = T("field.moduleIo");
         _multidropLabel.Text = T("field.multidrop");
+        _remotePasswordLabel.Text = T("field.remotePassword");
 
         _devicesGrid.ToolTip = T("tooltip.devicesGrid");
         _watchGrid.ToolTip = T("tooltip.watchGrid");
@@ -2166,6 +2174,11 @@ public partial class MainWindow : Window
             _station.Text = ReadRequiredInt(melsec, "stationNo").ToString(CultureInfo.InvariantCulture);
             _moduleIo.Text = ReadRequiredInt(melsec, "moduleIoNo").ToString(CultureInfo.InvariantCulture);
             _multidrop.Text = ReadRequiredInt(melsec, "multidropNo").ToString(CultureInfo.InvariantCulture);
+            _remotePassword.Password = ReadRequiredString(melsec, "remotePassword");
+        }
+        else
+        {
+            _remotePassword.Password = "";
         }
 
         var devicesElement = ReadRequiredArray(root, "deviceList");

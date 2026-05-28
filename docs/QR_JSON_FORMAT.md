@@ -30,6 +30,9 @@ Top-level fields:
 `deviceList` entries contain `address` and `dataType`. They may also contain
 `comment` when a ProjectBuilder device comment is set.
 
+MELSEC projects include `plc.melsec.remotePassword`. KEYENCE projects do not
+emit this field because the remote password is SLMP/MELSEC-specific.
+
 ProjectBuilder enforces the mobile app registration limits: up to 20 time chart
 targets and up to 20 trap definitions.
 

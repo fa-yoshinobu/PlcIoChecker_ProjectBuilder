@@ -25,6 +25,7 @@ These settings are necessary, but they are not the product focus:
 - Project name
 - Vendor and CPU model
 - Connection settings
+  - MELSEC connection settings include a remote password field.
 - QR chunk size, QR display size, QR error correction
 
 They should live behind secondary tabs or output/export areas.

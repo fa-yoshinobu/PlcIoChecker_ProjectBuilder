@@ -42,6 +42,7 @@
   "field.network": "Network",
   "field.port": "Port",
   "field.projectName": "プロジェクト名",
+  "field.remotePassword": "リモートパスワード",
   "field.station": "Station",
   "field.supportedDevices": "使用可能 device",
   "field.timeout": "Timeout ms",
