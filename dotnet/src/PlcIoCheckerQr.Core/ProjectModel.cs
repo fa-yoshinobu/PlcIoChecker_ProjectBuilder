@@ -28,7 +28,8 @@ public sealed record PlcConnection(
     int Network,
     int Station,
     int ModuleIo,
-    int Multidrop);
+    int Multidrop,
+    string RemotePassword);
 
 public sealed record DeviceDefinition(string Address, string DataType, string Comment = "");
 
@@ -60,6 +61,7 @@ public sealed record ProjectInput(
     int Station,
     int ModuleIo,
     int Multidrop,
+    string RemotePassword,
     string DevicesText,
     string WatchText,
     string TrapsText);
@@ -284,7 +286,10 @@ public static partial class ProjectFactory
                 input.Network,
                 input.Station,
                 input.ModuleIo,
-                input.Multidrop),
+                input.Multidrop,
+                string.Equals(input.Vendor, "Melsec", StringComparison.Ordinal)
+                    ? input.RemotePassword.Trim()
+                    : string.Empty),
             Devices: devices,
             TimeChart: timeChart,
             Traps: traps,

@@ -161,6 +161,7 @@ public static class ProjectQrPayload
                     stationNo = project.Connection.Station,
                     moduleIoNo = project.Connection.ModuleIo,
                     multidropNo = project.Connection.Multidrop,
+                    remotePassword = project.Connection.RemotePassword,
                 }
                 : null,
             keyence = IsVendor(project.Connection.Vendor, "Keyence")
