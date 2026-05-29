@@ -559,6 +559,7 @@ public partial class MainWindow : Window
         _moduleIo.Visibility = melsecRoutingVisibility;
         _multidropLabel.Visibility = melsecRoutingVisibility;
         _multidrop.Visibility = melsecRoutingVisibility;
+        _resetRoutingDefaultsButton.Visibility = melsecRoutingVisibility;
         _remotePasswordLabel.Visibility = melsecRoutingVisibility;
         _remotePassword.Visibility = melsecRoutingVisibility;
         if (vendor != "Keyence")
@@ -926,6 +927,7 @@ public partial class MainWindow : Window
         _stationLabel.Text = T("field.station");
         _moduleIoLabel.Text = T("field.moduleIo");
         _multidropLabel.Text = T("field.multidrop");
+        _resetRoutingDefaultsButton.Content = T("button.resetRoutingDefaults");
         _remotePasswordLabel.Text = T("field.remotePassword");
 
         _devicesGrid.ToolTip = T("tooltip.devicesGrid");
@@ -1126,6 +1128,14 @@ public partial class MainWindow : Window
             : LanguageCatalog.NextCode(_language.Code);
         ApplyLanguage();
         SetStatus(T("status.languageChanged"));
+    }
+
+    private void ResetRoutingDefaults_Click(object sender, RoutedEventArgs e)
+    {
+        _network.Text = "0";
+        _station.Text = "255";
+        _moduleIo.Text = FormatPrefixedHex(0x03FF, 4);
+        _multidrop.Text = FormatPrefixedHex(0, 2);
     }
 
     private void AboutMenuItem_Click(object sender, RoutedEventArgs e) => new AboutWindow(_language) { Owner = this }.ShowDialog();

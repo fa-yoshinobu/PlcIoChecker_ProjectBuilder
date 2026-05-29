@@ -17,6 +17,7 @@
   "button.generateQr": "QR  Generate QR",
   "button.next": "Next  ->",
   "button.previous": "<-  Previous",
+  "button.resetRoutingDefaults": "Reset routing defaults",
   "button.savePng": "v  Save PNG + JSON",
   "button.up": "^  Up",
   "column.address": "Address",

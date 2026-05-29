@@ -17,6 +17,7 @@
   "button.generateQr": "▦  QR 生成",
   "button.next": "次へ  →",
   "button.previous": "←  前へ",
+  "button.resetRoutingDefaults": "ルーティング既定値に戻す",
   "button.savePng": "↓  PNG + JSON 保存",
   "button.up": "↑  上へ",
   "column.address": "アドレス",
