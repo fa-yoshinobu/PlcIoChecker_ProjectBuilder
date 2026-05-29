@@ -25,10 +25,15 @@ public sealed class ProjectQrPayloadTests
         using var document = JsonDocument.Parse(decoded);
         var root = document.RootElement;
         Assert.Equal("plc-io-checker-project", root.GetProperty("schema").GetString());
-        Assert.Equal(2, root.GetProperty("schemaVersion").GetInt32());
+        Assert.Equal(3, root.GetProperty("schemaVersion").GetInt32());
         Assert.Equal("unit-project-123", root.GetProperty("projectId").GetString());
         Assert.Equal("MELSEC", root.GetProperty("plc").GetProperty("vendor").GetString());
-        Assert.Equal("secret1", root.GetProperty("plc").GetProperty("melsec").GetProperty("remotePassword").GetString());
+        var melsec = root.GetProperty("plc").GetProperty("melsec");
+        Assert.Equal(0, melsec.GetProperty("networkNo").GetInt32());
+        Assert.Equal(255, melsec.GetProperty("stationNo").GetInt32());
+        Assert.Equal("0x03FF", melsec.GetProperty("moduleIoNo").GetString());
+        Assert.Equal("0x00", melsec.GetProperty("multidropNo").GetString());
+        Assert.Equal("secret1", melsec.GetProperty("remotePassword").GetString());
         Assert.Equal("GREATER_OR_EQUAL", root.GetProperty("traps")[0].GetProperty("condition").GetString());
         Assert.Equal("Start input", root.GetProperty("deviceList")[0].GetProperty("comment").GetString());
         Assert.False(root.GetProperty("deviceList")[0].TryGetProperty("watch", out _));

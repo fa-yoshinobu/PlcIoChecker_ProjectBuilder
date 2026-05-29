@@ -138,7 +138,7 @@ public static class ProjectQrPayload
     private static object ToJsonShape(PlcProject project) => new
     {
         schema = "plc-io-checker-project",
-        schemaVersion = 2,
+        schemaVersion = 3,
         projectId = project.Id,
         projectName = project.Name,
         plc = new
@@ -159,8 +159,8 @@ public static class ProjectQrPayload
                 {
                     networkNo = project.Connection.Network,
                     stationNo = project.Connection.Station,
-                    moduleIoNo = project.Connection.ModuleIo,
-                    multidropNo = project.Connection.Multidrop,
+                    moduleIoNo = FormatPrefixedHex(project.Connection.ModuleIo, 4),
+                    multidropNo = FormatPrefixedHex(project.Connection.Multidrop, 2),
                     remotePassword = project.Connection.RemotePassword,
                 }
                 : null,
@@ -196,6 +196,9 @@ public static class ProjectQrPayload
 
     private static bool IsVendor(string value, string expected) =>
         string.Equals(value, expected, StringComparison.OrdinalIgnoreCase);
+
+    private static string FormatPrefixedHex(int value, int width) =>
+        $"0x{value.ToString($"X{width}", System.Globalization.CultureInfo.InvariantCulture)}";
 
     private static string FormatVendor(string value) => value switch
     {

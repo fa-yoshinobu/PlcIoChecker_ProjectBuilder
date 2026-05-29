@@ -5,10 +5,10 @@ The README is intentionally kept as a user guide.
 
 ## Project JSON
 
-The generated JSON uses the shared `plc-io-checker-project` schema v2 consumed
+The generated JSON uses the shared `plc-io-checker-project` schema v3 consumed
 by Android and iOS.
 
-Generated project JSON includes only shared v2 schema fields. UI-only
+Generated project JSON includes only shared v3 schema fields. UI-only
 preferences and runtime observation values are not emitted.
 
 ProjectBuilder may emit `deviceList[].comment` when a device comment is set.
@@ -30,8 +30,10 @@ Top-level fields:
 `deviceList` entries contain `address` and `dataType`. They may also contain
 `comment` when a ProjectBuilder device comment is set.
 
-MELSEC projects include `plc.melsec.remotePassword`. KEYENCE projects do not
-emit this field because the remote password is SLMP/MELSEC-specific.
+MELSEC routing uses decimal `networkNo` / `stationNo` values and `0x`-prefixed
+hexadecimal `moduleIoNo` / `multidropNo` strings. MELSEC projects also include
+`plc.melsec.remotePassword`. KEYENCE projects do not emit this field because
+the remote password is SLMP/MELSEC-specific.
 
 ProjectBuilder enforces the mobile app registration limits: up to 20 time chart
 targets and up to 20 trap definitions.

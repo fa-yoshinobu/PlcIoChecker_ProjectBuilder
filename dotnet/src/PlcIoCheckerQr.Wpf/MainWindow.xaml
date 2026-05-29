@@ -490,10 +490,10 @@
                   <TextBox x:Name="_station" Grid.Row="9" Grid.Column="1" Text="255" Margin="0,4,0,4"/>
 
                   <TextBlock x:Name="_moduleIoLabel" Grid.Row="10" Grid.Column="0" Text="Module IO" Style="{StaticResource FormLabel}" Margin="0,6,14,6"/>
-                  <TextBox x:Name="_moduleIo" Grid.Row="10" Grid.Column="1" Text="1023" Margin="0,4,0,4"/>
+                  <TextBox x:Name="_moduleIo" Grid.Row="10" Grid.Column="1" Text="0x03FF" Margin="0,4,0,4"/>
 
                   <TextBlock x:Name="_multidropLabel" Grid.Row="11" Grid.Column="0" Text="Multidrop" Style="{StaticResource FormLabel}" Margin="0,6,14,6"/>
-                  <TextBox x:Name="_multidrop" Grid.Row="11" Grid.Column="1" Text="0" Margin="0,4,0,4"/>
+                  <TextBox x:Name="_multidrop" Grid.Row="11" Grid.Column="1" Text="0x00" Margin="0,4,0,4"/>
 
                   <TextBlock x:Name="_remotePasswordLabel" Grid.Row="12" Grid.Column="0" Text="Remote password" Style="{StaticResource FormLabel}" Margin="0,6,14,6"/>
                   <PasswordBox x:Name="_remotePassword" Grid.Row="12" Grid.Column="1" Margin="0,4,0,4"/>

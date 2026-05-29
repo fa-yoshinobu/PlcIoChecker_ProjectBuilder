@@ -683,8 +683,8 @@ public partial class MainWindow : Window
             TransportMode: Selected(_transport),
             Network: ParseRange(_network, fallback: 0, min: 0, max: 255),
             Station: ParseRange(_station, fallback: 255, min: 0, max: 255),
-            ModuleIo: ParseRange(_moduleIo, fallback: 1023, min: 0, max: 65535),
-            Multidrop: ParseRange(_multidrop, fallback: 0, min: 0, max: 255),
+            ModuleIo: ParseHexRange(_moduleIo, fallback: 0x03FF, min: 0, max: 0xFFFF, width: 4),
+            Multidrop: ParseHexRange(_multidrop, fallback: 0, min: 0, max: 0xFF, width: 2),
             RemotePassword: Selected(_vendor) == "Melsec" ? _remotePassword.Password : "",
             DevicesText: DevicesText(),
             WatchText: WatchText(),
@@ -2172,8 +2172,8 @@ public partial class MainWindow : Window
             var melsec = ReadRequiredObject(plc, "melsec");
             _network.Text = ReadRequiredInt(melsec, "networkNo").ToString(CultureInfo.InvariantCulture);
             _station.Text = ReadRequiredInt(melsec, "stationNo").ToString(CultureInfo.InvariantCulture);
-            _moduleIo.Text = ReadRequiredInt(melsec, "moduleIoNo").ToString(CultureInfo.InvariantCulture);
-            _multidrop.Text = ReadRequiredInt(melsec, "multidropNo").ToString(CultureInfo.InvariantCulture);
+            _moduleIo.Text = FormatPrefixedHex(ReadRequiredHexInt(melsec, "moduleIoNo", 0, 0xFFFF), 4);
+            _multidrop.Text = FormatPrefixedHex(ReadRequiredHexInt(melsec, "multidropNo", 0, 0xFF), 2);
             _remotePassword.Password = ReadRequiredString(melsec, "remotePassword");
         }
         else
@@ -2312,8 +2312,28 @@ public partial class MainWindow : Window
         return value;
     }
 
+    private static int ParseHexRange(TextBox textBox, int fallback, int min, int max, int width)
+    {
+        var value = Clamp(ParseHexInt(textBox.Text, fallback), min, max);
+        textBox.Text = FormatPrefixedHex(value, width);
+        return value;
+    }
+
     private static int ParseInt(string text, int fallback) =>
         int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var value) ? value : fallback;
+
+    private static int ParseHexInt(string text, int fallback)
+    {
+        var token = text.Trim();
+        if (token.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
+        {
+            token = token[2..];
+        }
+        return int.TryParse(token, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var value) ? value : fallback;
+    }
+
+    private static string FormatPrefixedHex(int value, int width) =>
+        $"0x{value.ToString($"X{width}", CultureInfo.InvariantCulture)}";
 
     private static int Clamp(int value, int min, int max) => Math.Min(Math.Max(value, min), max);
 
@@ -2326,7 +2346,7 @@ public partial class MainWindow : Window
         }
 
         var version = ReadRequiredInt(root, "schemaVersion");
-        if (version != 2)
+        if (version != 3)
         {
             throw new InvalidOperationException($"Unsupported project schema version: {version}");
         }
@@ -2390,6 +2410,20 @@ public partial class MainWindow : Window
             !value.TryGetInt32(out var result))
         {
             throw new InvalidOperationException($"Project JSON value '{name}' must be an integer.");
+        }
+
+        return result;
+    }
+
+    private static int ReadRequiredHexInt(System.Text.Json.JsonElement element, string name, int min, int max)
+    {
+        var text = ReadRequiredString(element, name).Trim();
+        if (!text.StartsWith("0x", StringComparison.OrdinalIgnoreCase) ||
+            !int.TryParse(text[2..], NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var result) ||
+            result < min ||
+            result > max)
+        {
+            throw new InvalidOperationException($"Project JSON value '{name}' must be a 0x-prefixed hexadecimal string.");
         }
 
         return result;
