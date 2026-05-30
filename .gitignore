@@ -1,0 +1,9 @@
+__pycache__/
+.venv/
+output/
+*.pyc
+.DS_Store
+bin/
+obj/
+*.user
+dotnet/publish/

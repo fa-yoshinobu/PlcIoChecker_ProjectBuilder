@@ -1,0 +1,138 @@
+<Window x:Class="PlcIoCheckerQr.Wpf.Windows.AboutWindow"
+        x:ClassModifier="internal"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="About"
+        Width="560"
+        Height="440"
+        Icon="/icon.ico"
+        MinWidth="480"
+        MinHeight="380"
+        ResizeMode="NoResize"
+        WindowStartupLocation="CenterOwner"
+        Background="{StaticResource WindowBg}"
+        Foreground="{StaticResource TextMain}">
+
+  <Grid>
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="*"/>
+      <RowDefinition Height="Auto"/>
+    </Grid.RowDefinitions>
+
+    <!-- Header -->
+    <Border Grid.Row="0" Background="{StaticResource NavBg}" Padding="28,22">
+      <Grid>
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="Auto"/>
+          <ColumnDefinition Width="22"/>
+          <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+        <Image Grid.Column="0"
+               Source="/icon.ico"
+               Width="64"
+               Height="64"
+               RenderOptions.BitmapScalingMode="HighQuality"/>
+        <StackPanel Grid.Column="2" VerticalAlignment="Center">
+          <TextBlock Text="PLC IO Checker Project Builder"
+                     FontSize="20"
+                     FontWeight="SemiBold"
+                     Foreground="{StaticResource NavFg}"/>
+          <TextBlock x:Name="VersionTextBlock"
+                     Foreground="{StaticResource NavFgMuted}"
+                     FontSize="12"
+                     Margin="0,6,0,0"/>
+        </StackPanel>
+      </Grid>
+    </Border>
+
+    <!-- Library list -->
+    <ScrollViewer Grid.Row="1"
+                  VerticalScrollBarVisibility="Auto"
+                  Padding="24,20">
+      <StackPanel>
+        <TextBlock x:Name="ManualTitleTextBlock"
+                   Text="Manual"
+                   FontWeight="SemiBold"
+                   Foreground="{StaticResource TextMuted}"
+                   FontSize="11"
+                   Margin="0,0,0,6"/>
+        <TextBlock Foreground="{StaticResource TextMuted}"
+                   FontSize="12"
+                   TextWrapping="Wrap"
+                   Margin="0,0,0,18">
+          <Hyperlink x:Name="ManualHyperlink"
+                     RequestNavigate="UrlHyperlink_RequestNavigate">
+            <Run x:Name="ManualUrlRun"/>
+          </Hyperlink>
+        </TextBlock>
+        <TextBlock x:Name="LibrariesTitleTextBlock"
+                   Text="Libraries"
+                   FontWeight="SemiBold"
+                   Foreground="{StaticResource TextMuted}"
+                   FontSize="11"
+                   Margin="0,0,0,12"/>
+        <ItemsControl x:Name="LibrariesListView">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate>
+              <Border BorderBrush="{StaticResource BorderSoft}"
+                      BorderThickness="0,0,0,1"
+                      Padding="0,12">
+                <Grid>
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                  </Grid.ColumnDefinitions>
+                  <StackPanel Grid.Column="0">
+                    <TextBlock Text="{Binding Name}"
+                               FontWeight="SemiBold"
+                               Foreground="{StaticResource TextMain}"/>
+                    <TextBlock Text="{Binding Notes}"
+                               Foreground="{StaticResource TextMuted}"
+                               FontSize="12"
+                               Margin="0,2,0,0"/>
+                    <TextBlock Text="{Binding Details}"
+                               Foreground="{StaticResource TextMuted}"
+                               FontSize="12"
+                               TextWrapping="Wrap"
+                               Margin="0,6,0,0"/>
+                    <TextBlock Foreground="{StaticResource TextMuted}"
+                               FontSize="12"
+                               TextWrapping="Wrap"
+                               Margin="0,6,0,0">
+                      <Run Text="URL: "/>
+                      <Hyperlink NavigateUri="{Binding Url}"
+                                 RequestNavigate="UrlHyperlink_RequestNavigate">
+                        <Run Text="{Binding Url}"/>
+                      </Hyperlink>
+                    </TextBlock>
+                  </StackPanel>
+                  <TextBlock Grid.Column="1"
+                             Text="{Binding Version}"
+                             Foreground="{StaticResource TextMuted}"
+                             FontSize="12"
+                             VerticalAlignment="Center"
+                             Margin="16,0,0,0"/>
+                </Grid>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </StackPanel>
+    </ScrollViewer>
+
+    <!-- Footer -->
+    <Border Grid.Row="2"
+            Background="{StaticResource HeaderBg}"
+            BorderBrush="{StaticResource BorderSoft}"
+            BorderThickness="0,1,0,0"
+            Padding="24,14">
+      <Button x:Name="CloseButton"
+              Content="x  Close"
+              Style="{StaticResource AppButton}"
+              MinWidth="96"
+              HorizontalAlignment="Right"
+              Click="Close_Click"/>
+    </Border>
+  </Grid>
+</Window>

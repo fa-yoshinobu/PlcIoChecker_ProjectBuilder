@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>PlcIoCheckerQr.Wpf</RootNamespace>
+    <AssemblyName>PlcIoCheckerProjectBuilder</AssemblyName>
+    <Product>PLC IO Checker Project Builder</Product>
+    <Authors>FA Labo(fa_yoshinobu)</Authors>
+    <Company>FA Labo</Company>
+    <Copyright>FA Labo(fa_yoshinobu)</Copyright>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <Description>PC project builder and QR export tool for PLC IO Checker.</Description>
+    <Version>0.3.0</Version>
+    <AssemblyVersion>0.3.0.0</AssemblyVersion>
+    <FileVersion>0.3.0.0</FileVersion>
+    <AssemblyInformationalVersion>0.3.0</AssemblyInformationalVersion>
+    <InformationalVersion>0.3.0</InformationalVersion>
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+    <ApplicationIcon>..\..\..\icon.ico</ApplicationIcon>
+    <StartupObject />
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\PlcIoCheckerQr.Core\PlcIoCheckerQr.Core.csproj" />
+    <PackageReference Include="QRCoder" Version="1.6.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="..\..\..\icon.ico" Link="icon.ico" />
+    <Content Include="Languages\*.json"
+             CopyToOutputDirectory="PreserveNewest"
+             CopyToPublishDirectory="PreserveNewest"
+             ExcludeFromSingleFile="true" />
+    <EmbeddedResource Include="Languages\*.json" LogicalName="PlcIoCheckerQr.Wpf.Languages.%(Filename)%(Extension)" />
+  </ItemGroup>
+</Project>
