@@ -7,3 +7,4 @@ bin/
 obj/
 *.user
 dotnet/publish/
+artifacts/
