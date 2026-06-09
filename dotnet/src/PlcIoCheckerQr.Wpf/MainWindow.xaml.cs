@@ -5,6 +5,7 @@ using PlcIoCheckerQr.Wpf.Windows;
 using QRCoder;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Runtime.CompilerServices;
@@ -886,7 +887,9 @@ public partial class MainWindow : Window
         _qrErrorCorrectionMenu.ToolTip = T("menu.errorCorrection.tooltip");
         _saveQrImagesMenuItem.Header = T("menu.savePng");
         _helpMenu.Header = T("menu.help");
+        _manualMenuItem.Header = T("about.manual");
         _aboutMenuItem.Header = T("menu.about");
+        _projectBuilderManualRun.Text = T("manual.projectBuilder");
         ApplyQrOptionTooltips();
 
         _generateQrButton.Content = T("button.generateQr");
@@ -1154,6 +1157,30 @@ public partial class MainWindow : Window
         _station.Text = "255";
         _moduleIo.Text = FormatPrefixedHex(0x03FF, 4);
         _multidrop.Text = FormatPrefixedHex(0, 2);
+    }
+
+    private void ManualMenuItem_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            Process.Start(new ProcessStartInfo(T("about.manualUrl")) { UseShellExecute = true });
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, ex.Message, Title, MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private void ProjectBuilderManualLink_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            Process.Start(new ProcessStartInfo(T("manual.projectBuilderUrl")) { UseShellExecute = true });
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, ex.Message, Title, MessageBoxButton.OK, MessageBoxImage.Error);
+        }
     }
 
     private void AboutMenuItem_Click(object sender, RoutedEventArgs e) => new AboutWindow(_language) { Owner = this }.ShowDialog();

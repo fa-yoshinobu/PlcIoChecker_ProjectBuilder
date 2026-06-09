@@ -67,6 +67,8 @@
   "language.buttonLabel": "EN",
   "language.next": "ja",
   "language.switchTooltip": "Switch display language",
+  "manual.projectBuilder": "ProjectBuilder manual",
+  "manual.projectBuilderUrl": "https://fa-yoshinobu.github.io/PlcIoChecker_Site/projectbuilder/projectbuilder.html",
   "menu.about": "About",
   "menu.errorCorrection": "Error correction",
   "menu.errorCorrection.option.H.tooltip": "Recovers up to about 30%. Stronger recovery, but the QR code becomes denser and may be harder to scan.",

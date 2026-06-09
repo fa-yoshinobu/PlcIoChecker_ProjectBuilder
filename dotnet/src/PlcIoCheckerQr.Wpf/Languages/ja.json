@@ -67,6 +67,8 @@
   "language.buttonLabel": "JP",
   "language.next": "en",
   "language.switchTooltip": "表示言語を切り替えます",
+  "manual.projectBuilder": "ProjectBuilder マニュアル",
+  "manual.projectBuilderUrl": "https://fa-yoshinobu.github.io/PlcIoChecker_Site/projectbuilder/projectbuilder.html",
   "menu.about": "バージョン情報",
   "menu.errorCorrection": "誤り訂正",
   "menu.errorCorrection.option.H.tooltip": "約30%まで復元できます。復元力は高いですが、QRが細かくなり読み取りにくくなる場合があります。",
