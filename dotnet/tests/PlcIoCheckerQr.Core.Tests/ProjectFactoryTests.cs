@@ -1,0 +1,159 @@
+using PlcIoCheckerQr.Core;
+
+namespace PlcIoCheckerQr.Core.Tests;
+
+public sealed class ProjectFactoryTests
+{
+    [Theory]
+    [InlineData("Melsec", "Normal", "iQ-R", "XFF", true, "Bit")]
+    [InlineData("Melsec", "Normal", "iQ-R", "SWFF", false, "Int16")]
+    [InlineData("Melsec", "Normal", "iQ-F", "X77", true, "Bit")]
+    [InlineData("Keyence", "Normal", "KV-8000", "R015", true, "Bit")]
+    [InlineData("Keyence", "Normal", "KV-8000", "DM100", false, "Int16")]
+    [InlineData("Keyence", "Xym", "KV-8000", "X39F", true, "Bit")]
+    [InlineData("Keyence", "Xym", "KV-8000", "D100", false, "Int16")]
+    public void GuessDataTypeAndBitDetectionAreVendorModeAndModelAware(
+        string vendor,
+        string keyenceDeviceMode,
+        string machineLabel,
+        string address,
+        bool expectedIsBit,
+        string expectedDataType)
+    {
+        Assert.Equal(expectedIsBit, ProjectFactory.IsBitAddress(address, vendor, keyenceDeviceMode, machineLabel));
+        Assert.Equal(expectedDataType, ProjectFactory.GuessDataType(address, vendor, keyenceDeviceMode, machineLabel));
+    }
+
+    [Fact]
+    public void UnknownAddressFamilyFallsBackToWordLikeDataTypeUntilValidated()
+    {
+        Assert.False(ProjectFactory.IsBitAddress("DFFFF", "Melsec", "Normal", "iQ-R"));
+        Assert.Equal("Int16", ProjectFactory.GuessDataType("DFFFF", "Melsec", "Normal", "iQ-R"));
+        Assert.Equal(ProjectFactory.DeviceDataTypes, ProjectFactory.DeviceDataTypesForAddress("DFFFF", "Melsec"));
+        Assert.Equal(ProjectFactory.DeviceDataTypes, ProjectFactory.DeviceDataTypesForAddress("", "Melsec"));
+    }
+
+    [Fact]
+    public void TrapConditionListsAndDefaultsFollowAddressKind()
+    {
+        Assert.Equal(ProjectFactory.TrapConditions, ProjectFactory.TrapConditionsForAddress("", "Melsec"));
+
+        Assert.Equal(ProjectFactory.BitTrapConditions, ProjectFactory.TrapConditionsForAddress("X0", "Melsec"));
+        Assert.Equal("Rise", ProjectFactory.DefaultTrapConditionForAddress("X0", "Melsec"));
+        Assert.Equal("Rise", ProjectFactory.CoerceTrapConditionForAddress("X0", "GreaterOrEqual", "Melsec"));
+
+        Assert.Equal(ProjectFactory.WordTrapConditions, ProjectFactory.TrapConditionsForAddress("D0", "Melsec"));
+        Assert.Equal("GreaterOrEqual", ProjectFactory.DefaultTrapConditionForAddress("D0", "Melsec"));
+        Assert.Equal("GreaterOrEqual", ProjectFactory.CoerceTrapConditionForAddress("D0", "Rise", "Melsec"));
+    }
+
+    [Fact]
+    public void TrapConditionValidationRejectsUnsupportedConditionForAddressKind()
+    {
+        Assert.Equal("Fall", ProjectFactory.ValidateTrapConditionForAddress("X0", "Fall", "Melsec"));
+        Assert.Equal("LessOrEqual", ProjectFactory.ValidateTrapConditionForAddress("D0", "LessOrEqual", "Melsec"));
+
+        var bitException = Assert.Throws<ArgumentException>(() =>
+            ProjectFactory.ValidateTrapConditionForAddress("X0", "GreaterOrEqual", "Melsec"));
+        Assert.Contains("Invalid trap condition for X0", bitException.Message);
+
+        var wordException = Assert.Throws<ArgumentException>(() =>
+            ProjectFactory.ValidateTrapConditionForAddress("D0", "Rise", "Melsec"));
+        Assert.Contains("Invalid trap condition for D0", wordException.Message);
+    }
+
+    [Theory]
+    [InlineData("Rise", false)]
+    [InlineData("Fall", false)]
+    [InlineData("Change", false)]
+    [InlineData("GreaterOrEqual", true)]
+    [InlineData("LessOrEqual", true)]
+    [InlineData("Equal", true)]
+    [InlineData("NotEqual", true)]
+    public void TrapConditionThresholdRequirementIsConditionSpecific(string condition, bool requiresThreshold)
+    {
+        Assert.Equal(requiresThreshold, ProjectFactory.TrapConditionRequiresThreshold(condition));
+    }
+
+    [Fact]
+    public void SlugifyLowercasesAndKeepsFallbackForEmptySlug()
+    {
+        Assert.Equal("plc-io-checker-2026", ProjectFactory.Slugify(" PLC IO Checker!! 2026 "));
+        Assert.Equal("plc-project", ProjectFactory.Slugify("###"));
+        Assert.Equal("custom", ProjectFactory.Slugify("   ", fallback: "custom"));
+    }
+
+    [Fact]
+    public void MakeProjectNormalizesNameIdPasswordAndDistinctWatchAddresses()
+    {
+        var project = ProjectFactory.MakeProject(TestInput(
+            Name: "  ",
+            RemotePassword: "  secret1  ",
+            DevicesText: "d100,uint16,Speed\r\nx0,Bit,Start",
+            WatchText: "D100\r\nd100\r\nX0",
+            TrapsText: "D100,GreaterOrEqual,12.5,false"),
+            nowEpochMs: 456);
+
+        Assert.Equal("PLC QR Project", project.Name);
+        Assert.Equal("plc-qr-project-456", project.Id);
+        Assert.Equal("secret1", project.Connection.RemotePassword);
+        Assert.Equal(["D100", "X0"], project.TimeChart.Select(target => target.Address).ToArray());
+        Assert.Equal("UInt16", project.Devices[0].DataType);
+        Assert.Equal(12.5, project.Traps.Single().Threshold);
+        Assert.False(project.Traps.Single().Enabled);
+    }
+
+    [Fact]
+    public void MakeProjectClearsRemotePasswordForKeyence()
+    {
+        var project = ProjectFactory.MakeProject(TestInput(
+            Vendor: "Keyence",
+            MachineLabel: "KV-8000",
+            Port: 8501,
+            RemotePassword: "secret1",
+            DevicesText: "R000",
+            WatchText: "",
+            TrapsText: ""),
+            nowEpochMs: 789);
+
+        Assert.Equal("", project.Connection.RemotePassword);
+    }
+
+    private static ProjectInput TestInput(
+        string Name = "Unit Project",
+        string Vendor = "Melsec",
+        string ConnectionMode = "Real",
+        string Host = "192.168.250.100",
+        int? Port = null,
+        int MonitorIntervalMs = 500,
+        int TimeoutMs = 2000,
+        string? MachineLabel = null,
+        string KeyenceDeviceMode = "Normal",
+        string TransportMode = "Tcp",
+        int Network = 0,
+        int Station = 255,
+        int ModuleIo = 1023,
+        int Multidrop = 0,
+        string RemotePassword = "secret1",
+        string DevicesText = "D100",
+        string WatchText = "",
+        string TrapsText = "") => new(
+        Name: Name,
+        Vendor: Vendor,
+        ConnectionMode: ConnectionMode,
+        Host: Host,
+        Port: Port ?? (Vendor == "Keyence" ? 8501 : 1025),
+        MonitorIntervalMs: MonitorIntervalMs,
+        TimeoutMs: TimeoutMs,
+        MachineLabel: MachineLabel ?? (Vendor == "Keyence" ? "KV-8000" : "iQ-R"),
+        KeyenceDeviceMode: KeyenceDeviceMode,
+        TransportMode: TransportMode,
+        Network: Network,
+        Station: Station,
+        ModuleIo: ModuleIo,
+        Multidrop: Multidrop,
+        RemotePassword: RemotePassword,
+        DevicesText: DevicesText,
+        WatchText: WatchText,
+        TrapsText: TrapsText);
+}
