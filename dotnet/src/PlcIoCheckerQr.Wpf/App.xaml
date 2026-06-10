@@ -3,10 +3,10 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              StartupUri="MainWindow.xaml">
   <Application.Resources>
-    <SolidColorBrush x:Key="NavBg"      Color="#1F3A4A"/>
-    <SolidColorBrush x:Key="NavFg"      Color="#F8FAFC"/>
-    <SolidColorBrush x:Key="NavFgMuted" Color="#94A3B8"/>
-    <SolidColorBrush x:Key="NavHover"   Color="#1E293B"/>
+    <SolidColorBrush x:Key="NavBg"      Color="#E8F2F0"/>
+    <SolidColorBrush x:Key="NavFg"      Color="#14211F"/>
+    <SolidColorBrush x:Key="NavFgMuted" Color="#51615D"/>
+    <SolidColorBrush x:Key="NavHover"   Color="#D7E6E2"/>
     <SolidColorBrush x:Key="WindowBg" Color="#F1F5F9"/>
     <SolidColorBrush x:Key="HeaderBg" Color="#FFFFFF"/>
     <SolidColorBrush x:Key="PanelBg" Color="#FFFFFF"/>
@@ -21,7 +21,7 @@
     <SolidColorBrush x:Key="AccentSofter" Color="#F0FAF8"/>
     <SolidColorBrush x:Key="RowAlt" Color="#F7FAF9"/>
     <SolidColorBrush x:Key="QrStageBg" Color="#ECF2F0"/>
-    <SolidColorBrush x:Key="QrPageFg" Color="#FACC15"/>
+    <SolidColorBrush x:Key="QrPageFg" Color="#A15C07"/>
     <SolidColorBrush x:Key="ErrorFg" Color="#B42318"/>
 
     <Style TargetType="Window">

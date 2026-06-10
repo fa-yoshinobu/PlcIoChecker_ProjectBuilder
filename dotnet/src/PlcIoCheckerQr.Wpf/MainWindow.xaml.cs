@@ -889,7 +889,7 @@ public partial class MainWindow : Window
         _helpMenu.Header = T("menu.help");
         _manualMenuItem.Header = T("about.manual");
         _aboutMenuItem.Header = T("menu.about");
-        _projectBuilderManualRun.Text = T("manual.projectBuilder");
+        _projectBuilderManualText.Text = T("manual.projectBuilder");
         ApplyQrOptionTooltips();
 
         _generateQrButton.Content = T("button.generateQr");

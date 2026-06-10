@@ -122,7 +122,7 @@
                        FontSize="15"
                        VerticalAlignment="Center"/>
             <TextBlock Text=" — "
-                       Foreground="{StaticResource NavHover}"
+                       Foreground="{StaticResource NavFgMuted}"
                        FontSize="15" Margin="8,0"
                        VerticalAlignment="Center"/>
             <TextBlock x:Name="_headerProjectName"
@@ -135,12 +135,16 @@
 
           <StackPanel Grid.Column="1" Orientation="Horizontal"
                       VerticalAlignment="Center" Margin="0,0,20,0">
-            <TextBlock VerticalAlignment="Center" Margin="0,0,14,0">
-              <Hyperlink x:Name="_projectBuilderManualLink"
-                         Click="ProjectBuilderManualLink_Click">
-                <Run x:Name="_projectBuilderManualRun" Text="ProjectBuilder manual"/>
-              </Hyperlink>
-            </TextBlock>
+            <Button x:Name="_projectBuilderManualButton"
+                    Style="{StaticResource NavOutlineButton}"
+                    Margin="0,0,10,0"
+                    FontSize="12"
+                    Click="ProjectBuilderManualLink_Click">
+              <TextBlock x:Name="_projectBuilderManualText"
+                         Text="ProjectBuilder manual"
+                         FontSize="12"
+                         VerticalAlignment="Center"/>
+            </Button>
             <Button x:Name="_langButton"
                     Style="{StaticResource NavOutlineButton}"
                     Margin="0,0,10,0"
