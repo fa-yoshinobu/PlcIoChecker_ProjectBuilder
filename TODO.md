@@ -1,23 +1,23 @@
 # TODO
 
-This file tracks remaining release and maintenance work for PLC IO Checker Project Builder.
+PLC IO Checker Project Builder の残りの公開作業と保守作業を管理する。
 
-## Release Follow-Up
+## 公開後 / 公開前の確認
 
-- [ ] Decide whether the Windows release should be code-signed.
-  Current GitHub release packaging publishes a self-contained single-file EXE without an installer or code signature.
-- [ ] Confirm the GitHub Release asset after each release.
-  Check that `PlcIoCheckerProjectBuilder-win-x64.zip` contains `PlcIoCheckerProjectBuilder.exe` and that the app starts on a clean Windows PC.
-- [ ] Confirm the public manual links before each release.
-  The app Help menu opens `https://fa-yoshinobu.github.io/PlcIoChecker_Site/`, and the top header link opens `https://fa-yoshinobu.github.io/PlcIoChecker_Site/projectbuilder/projectbuilder.html`.
-- [ ] Decide whether to keep ZIP-only distribution or add an installer.
-  Current distribution is ZIP only from GitHub Releases.
+- [ ] Windows 版リリースにコード署名を付けるか決める。
+  現在の GitHub Release パッケージは、インストーラーなし / コード署名なしの自己完結型 single-file EXE を公開する。
+- [ ] 各リリース後に GitHub Release の配布ファイルを確認する。
+  `PlcIoCheckerProjectBuilder-win-x64.zip` に `PlcIoCheckerProjectBuilder.exe` が含まれ、クリーンな Windows PC で起動することを確認する。
+- [ ] 各リリース前に公開マニュアルへのリンクを確認する。
+  アプリの Help メニューは `https://fa-yoshinobu.github.io/PlcIoChecker_Site/` を開き、上部ヘッダーのリンクは `https://fa-yoshinobu.github.io/PlcIoChecker_Site/projectbuilder/projectbuilder.html` を開く。
+- [ ] ZIP 配布のみを継続するか、インストーラーを追加するか決める。
+  現在の配布方法は GitHub Releases からの ZIP のみ。
 
-## Maintenance Notes
+## 保守メモ
 
-- [x] Build output is ignored.
-  `dotnet/publish/` and `artifacts/` are intentionally excluded from Git.
-- [x] ProjectBuilder manual links are present in the app UI.
-  Help menu opens the general manual site, and the header link opens the ProjectBuilder manual page.
-- [x] Release build path is documented.
-  Use `build-dotnet-onefile.bat` to generate `dotnet/publish/win-x64/PlcIoCheckerProjectBuilder.exe`.
+- [x] ビルド出力は Git 管理外にしている。
+  `dotnet/publish/` と `artifacts/` は意図的に Git から除外する。
+- [x] ProjectBuilder マニュアルへのリンクはアプリ UI に配置済み。
+  Help メニューは全体マニュアルサイトを開き、ヘッダーリンクは ProjectBuilder マニュアルページを開く。
+- [x] リリースビルドの出力先は文書化済み。
+  `build-dotnet-onefile.bat` で `dotnet/publish/win-x64/PlcIoCheckerProjectBuilder.exe` を生成する。
