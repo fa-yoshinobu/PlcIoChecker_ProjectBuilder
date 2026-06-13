@@ -28,6 +28,8 @@ public sealed class ProjectQrPayloadTests
         Assert.Equal(3, root.GetProperty("schemaVersion").GetInt32());
         Assert.Equal("unit-project-123", root.GetProperty("projectId").GetString());
         Assert.Equal("MELSEC", root.GetProperty("plc").GetProperty("vendor").GetString());
+        Assert.Equal("iQ-R", root.GetProperty("plc").GetProperty("cpuModel").GetString());
+        Assert.False(root.GetProperty("plc").TryGetProperty("plcProfile", out _));
         var melsec = root.GetProperty("plc").GetProperty("melsec");
         Assert.Equal(0, melsec.GetProperty("networkNo").GetInt32());
         Assert.Equal(255, melsec.GetProperty("stationNo").GetInt32());
@@ -66,6 +68,8 @@ public sealed class ProjectQrPayloadTests
 
         var json = Encoding.UTF8.GetString(ProjectQrPayload.ProjectQrJsonBytes(project));
         Assert.Contains("\"vendor\":\"KEYENCE\"", json);
+        Assert.Contains("\"cpuModel\":\"KV-8000\"", json);
+        Assert.DoesNotContain("\"plcProfile\"", json);
         Assert.Contains("\"mode\":\"DEMO_MOCK\"", json);
         Assert.Contains("\"deviceMode\":\"NORMAL\"", json);
         Assert.Contains("\"timeChart\":[{\"address\":\"R000\",\"dataType\":\"BIT\"}]", json);
