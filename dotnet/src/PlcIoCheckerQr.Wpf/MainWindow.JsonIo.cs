@@ -185,7 +185,7 @@ public partial class MainWindow
             throw new InvalidOperationException($"Unsupported connection port: {port}");
         }
         _port.Text = port.ToString(CultureInfo.InvariantCulture);
-        SelectItem(_model, ReadRequiredString(plc, "cpuModel"));
+        SelectItem(_model, ToUiMachineLabel(vendor, ReadRequiredString(plc, "cpuModel")));
         if (vendor == "Keyence")
         {
             var keyence = ReadRequiredObject(plc, "keyence");

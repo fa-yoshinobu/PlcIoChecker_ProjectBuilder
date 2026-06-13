@@ -144,7 +144,7 @@ public static class ProjectQrPayload
         plc = new
         {
             vendor = FormatVendor(project.Connection.Vendor),
-            cpuModel = project.Connection.MachineLabel,
+            cpuModel = ProjectFactory.ToCanonicalMachineLabel(project.Connection.Vendor, project.Connection.MachineLabel),
             connection = new
             {
                 mode = FormatConnectionMode(project.Connection.ConnectionMode),

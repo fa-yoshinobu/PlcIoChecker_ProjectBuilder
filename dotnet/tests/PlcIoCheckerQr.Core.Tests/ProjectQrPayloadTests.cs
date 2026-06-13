@@ -28,7 +28,7 @@ public sealed class ProjectQrPayloadTests
         Assert.Equal(3, root.GetProperty("schemaVersion").GetInt32());
         Assert.Equal("unit-project-123", root.GetProperty("projectId").GetString());
         Assert.Equal("MELSEC", root.GetProperty("plc").GetProperty("vendor").GetString());
-        Assert.Equal("iQ-R", root.GetProperty("plc").GetProperty("cpuModel").GetString());
+        Assert.Equal("melsec:iq-r", root.GetProperty("plc").GetProperty("cpuModel").GetString());
         Assert.False(root.GetProperty("plc").TryGetProperty("plcProfile", out _));
         var melsec = root.GetProperty("plc").GetProperty("melsec");
         Assert.Equal(0, melsec.GetProperty("networkNo").GetInt32());
@@ -68,13 +68,49 @@ public sealed class ProjectQrPayloadTests
 
         var json = Encoding.UTF8.GetString(ProjectQrPayload.ProjectQrJsonBytes(project));
         Assert.Contains("\"vendor\":\"KEYENCE\"", json);
-        Assert.Contains("\"cpuModel\":\"KV-8000\"", json);
+        Assert.Contains("\"cpuModel\":\"keyence:kv-8000\"", json);
         Assert.DoesNotContain("\"plcProfile\"", json);
         Assert.Contains("\"mode\":\"DEMO_MOCK\"", json);
         Assert.Contains("\"deviceMode\":\"NORMAL\"", json);
         Assert.Contains("\"timeChart\":[{\"address\":\"R000\",\"dataType\":\"BIT\"}]", json);
         Assert.DoesNotContain("\"melsec\"", json);
         Assert.DoesNotContain("\"remotePassword\"", json);
+    }
+
+    [Fact]
+    public void ProjectFactoryMapsDisplayModelLabelsToCanonicalJsonLabels()
+    {
+        Assert.Equal("melsec:iq-r", ProjectFactory.ToCanonicalMachineLabel("Melsec", "iQ-R"));
+        Assert.Equal("melsec:iq-f", ProjectFactory.ToCanonicalMachineLabel("Melsec", "iQ-F"));
+        Assert.Equal("melsec:iq-l", ProjectFactory.ToCanonicalMachineLabel("Melsec", "iQ-L"));
+        Assert.Equal("melsec:mx-r", ProjectFactory.ToCanonicalMachineLabel("Melsec", "MX-R"));
+        Assert.Equal("melsec:mx-f", ProjectFactory.ToCanonicalMachineLabel("Melsec", "MX-F"));
+        Assert.Equal("melsec:qnudv", ProjectFactory.ToCanonicalMachineLabel("Melsec", "QnUDV"));
+        Assert.Equal("melsec:qnu", ProjectFactory.ToCanonicalMachineLabel("Melsec", "QnU"));
+        Assert.Equal("melsec:qcpu", ProjectFactory.ToCanonicalMachineLabel("Melsec", "QCPU"));
+        Assert.Equal("melsec:lcpu", ProjectFactory.ToCanonicalMachineLabel("Melsec", "LCPU"));
+        Assert.Equal("keyence:kv-x500", ProjectFactory.ToCanonicalMachineLabel("Keyence", "KV-X500"));
+        Assert.Equal("keyence:kv-8000", ProjectFactory.ToCanonicalMachineLabel("Keyence", "KV-8000"));
+        Assert.Equal("keyence:kv-7000", ProjectFactory.ToCanonicalMachineLabel("Keyence", "KV-7000"));
+        Assert.Equal("keyence:kv-3000-5000", ProjectFactory.ToCanonicalMachineLabel("Keyence", "KV-3000/5000"));
+    }
+
+    [Fact]
+    public void ProjectFactoryMapsCanonicalJsonLabelsToDisplayModelLabels()
+    {
+        Assert.Equal("iQ-R", ProjectFactory.ToDisplayMachineLabel("Melsec", "melsec:iq-r"));
+        Assert.Equal("iQ-F", ProjectFactory.ToDisplayMachineLabel("Melsec", "melsec:iq-f"));
+        Assert.Equal("iQ-L", ProjectFactory.ToDisplayMachineLabel("Melsec", "melsec:iq-l"));
+        Assert.Equal("MX-R", ProjectFactory.ToDisplayMachineLabel("Melsec", "melsec:mx-r"));
+        Assert.Equal("MX-F", ProjectFactory.ToDisplayMachineLabel("Melsec", "melsec:mx-f"));
+        Assert.Equal("QnUDV", ProjectFactory.ToDisplayMachineLabel("Melsec", "melsec:qnudv"));
+        Assert.Equal("QnU", ProjectFactory.ToDisplayMachineLabel("Melsec", "melsec:qnu"));
+        Assert.Equal("QCPU", ProjectFactory.ToDisplayMachineLabel("Melsec", "melsec:qcpu"));
+        Assert.Equal("LCPU", ProjectFactory.ToDisplayMachineLabel("Melsec", "melsec:lcpu"));
+        Assert.Equal("KV-X500", ProjectFactory.ToDisplayMachineLabel("Keyence", "keyence:kv-x500"));
+        Assert.Equal("KV-8000", ProjectFactory.ToDisplayMachineLabel("Keyence", "keyence:kv-8000"));
+        Assert.Equal("KV-7000", ProjectFactory.ToDisplayMachineLabel("Keyence", "keyence:kv-7000"));
+        Assert.Equal("KV-3000/5000", ProjectFactory.ToDisplayMachineLabel("Keyence", "keyence:kv-3000-5000"));
     }
 
     [Fact]

@@ -35,11 +35,10 @@ hexadecimal `moduleIoNo` / `multidropNo` strings. MELSEC projects also include
 `plc.melsec.remotePassword`. KEYENCE projects do not emit this field because
 the remote password is SLMP/MELSEC-specific.
 
-`plc.cpuModel` is a mobile app model label, not the SLMP library `PlcProfile`
-string. MELSEC values are labels such as `iQ-R`, `iQ-F`, `iQ-L`, `QnUDV`,
-`QnU`, `QCPU`, and `LCPU`; ProjectBuilder must not emit `melsec:iq-r` or a
-separate `plcProfile` field in schema v3. Android and iOS map the model label to
-the canonical SLMP profile internally.
+`plc.cpuModel` is the mobile app canonical connection model key. ProjectBuilder
+keeps friendly labels such as `iQ-R` and `KV-8000` in the UI, but schema v3 JSON
+emits values such as `melsec:iq-r` and `keyence:kv-8000`. ProjectBuilder must
+not emit a separate `plcProfile` field in schema v3.
 
 ProjectBuilder enforces the mobile app registration limits: up to 20 time chart
 targets and up to 20 trap definitions.
@@ -47,7 +46,7 @@ targets and up to 20 trap definitions.
 ## Value Sets
 
 - `plc.vendor`: `MELSEC`, `KEYENCE`
-- `plc.cpuModel`: mobile app model label, for example `iQ-R` or `KV-X500`
+- `plc.cpuModel`: mobile app canonical model key, for example `melsec:iq-r` or `keyence:kv-x500`
 - `plc.connection.mode`: `REAL`, `DEMO_MOCK`
 - `plc.keyence.deviceMode`: `NORMAL`, `XYM`
 - `plc.connection.transport`: `TCP`, `UDP`

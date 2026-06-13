@@ -1,4 +1,5 @@
 using System.Globalization;
+using PlcIoCheckerQr.Core;
 using PlcIoCheckerQr.Wpf.Localization;
 
 namespace PlcIoCheckerQr.Wpf;
@@ -44,6 +45,18 @@ internal static class UiValueMapping
         "UDP" => "Udp",
         _ => throw new InvalidOperationException($"Unsupported transport: {value}"),
     };
+
+    internal static string ToUiMachineLabel(string vendor, string value)
+    {
+        try
+        {
+            return ProjectFactory.ToDisplayMachineLabel(vendor, value);
+        }
+        catch (ArgumentException ex)
+        {
+            throw new InvalidOperationException(ex.Message, ex);
+        }
+    }
 
     internal static string ToUiDataType(string value) => value.Trim().ToUpperInvariant() switch
     {

@@ -77,13 +77,84 @@ public static partial class ProjectFactory
     public static readonly string[] TransportModes = ["Tcp", "Udp"];
     public static readonly string[] DeviceDataTypes = ["Bit", "Int16", "UInt16", "Int32", "UInt32", "Float32"];
     public static readonly string[] MelsecCpuModels = ["iQ-R", "iQ-F", "iQ-L", "MX-R", "MX-F", "QnUDV", "QnU", "QCPU", "LCPU"];
-    public static readonly string[] KeyenceCpuModels = ["KV-X500", "KV-8000", "KV-7000", "KV-5000"];
+    public static readonly string[] KeyenceCpuModels = ["KV-X500", "KV-8000", "KV-7000", "KV-3000/5000"];
 
     public static readonly string[] BitTrapConditions = ["Rise", "Fall", "Change"];
     public static readonly string[] WordTrapConditions = ["Change", "GreaterOrEqual", "LessOrEqual", "Equal", "NotEqual"];
     public static readonly string[] TrapConditions = BitTrapConditions.Concat(WordTrapConditions).Distinct(StringComparer.Ordinal).ToArray();
 
     private static readonly HashSet<string> ValidTrapConditions = new(TrapConditions, StringComparer.Ordinal);
+
+    public static string ToCanonicalMachineLabel(string vendor, string machineLabel)
+    {
+        var normalized = machineLabel.Trim();
+        if (string.Equals(vendor, "Melsec", StringComparison.OrdinalIgnoreCase))
+        {
+            return normalized switch
+            {
+                "iQ-R" => "melsec:iq-r",
+                "iQ-F" => "melsec:iq-f",
+                "iQ-L" => "melsec:iq-l",
+                "MX-R" => "melsec:mx-r",
+                "MX-F" => "melsec:mx-f",
+                "QnUDV" => "melsec:qnudv",
+                "QnU" => "melsec:qnu",
+                "QCPU" => "melsec:qcpu",
+                "LCPU" => "melsec:lcpu",
+                _ => throw new ArgumentException($"Unsupported MELSEC CPU model: {machineLabel}"),
+            };
+        }
+
+        if (string.Equals(vendor, "Keyence", StringComparison.OrdinalIgnoreCase))
+        {
+            return normalized switch
+            {
+                "KV-X500" => "keyence:kv-x500",
+                "KV-8000" => "keyence:kv-8000",
+                "KV-7000" => "keyence:kv-7000",
+                "KV-3000/5000" => "keyence:kv-3000-5000",
+                _ => throw new ArgumentException($"Unsupported KEYENCE CPU model: {machineLabel}"),
+            };
+        }
+
+        throw new ArgumentException($"Unsupported PLC vendor: {vendor}");
+    }
+
+    public static string ToDisplayMachineLabel(string vendor, string machineLabel)
+    {
+        var normalized = machineLabel.Trim();
+        if (string.Equals(vendor, "Melsec", StringComparison.OrdinalIgnoreCase))
+        {
+            return normalized switch
+            {
+                "melsec:iq-r" => "iQ-R",
+                "melsec:iq-f" => "iQ-F",
+                "melsec:iq-l" => "iQ-L",
+                "melsec:mx-r" => "MX-R",
+                "melsec:mx-f" => "MX-F",
+                "melsec:qnudv" => "QnUDV",
+                "melsec:qnu" => "QnU",
+                "melsec:qcpu" => "QCPU",
+                "melsec:lcpu" => "LCPU",
+                _ => throw new ArgumentException($"Unsupported MELSEC CPU model: {machineLabel}"),
+            };
+        }
+
+        if (string.Equals(vendor, "Keyence", StringComparison.OrdinalIgnoreCase))
+        {
+            return normalized switch
+            {
+                "keyence:kv-x500" => "KV-X500",
+                "keyence:kv-8000" => "KV-8000",
+                "keyence:kv-7000" => "KV-7000",
+                "keyence:kv-3000-5000" => "KV-3000/5000",
+                _ => throw new ArgumentException($"Unsupported KEYENCE CPU model: {machineLabel}"),
+            };
+        }
+
+        throw new ArgumentException($"Unsupported PLC vendor: {vendor}");
+    }
+
     private static readonly DeviceFamilyRule[] MelsecDeviceFamilies =
     [
         Bit("X", DeviceAddressNumberFormat.Hex),

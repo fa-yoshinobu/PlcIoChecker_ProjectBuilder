@@ -6,25 +6,27 @@ cleanup.
 ## Result
 
 - No direct SLMP API usage requiring source changes was found.
-- The project JSON is affected only by interpretation: `plc.cpuModel` remains a
-  mobile app model label such as `iQ-R` or `KV-X500`. It is not the SLMP library
-  profile string and must not be changed to `melsec:iq-r`.
-- ProjectBuilder does not emit a `plcProfile` field in schema v3. Android and
-  iOS map `cpuModel` to the canonical SLMP profile internally.
+- The project JSON is affected by the mobile app profile-label cleanup:
+  `plc.cpuModel` is now the mobile app canonical connection model key, such as
+  `melsec:iq-r` or `keyence:kv-x500`.
+- ProjectBuilder keeps friendly CPU model labels in the UI, maps them to
+  canonical JSON labels at export time, and maps canonical JSON labels back to
+  friendly labels when loading JSON.
+- ProjectBuilder does not emit a `plcProfile` field in schema v3.
 
 ## Verification
 
 ```text
-dotnet build dotnet\PlcIoCheckerQr.sln
+dotnet build dotnet/src/PlcIoCheckerQr.Core/PlcIoCheckerQr.Core.csproj
 passed
 
-dotnet test dotnet\PlcIoCheckerQr.sln
-61 passed
+DOTNET_ROLL_FORWARD=Major dotnet test dotnet/tests/PlcIoCheckerQr.Core.Tests/PlcIoCheckerQr.Core.Tests.csproj
+63 passed
 ```
 
 ## Notes
 
 - `docs/QR_JSON_FORMAT.md` and payload tests pin the current JSON behavior:
-  `cpuModel` is preserved and `plcProfile` is absent.
+  `cpuModel` is canonical and `plcProfile` is absent.
 - The detailed SLMP manual decisions are recorded in the SLMP implementation
   repositories and `plc-comm-slmp-cross-verify`.
