@@ -92,7 +92,8 @@ public sealed class ProjectQrPayloadTests
         Assert.Equal("keyence:kv-x500", ProjectFactory.ToCanonicalMachineLabel("Keyence", "KV-X500"));
         Assert.Equal("keyence:kv-8000", ProjectFactory.ToCanonicalMachineLabel("Keyence", "KV-8000"));
         Assert.Equal("keyence:kv-7000", ProjectFactory.ToCanonicalMachineLabel("Keyence", "KV-7000"));
-        Assert.Equal("keyence:kv-3000-5000", ProjectFactory.ToCanonicalMachineLabel("Keyence", "KV-3000/5000"));
+        Assert.Equal("keyence:kv-3000", ProjectFactory.ToCanonicalMachineLabel("Keyence", "KV-3000"));
+        Assert.Equal("keyence:kv-5000", ProjectFactory.ToCanonicalMachineLabel("Keyence", "KV-5000"));
     }
 
     [Fact]
@@ -110,7 +111,8 @@ public sealed class ProjectQrPayloadTests
         Assert.Equal("KV-X500", ProjectFactory.ToDisplayMachineLabel("Keyence", "keyence:kv-x500"));
         Assert.Equal("KV-8000", ProjectFactory.ToDisplayMachineLabel("Keyence", "keyence:kv-8000"));
         Assert.Equal("KV-7000", ProjectFactory.ToDisplayMachineLabel("Keyence", "keyence:kv-7000"));
-        Assert.Equal("KV-3000/5000", ProjectFactory.ToDisplayMachineLabel("Keyence", "keyence:kv-3000-5000"));
+        Assert.Equal("KV-3000", ProjectFactory.ToDisplayMachineLabel("Keyence", "keyence:kv-3000"));
+        Assert.Equal("KV-5000", ProjectFactory.ToDisplayMachineLabel("Keyence", "keyence:kv-5000"));
     }
 
     [Fact]
