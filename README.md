@@ -83,6 +83,7 @@ For multi-page QR output, import completes after the mobile app has scanned ever
 
 ## License
 
-This repository is published under the MIT License. See [LICENSE](LICENSE).
-
-The MIT License applies only to the PC-side project builder and QR export tool in this repository. It does not include the Android/iOS PLC IO Checker mobile apps.
+| Item | Value |
+| --- | --- |
+| License | [MIT](LICENSE) |
+| Scope | Applies only to the PC-side project builder and QR export tool in this repository. It does not include the Android/iOS PLC IO Checker mobile apps. |
