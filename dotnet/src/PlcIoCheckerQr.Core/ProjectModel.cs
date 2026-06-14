@@ -77,7 +77,7 @@ public static partial class ProjectFactory
     public static readonly string[] TransportModes = ["Tcp", "Udp"];
     public static readonly string[] DeviceDataTypes = ["Bit", "Int16", "UInt16", "Int32", "UInt32", "Float32"];
     public static readonly string[] MelsecCpuModels = ["iQ-R", "iQ-F", "iQ-L", "MX-R", "MX-F", "QnUDV", "QnU", "QCPU", "LCPU"];
-    public static readonly string[] KeyenceCpuModels = ["KV-X500", "KV-8000", "KV-7000", "KV-3000", "KV-5000"];
+    public static readonly string[] KeyenceCpuModels = ["KV-X500", "KV-8000", "KV-7000", "KV-5000", "KV-3000"];
 
     public static readonly string[] BitTrapConditions = ["Rise", "Fall", "Change"];
     public static readonly string[] WordTrapConditions = ["Change", "GreaterOrEqual", "LessOrEqual", "Equal", "NotEqual"];
