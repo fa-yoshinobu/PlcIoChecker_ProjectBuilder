@@ -125,7 +125,7 @@ public sealed class ProjectQrPayloadTests
     [Fact]
     public void ProjectFactoryCommonizesDeviceCommentsByAddress()
     {
-        var project = ProjectFactory.MakeProject(TestInput(
+        var project = ProjectFactory.MakeProject(ProjectInputBuilder.MakeInput(
             DevicesText: "D100,Int16,Speed word\r\nD100,UInt16,Ignored duplicate\r\nD101,Alarm word",
             WatchText: "",
             TrapsText: ""));
@@ -143,7 +143,7 @@ public sealed class ProjectQrPayloadTests
     [Fact]
     public void ProjectFactoryLimitsTimeChartTargetsToAndroidMaximum()
     {
-        var input = TestInput(
+        var input = ProjectInputBuilder.MakeInput(
             DevicesText: "",
             WatchText: string.Join("\n", Enumerable.Range(0, ProjectFactory.MaxTimeChartTargets + 1).Select(index => $"D{index}")),
             TrapsText: "");
@@ -155,7 +155,7 @@ public sealed class ProjectQrPayloadTests
     [Fact]
     public void ProjectFactoryLimitsTrapDefinitionsToMobileMaximum()
     {
-        var input = TestInput(
+        var input = ProjectInputBuilder.MakeInput(
             DevicesText: "",
             WatchText: "",
             TrapsText: string.Join("\n", Enumerable.Range(0, ProjectFactory.MaxTrapDefinitions + 1).Select(index => $"D{index},Change,,true")));
@@ -167,7 +167,7 @@ public sealed class ProjectQrPayloadTests
     [Fact]
     public void ProjectFactoryUsesVendorAwareTrapConditions()
     {
-        var melsecProject = ProjectFactory.MakeProject(TestInput(
+        var melsecProject = ProjectFactory.MakeProject(ProjectInputBuilder.MakeInput(
             Vendor: "Melsec",
             DevicesText: "R100",
             WatchText: "",
@@ -177,8 +177,9 @@ public sealed class ProjectQrPayloadTests
         Assert.Equal("GreaterOrEqual", melsecProject.Traps.Single().Condition);
         Assert.Equal(1, melsecProject.Traps.Single().Threshold);
 
-        var keyenceProject = ProjectFactory.MakeProject(TestInput(
+        var keyenceProject = ProjectFactory.MakeProject(ProjectInputBuilder.MakeInput(
             Vendor: "Keyence",
+            RemotePassword: "",
             DevicesText: "R100",
             WatchText: "",
             TrapsText: "R100,Rise,,true"));
@@ -187,8 +188,9 @@ public sealed class ProjectQrPayloadTests
         Assert.Equal("Rise", keyenceProject.Traps.Single().Condition);
         Assert.Null(keyenceProject.Traps.Single().Threshold);
 
-        Assert.Throws<ArgumentException>(() => ProjectFactory.MakeProject(TestInput(
+        Assert.Throws<ArgumentException>(() => ProjectFactory.MakeProject(ProjectInputBuilder.MakeInput(
             Vendor: "Keyence",
+            RemotePassword: "",
             DevicesText: "R100",
             WatchText: "",
             TrapsText: "R100,GreaterOrEqual,1,true")));
@@ -197,12 +199,12 @@ public sealed class ProjectQrPayloadTests
     [Fact]
     public void ProjectFactoryRequiresThresholdOnlyForNumericTrapConditions()
     {
-        Assert.Throws<ArgumentException>(() => ProjectFactory.MakeProject(TestInput(
+        Assert.Throws<ArgumentException>(() => ProjectFactory.MakeProject(ProjectInputBuilder.MakeInput(
             DevicesText: "D100",
             WatchText: "",
             TrapsText: "D100,GreaterOrEqual,,true")));
 
-        var project = ProjectFactory.MakeProject(TestInput(
+        var project = ProjectFactory.MakeProject(ProjectInputBuilder.MakeInput(
             DevicesText: "D100",
             WatchText: "",
             TrapsText: "D100,Change,123,true"));
@@ -229,10 +231,11 @@ public sealed class ProjectQrPayloadTests
     {
         var condition = expectedDataType == "Bit" ? "Rise" : "GreaterOrEqual";
         var threshold = expectedDataType == "Bit" ? "" : "1";
-        var project = ProjectFactory.MakeProject(TestInput(
+        var project = ProjectFactory.MakeProject(ProjectInputBuilder.MakeInput(
             Vendor: vendor,
             KeyenceDeviceMode: keyenceDeviceMode,
             MachineLabel: machineLabel,
+            RemotePassword: vendor == "Melsec" ? "secret1" : "",
             DevicesText: address,
             WatchText: address,
             TrapsText: $"{address},{expectedDataType},{condition},{threshold},true"));
@@ -261,9 +264,10 @@ public sealed class ProjectQrPayloadTests
         string keyenceDeviceMode,
         string address)
     {
-        var exception = Assert.Throws<ArgumentException>(() => ProjectFactory.MakeProject(TestInput(
+        var exception = Assert.Throws<ArgumentException>(() => ProjectFactory.MakeProject(ProjectInputBuilder.MakeInput(
             Vendor: vendor,
             KeyenceDeviceMode: keyenceDeviceMode,
+            RemotePassword: vendor == "Melsec" ? "secret1" : "",
             DevicesText: address,
             WatchText: "",
             TrapsText: "")));
@@ -284,10 +288,11 @@ public sealed class ProjectQrPayloadTests
         string machineLabel,
         string address)
     {
-        var exception = Assert.Throws<ArgumentException>(() => ProjectFactory.MakeProject(TestInput(
+        var exception = Assert.Throws<ArgumentException>(() => ProjectFactory.MakeProject(ProjectInputBuilder.MakeInput(
             Vendor: vendor,
             KeyenceDeviceMode: keyenceDeviceMode,
             MachineLabel: machineLabel,
+            RemotePassword: vendor == "Melsec" ? "secret1" : "",
             DevicesText: address,
             WatchText: "",
             TrapsText: "")));
@@ -298,15 +303,15 @@ public sealed class ProjectQrPayloadTests
     [Fact]
     public void ProjectFactoryValidatesDeviceAddressStringsInAllInputSections()
     {
-        Assert.Throws<ArgumentException>(() => ProjectFactory.MakeProject(TestInput(
+        Assert.Throws<ArgumentException>(() => ProjectFactory.MakeProject(ProjectInputBuilder.MakeInput(
             DevicesText: "DFFFF",
             WatchText: "",
             TrapsText: "")));
-        Assert.Throws<ArgumentException>(() => ProjectFactory.MakeProject(TestInput(
+        Assert.Throws<ArgumentException>(() => ProjectFactory.MakeProject(ProjectInputBuilder.MakeInput(
             DevicesText: "",
             WatchText: "DFFFF",
             TrapsText: "")));
-        Assert.Throws<ArgumentException>(() => ProjectFactory.MakeProject(TestInput(
+        Assert.Throws<ArgumentException>(() => ProjectFactory.MakeProject(ProjectInputBuilder.MakeInput(
             DevicesText: "",
             WatchText: "",
             TrapsText: "DFFFF,Change,,true")));
@@ -336,9 +341,10 @@ public sealed class ProjectQrPayloadTests
         string address,
         string expectedDataType)
     {
-        var project = ProjectFactory.MakeProject(TestInput(
+        var project = ProjectFactory.MakeProject(ProjectInputBuilder.MakeInput(
             Vendor: vendor,
             KeyenceDeviceMode: keyenceDeviceMode,
+            RemotePassword: "",
             DevicesText: address,
             WatchText: address,
             TrapsText: ""));
@@ -372,7 +378,7 @@ public sealed class ProjectQrPayloadTests
     [InlineData("X000,Int16")]
     public void ProjectFactoryRejectsDataTypesThatDoNotMatchDeviceKind(string devicesText)
     {
-        var exception = Assert.Throws<ArgumentException>(() => ProjectFactory.MakeProject(TestInput(
+        var exception = Assert.Throws<ArgumentException>(() => ProjectFactory.MakeProject(ProjectInputBuilder.MakeInput(
             DevicesText: devicesText,
             WatchText: "",
             TrapsText: "")));
@@ -408,30 +414,4 @@ public sealed class ProjectQrPayloadTests
         TrapsText: "D100,GreaterOrEqual,100,true"),
         nowEpochMs: 123);
 
-    private static ProjectInput TestInput(
-        string Vendor = "Melsec",
-        string KeyenceDeviceMode = "Normal",
-        string? MachineLabel = null,
-        string RemotePassword = "secret1",
-        string DevicesText = "D100",
-        string WatchText = "",
-        string TrapsText = "") => new(
-        Name: "Unit Project",
-        Vendor: Vendor,
-        ConnectionMode: "Real",
-        Host: "192.168.250.100",
-        Port: Vendor == "Keyence" ? 8501 : 1025,
-        MonitorIntervalMs: 500,
-        TimeoutMs: 2000,
-        MachineLabel: MachineLabel ?? (Vendor == "Keyence" ? "KV-8000" : "iQ-R"),
-        KeyenceDeviceMode: KeyenceDeviceMode,
-        TransportMode: "Tcp",
-        Network: 0,
-        Station: 255,
-        ModuleIo: 1023,
-        Multidrop: 0,
-        RemotePassword: Vendor == "Melsec" ? RemotePassword : "",
-        DevicesText: DevicesText,
-        WatchText: WatchText,
-        TrapsText: TrapsText);
 }

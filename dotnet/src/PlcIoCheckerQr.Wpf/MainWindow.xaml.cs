@@ -43,7 +43,7 @@ public partial class MainWindow : Window
     private int _displaySize = 1000;
     private string _errorCorrection = "L";
     private string _languageCode = "en";
-    private bool _statusIsReady = true;
+    private bool _isReadyStatus = true;
     private readonly DispatcherTimer _autoQrTimer = new();
 
     private const double DefaultAutoQrIntervalSeconds = 1.0;
@@ -63,7 +63,6 @@ public partial class MainWindow : Window
         MoveProjectTabFirst();
         SetupComboBoxes();
         SetupGrids();
-        LoadDefaultRows();
         _autoQrTimer.Tick += AutoQrTimer_Tick;
         _autoQrTimer.Interval = TimeSpan.FromSeconds(DefaultAutoQrIntervalSeconds);
         _traps.CollectionChanged += (_, _) => UpdateTrapLimitUi();
@@ -80,13 +79,6 @@ public partial class MainWindow : Window
         UpdateHeaderProjectName();
         UpdateQrMenuChecks();
         Generate(showQrScreen: false);
-    }
-
-    private void LoadDefaultRows()
-    {
-        _devices.Clear();
-        _watches.Clear();
-        _traps.Clear();
     }
 
     private void ApplyVendorDefaults()
@@ -200,7 +192,7 @@ public partial class MainWindow : Window
             row.Address = row.Address.Trim().ToUpperInvariant();
             row.DataType = string.IsNullOrWhiteSpace(row.DataType)
                 ? ProjectFactory.GuessDataType(row.Address, Selected(_vendor), SelectedKeyenceDeviceMode())
-                : CoerceDataTypeForAddress(row.DataType, row.Address);
+                : NormalizeDeviceDataType(row.DataType, row.Address);
             row.Comment = NormalizeDeviceComment(row.Comment);
         }
         CommonizeDeviceComments();
@@ -211,7 +203,7 @@ public partial class MainWindow : Window
             row.Address = row.Address.Trim().ToUpperInvariant();
             row.DataType = string.IsNullOrWhiteSpace(row.DataType)
                 ? ProjectFactory.GuessDataType(row.Address, Selected(_vendor), SelectedKeyenceDeviceMode())
-                : CoerceDataTypeForAddress(row.DataType, row.Address);
+                : NormalizeDeviceDataType(row.DataType, row.Address);
         }
 
         foreach (var row in _traps.Where(row => !string.IsNullOrWhiteSpace(row.Address)))
@@ -220,7 +212,7 @@ public partial class MainWindow : Window
             row.Address = row.Address.Trim().ToUpperInvariant();
             row.DataType = string.IsNullOrWhiteSpace(row.DataType)
                 ? ProjectFactory.GuessDataType(row.Address, Selected(_vendor), SelectedKeyenceDeviceMode())
-                : CoerceDataTypeForAddress(row.DataType, row.Address);
+                : NormalizeDeviceDataType(row.DataType, row.Address);
             row.Condition = ProjectFactory.CoerceTrapConditionForAddress(row.Address, row.Condition, Selected(_vendor), SelectedKeyenceDeviceMode());
         }
 
@@ -253,11 +245,18 @@ public partial class MainWindow : Window
 
     private void SetStatus(string message, bool isError = false)
     {
-        _statusIsReady = message == T("status.ready");
+        _isReadyStatus = false;
         _statusText.Text = message;
         _statusText.Foreground = isError
             ? (Brush)FindResource("ErrorFg")
             : (Brush)FindResource("TextMuted");
+    }
+
+    private void SetReadyStatus()
+    {
+        _isReadyStatus = true;
+        _statusText.Text = T("status.ready");
+        _statusText.Foreground = (Brush)FindResource("TextMuted");
     }
 
     private void UpdateDeviceValidationStatus()

@@ -175,7 +175,7 @@ public partial class MainWindow
                 continue;
             }
 
-            var fields = SplitDeviceClipboardLine(line);
+            var fields = SplitClipboardLine(line);
             if (isFirstRow && IsDeviceClipboardHeader(fields))
             {
                 isFirstRow = false;
@@ -205,9 +205,6 @@ public partial class MainWindow
 
     private string NormalizeDeviceDataType(string text, string address) =>
         ClipboardImport.NormalizeDeviceDataType(text, address, Selected(_vendor), SelectedKeyenceDeviceMode());
-
-    private string CoerceDataTypeForAddress(string dataType, string address) =>
-        NormalizeDeviceDataType(dataType, address);
 
     private void WatchGrid_PreviewKeyDown(object sender, KeyEventArgs e)
     {
@@ -306,7 +303,7 @@ public partial class MainWindow
                 var row = new WatchRow();
                 row.SetDeviceContext(Selected(_vendor), SelectedKeyenceDeviceMode());
                 row.Address = address;
-                row.DataType = fields.Length > 1 ? CoerceDataTypeForAddress(fields[1], address) : ProjectFactory.GuessDataType(address, Selected(_vendor), SelectedKeyenceDeviceMode());
+                row.DataType = fields.Length > 1 ? NormalizeDeviceDataType(fields[1], address) : ProjectFactory.GuessDataType(address, Selected(_vendor), SelectedKeyenceDeviceMode());
                 yield return row;
             }
         }
@@ -418,7 +415,7 @@ public partial class MainWindow
             row.SetDeviceContext(Selected(_vendor), SelectedKeyenceDeviceMode());
             row.Address = address;
             var hasDataType = fields.Length > 2 && ProjectFactory.DeviceDataTypes.Any(dataType => dataType.Equals(fields[1].Trim(), StringComparison.OrdinalIgnoreCase));
-            row.DataType = hasDataType ? CoerceDataTypeForAddress(fields[1], address) : ProjectFactory.GuessDataType(address, Selected(_vendor), SelectedKeyenceDeviceMode());
+            row.DataType = hasDataType ? NormalizeDeviceDataType(fields[1], address) : ProjectFactory.GuessDataType(address, Selected(_vendor), SelectedKeyenceDeviceMode());
             var conditionIndex = hasDataType ? 2 : 1;
             var thresholdIndex = hasDataType ? 3 : 2;
             var enabledIndex = hasDataType ? 4 : 3;

@@ -134,9 +134,9 @@ public partial class MainWindow
             ShowCurrentQr();
         }
 
-        if (_statusIsReady)
+        if (_isReadyStatus)
         {
-            _statusText.Text = T("status.ready");
+            SetReadyStatus();
         }
     }
 

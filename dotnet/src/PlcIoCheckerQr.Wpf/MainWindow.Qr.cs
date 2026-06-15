@@ -136,7 +136,7 @@ public partial class MainWindow
                 var address = row.Address.Trim();
                 var dataType = string.IsNullOrWhiteSpace(row.DataType)
                     ? ProjectFactory.GuessDataType(address, Selected(_vendor), SelectedKeyenceDeviceMode())
-                    : CoerceDataTypeForAddress(row.DataType.Trim(), address);
+                    : NormalizeDeviceDataType(row.DataType.Trim(), address);
                 var comment = NormalizeDeviceComment(row.Comment);
                 return string.IsNullOrWhiteSpace(comment)
                     ? $"{address},{dataType}"
@@ -193,7 +193,7 @@ public partial class MainWindow
                 var address = row.Address.Trim();
                 var dataType = string.IsNullOrWhiteSpace(row.DataType)
                     ? ProjectFactory.GuessDataType(address, Selected(_vendor), SelectedKeyenceDeviceMode())
-                    : CoerceDataTypeForAddress(row.DataType.Trim(), address);
+                    : NormalizeDeviceDataType(row.DataType.Trim(), address);
                 return $"{address},{dataType},{row.Condition.Trim()},{row.Threshold.Trim()},{(row.Enabled ? "true" : "false")}";
             }));
     }

@@ -39,27 +39,22 @@ public partial class MainWindow
     {
         _devicesGrid.ItemsSource = _devices;
         _devicesGrid.PreviewKeyDown += DevicesGrid_PreviewKeyDown;
-        _devicesGrid.ToolTip = "Copy and paste tab-separated rows from Excel. Columns are Address / Data type / Comment.";
         _devicesGrid.Columns.Add(new DataGridTextColumn
         {
-            Header = "Address",
             Binding = new Binding(nameof(DeviceRow.Address)) { UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged },
             Width = new DataGridLength(1, DataGridLengthUnitType.Star),
         });
         _devicesGrid.Columns.Add(DeviceDataTypeColumn<DeviceRow>());
         _devicesGrid.Columns.Add(new DataGridTextColumn
         {
-            Header = "Comment",
             Binding = new Binding(nameof(DeviceRow.Comment)) { UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged },
             Width = new DataGridLength(1.4, DataGridLengthUnitType.Star),
         });
 
         _watchGrid.ItemsSource = _watches;
         _watchGrid.PreviewKeyDown += WatchGrid_PreviewKeyDown;
-        _watchGrid.ToolTip = "Copy and paste tab-separated rows from Excel. Columns are Address.";
         _watchGrid.Columns.Add(new DataGridTextColumn
         {
-            Header = "Address",
             Binding = new Binding(nameof(WatchRow.Address)) { UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged },
             Width = new DataGridLength(1, DataGridLengthUnitType.Star),
         });
@@ -67,31 +62,26 @@ public partial class MainWindow
 
         _trapsGrid.ItemsSource = _traps;
         _trapsGrid.PreviewKeyDown += TrapsGrid_PreviewKeyDown;
-        _trapsGrid.ToolTip = "Copy and paste tab-separated rows from Excel. Columns are Address / Data type / Condition / Threshold / Enabled.";
         _trapsGrid.Columns.Add(new DataGridTextColumn
         {
-            Header = "Address",
             Binding = new Binding(nameof(TrapRow.Address)) { UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged },
             Width = new DataGridLength(1, DataGridLengthUnitType.Star),
         });
         _trapsGrid.Columns.Add(DeviceDataTypeColumn<TrapRow>());
         _trapsGrid.Columns.Add(new DataGridTemplateColumn
         {
-            Header = "Condition",
             CellTemplate = TrapConditionCellTemplate(),
             CellEditingTemplate = TrapConditionEditingTemplate(),
             Width = new DataGridLength(220),
         });
         _trapsGrid.Columns.Add(new DataGridTemplateColumn
         {
-            Header = "Threshold",
             CellTemplate = TrapThresholdCellTemplate(),
             CellEditingTemplate = TrapThresholdEditingTemplate(),
             Width = new DataGridLength(140),
         });
         _trapsGrid.Columns.Add(new DataGridCheckBoxColumn
         {
-            Header = "Enabled",
             Binding = new Binding(nameof(TrapRow.Enabled)) { UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged },
             Width = new DataGridLength(90),
         });
@@ -100,7 +90,6 @@ public partial class MainWindow
     private static DataGridTemplateColumn DeviceDataTypeColumn<T>() where T : DataTypedAddressRow =>
         new()
         {
-            Header = "Data type",
             CellTemplate = DeviceDataTypeCellTemplate<T>(),
             CellEditingTemplate = DeviceDataTypeEditingTemplate<T>(),
             Width = new DataGridLength(170),

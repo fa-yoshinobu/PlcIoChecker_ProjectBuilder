@@ -2,7 +2,7 @@
 
 This app exists because configuring PLC IO Checker projects on a smartphone is
 tedious. The PC GUI should make project data entry easier, then export project
-JSON v2 and QR codes for Android and iOS.
+JSON v3 and QR codes for Android and iOS.
 
 ## Primary Workflows
 
@@ -32,9 +32,11 @@ They should live behind secondary tabs or output/export areas.
 
 ## Project JSON Compatibility
 
-Use the shared `plc-io-checker-project` schema v2 as the source of truth for
+Use the shared `plc-io-checker-project` schema v3 as the source of truth for
 JSON structure and selection values:
 
+- `schema`
+- `schemaVersion`
 - `projectId`
 - `projectName`
 - `plc`
@@ -46,7 +48,7 @@ JSON structure and selection values:
 
 Do not emit removed project keys, UI-only preferences, or runtime trap values.
 
-Use uppercase v2 enum values in JSON:
+Use uppercase v3 enum values in JSON:
 
 - `MELSEC`, `KEYENCE`
 - `REAL`, `DEMO_MOCK`

@@ -217,7 +217,7 @@ public partial class MainWindow
             var row = new DeviceRow();
             row.SetDeviceContext(Selected(_vendor), SelectedKeyenceDeviceMode());
             row.Address = address;
-            row.DataType = CoerceDataTypeForAddress(ToUiDataType(ReadRequiredString(device, "dataType")), address);
+            row.DataType = NormalizeDeviceDataType(ToUiDataType(ReadRequiredString(device, "dataType")), address);
             row.Comment = ReadOptionalString(device, "comment");
             _devices.Add(row);
         }
@@ -230,7 +230,7 @@ public partial class MainWindow
             var row = new WatchRow();
             row.SetDeviceContext(Selected(_vendor), SelectedKeyenceDeviceMode());
             row.Address = address;
-            row.DataType = CoerceDataTypeForAddress(ToUiDataType(ReadRequiredString(target, "dataType")), address);
+            row.DataType = NormalizeDeviceDataType(ToUiDataType(ReadRequiredString(target, "dataType")), address);
             _watches.Add(row);
         }
 
@@ -252,7 +252,7 @@ public partial class MainWindow
             var row = new TrapRow();
             row.SetDeviceContext(Selected(_vendor), SelectedKeyenceDeviceMode());
             row.Address = ReadRequiredString(trap, "address");
-            row.DataType = CoerceDataTypeForAddress(ToUiDataType(ReadRequiredString(trap, "dataType")), row.Address);
+            row.DataType = NormalizeDeviceDataType(ToUiDataType(ReadRequiredString(trap, "dataType")), row.Address);
             row.Condition = ToUiTrapCondition(ReadRequiredString(trap, "condition"));
             row.Threshold = threshold;
             row.Enabled = ReadRequiredBool(trap, "enabled");

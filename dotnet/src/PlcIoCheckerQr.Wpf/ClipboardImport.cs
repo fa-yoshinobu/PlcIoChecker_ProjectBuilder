@@ -81,11 +81,6 @@ internal static class ClipboardImport
             .Select(item => item.Condition)
             .FirstOrDefault();
 
-    internal static string[] SplitDeviceClipboardLine(string line) =>
-        line.Contains('\t', StringComparison.Ordinal)
-            ? line.Split('\t')
-            : line.Split(',');
-
     internal static string[] SplitClipboardLine(string line) =>
         line.Contains('\t', StringComparison.Ordinal)
             ? line.Split('\t')
