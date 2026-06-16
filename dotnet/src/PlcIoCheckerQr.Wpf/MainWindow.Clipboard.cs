@@ -42,6 +42,13 @@ public partial class MainWindow
             return;
         }
 
+        if (e.Key == Key.Z && _undoStack.TryPop(out var undo))
+        {
+            undo();
+            e.Handled = true;
+            return;
+        }
+
         if (e.Key == Key.C)
         {
             CopySelectedDevicesToClipboard();
@@ -116,7 +123,7 @@ public partial class MainWindow
             return;
         }
 
-        var rows = ParseDeviceClipboardRows(Clipboard.GetText()).ToList();
+        var (rows, skipped) = ParseDeviceClipboardRows(Clipboard.GetText());
         if (rows.Count == 0)
         {
             SetStatus(T("status.noDeviceRowsPasted"), isError: true);
@@ -156,7 +163,8 @@ public partial class MainWindow
         try
         {
             var count = TimeChartAddresses().Count;
-            SetStatus(Tf("status.pastedDeviceRows", rows.Count, count, ProjectFactory.MaxTimeChartTargets));
+            var pasteMsg = Tf("status.pastedDeviceRows", rows.Count, count, ProjectFactory.MaxTimeChartTargets);
+            SetStatus(skipped > 0 ? $"{pasteMsg}  {Tf("status.clipboardSkipped", skipped)}" : pasteMsg);
         }
         catch (ArgumentException ex)
         {
@@ -164,9 +172,12 @@ public partial class MainWindow
         }
     }
 
-    private IEnumerable<DeviceRow> ParseDeviceClipboardRows(string text)
+    private (IReadOnlyList<DeviceRow> Rows, int Skipped) ParseDeviceClipboardRows(string text)
     {
+        var rows = new List<DeviceRow>();
+        var skipped = 0;
         var isFirstRow = true;
+
         foreach (var rawLine in text.Split(["\r\n", "\n"], StringSplitOptions.None))
         {
             var line = rawLine.TrimEnd('\r');
@@ -186,6 +197,7 @@ public partial class MainWindow
             var address = fields[0].Trim();
             if (string.IsNullOrWhiteSpace(address))
             {
+                skipped++;
                 continue;
             }
 
@@ -199,8 +211,10 @@ public partial class MainWindow
             row.Address = address;
             row.DataType = dataType;
             row.Comment = DeviceCommentFromFields(fields, commentIndex);
-            yield return row;
+            rows.Add(row);
         }
+
+        return (rows, skipped);
     }
 
     private string NormalizeDeviceDataType(string text, string address) =>
@@ -215,6 +229,13 @@ public partial class MainWindow
 
         if ((Keyboard.Modifiers & ModifierKeys.Control) != ModifierKeys.Control)
         {
+            return;
+        }
+
+        if (e.Key == Key.Z && _undoStack.TryPop(out var undo))
+        {
+            undo();
+            e.Handled = true;
             return;
         }
 
@@ -324,6 +345,13 @@ public partial class MainWindow
 
         if ((Keyboard.Modifiers & ModifierKeys.Control) != ModifierKeys.Control)
         {
+            return;
+        }
+
+        if (e.Key == Key.Z && _undoStack.TryPop(out var undo))
+        {
+            undo();
+            e.Handled = true;
             return;
         }
 

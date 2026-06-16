@@ -241,9 +241,29 @@ public static partial class ProjectFactory
 
         var now = nowEpochMs ?? DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         var name = string.IsNullOrWhiteSpace(input.Name) ? "PLC QR Project" : input.Name.Trim();
-        var parsedDevices = new List<DeviceDefinition>();
 
-        foreach (var line in ParseLines(input.DevicesText))
+        var devices = ParseDevices(input.DevicesText, input.Vendor, input.KeyenceDeviceMode, input.MachineLabel);
+        var deviceTypesByAddress = devices
+            .GroupBy(device => device.Address, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.First().DataType, StringComparer.OrdinalIgnoreCase);
+
+        var timeChart = ParseTimeChart(input.WatchText, input.Vendor, input.KeyenceDeviceMode, input.MachineLabel, deviceTypesByAddress);
+        var traps = ParseTraps(input.TrapsText, input.Vendor, input.KeyenceDeviceMode, input.MachineLabel, deviceTypesByAddress);
+
+        return new PlcProject(
+            Id: $"{Slugify(name)}-{now}",
+            Name: name,
+            Connection: BuildConnection(input),
+            Devices: devices,
+            TimeChart: timeChart,
+            Traps: traps,
+            UpdatedAtEpochMs: now);
+    }
+
+    private static List<DeviceDefinition> ParseDevices(string devicesText, string vendor, string keyenceDeviceMode, string machineLabel)
+    {
+        var parsedDevices = new List<DeviceDefinition>();
+        foreach (var line in ParseLines(devicesText))
         {
             var parts = line.Split(',').Select(part => part.Trim()).ToArray();
             if (parts.Length == 0 || string.IsNullOrWhiteSpace(parts[0]))
@@ -252,16 +272,16 @@ public static partial class ProjectFactory
             }
 
             var address = parts[0].ToUpperInvariant();
-            ValidateDeviceAddress(address, input.Vendor, input.KeyenceDeviceMode, input.MachineLabel);
+            ValidateDeviceAddress(address, vendor, keyenceDeviceMode, machineLabel);
             var hasDataType = false;
-            var dataType = GuessDataType(address, input.Vendor, input.KeyenceDeviceMode, input.MachineLabel);
+            var dataType = GuessDataType(address, vendor, keyenceDeviceMode, machineLabel);
             if (parts.Length > 1 && TryNormalizeDeviceDataType(parts[1], out var parsedDataType))
             {
                 hasDataType = true;
                 dataType = parsedDataType;
             }
             ValidateChoice(dataType, DeviceDataTypes, "device data type");
-            dataType = ValidateDataTypeForAddress(address, dataType, input.Vendor, input.KeyenceDeviceMode, input.MachineLabel, "device data type");
+            dataType = ValidateDataTypeForAddress(address, dataType, vendor, keyenceDeviceMode, machineLabel, "device data type");
             var commentIndex = hasDataType ? 2 : parts.Length > 2 && string.IsNullOrWhiteSpace(parts[1]) ? 2 : 1;
             parsedDevices.Add(new DeviceDefinition(address, dataType, DeviceCommentFromParts(parts, commentIndex)));
         }
@@ -270,16 +290,20 @@ public static partial class ProjectFactory
             .Where(device => !string.IsNullOrWhiteSpace(device.Comment))
             .GroupBy(device => device.Address, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(group => group.Key, group => group.First().Comment, StringComparer.OrdinalIgnoreCase);
-        var devices = parsedDevices
+        return parsedDevices
             .Select(device => device with { Comment = commentsByAddress.GetValueOrDefault(device.Address, "") })
             .ToList();
+    }
 
-        var deviceTypesByAddress = devices
-            .GroupBy(device => device.Address, StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(group => group.Key, group => group.First().DataType, StringComparer.OrdinalIgnoreCase);
-
-        var timeChart = ParseLines(input.WatchText)
-            .Select(line => ParseDeviceLine(line, input.Vendor, input.KeyenceDeviceMode, input.MachineLabel, deviceTypesByAddress))
+    private static List<MonitorTargetDefinition> ParseTimeChart(
+        string watchText,
+        string vendor,
+        string keyenceDeviceMode,
+        string machineLabel,
+        IReadOnlyDictionary<string, string> deviceTypesByAddress)
+    {
+        var timeChart = ParseLines(watchText)
+            .Select(line => ParseDeviceLine(line, vendor, keyenceDeviceMode, machineLabel, deviceTypesByAddress))
             .DistinctBy(target => target.Address, StringComparer.OrdinalIgnoreCase)
             .ToList();
         if (timeChart.Count > MaxTimeChartTargets)
@@ -287,9 +311,19 @@ public static partial class ProjectFactory
             throw new ArgumentException($"Time chart can contain up to {MaxTimeChartTargets} channels.");
         }
 
+        return timeChart;
+    }
+
+    private static List<TrapDefinition> ParseTraps(
+        string trapsText,
+        string vendor,
+        string keyenceDeviceMode,
+        string machineLabel,
+        IReadOnlyDictionary<string, string> deviceTypesByAddress)
+    {
         var traps = new List<TrapDefinition>();
         var offset = 1;
-        foreach (var line in ParseLines(input.TrapsText))
+        foreach (var line in ParseLines(trapsText))
         {
             var parts = line.Split(',').Select(part => part.Trim()).ToArray();
             if (parts.Length < 2 || string.IsNullOrWhiteSpace(parts[0]) || string.IsNullOrWhiteSpace(parts[1]))
@@ -298,14 +332,14 @@ public static partial class ProjectFactory
             }
 
             var address = parts[0].ToUpperInvariant();
-            ValidateDeviceAddress(address, input.Vendor, input.KeyenceDeviceMode, input.MachineLabel);
+            ValidateDeviceAddress(address, vendor, keyenceDeviceMode, machineLabel);
             var hasDataType = parts.Length >= 3 && DeviceDataTypes.Contains(parts[1], StringComparer.Ordinal);
             var dataType = hasDataType
                 ? parts[1]
-                : deviceTypesByAddress.GetValueOrDefault(address, GuessDataType(address, input.Vendor, input.KeyenceDeviceMode, input.MachineLabel));
+                : deviceTypesByAddress.GetValueOrDefault(address, GuessDataType(address, vendor, keyenceDeviceMode, machineLabel));
             ValidateChoice(dataType, DeviceDataTypes, "trap data type");
-            dataType = ValidateDataTypeForAddress(address, dataType, input.Vendor, input.KeyenceDeviceMode, input.MachineLabel, "trap data type");
-            var condition = ValidateTrapConditionForAddress(address, hasDataType ? parts[2] : parts[1], input.Vendor, input.KeyenceDeviceMode);
+            dataType = ValidateDataTypeForAddress(address, dataType, vendor, keyenceDeviceMode, machineLabel, "trap data type");
+            var condition = ValidateTrapConditionForAddress(address, hasDataType ? parts[2] : parts[1], vendor, keyenceDeviceMode);
             var thresholdIndex = hasDataType ? 3 : 2;
             var enabledIndex = hasDataType ? 4 : 3;
             double? threshold = null;
@@ -343,31 +377,27 @@ public static partial class ProjectFactory
             offset++;
         }
 
-        return new PlcProject(
-            Id: $"{Slugify(name)}-{now}",
-            Name: name,
-            Connection: new PlcConnection(
-                input.Vendor,
-                input.ConnectionMode,
-                input.Host.Trim(),
-                input.Port,
-                input.MonitorIntervalMs,
-                input.TimeoutMs,
-                input.MachineLabel,
-                input.KeyenceDeviceMode,
-                input.TransportMode,
-                input.Network,
-                input.Station,
-                input.ModuleIo,
-                input.Multidrop,
-                string.Equals(input.Vendor, "Melsec", StringComparison.Ordinal)
-                    ? input.RemotePassword.Trim()
-                    : string.Empty),
-            Devices: devices,
-            TimeChart: timeChart,
-            Traps: traps,
-            UpdatedAtEpochMs: now);
+        return traps;
     }
+
+    private static PlcConnection BuildConnection(ProjectInput input) =>
+        new(
+            input.Vendor,
+            input.ConnectionMode,
+            input.Host.Trim(),
+            input.Port,
+            input.MonitorIntervalMs,
+            input.TimeoutMs,
+            input.MachineLabel,
+            input.KeyenceDeviceMode,
+            input.TransportMode,
+            input.Network,
+            input.Station,
+            input.ModuleIo,
+            input.Multidrop,
+            string.Equals(input.Vendor, "Melsec", StringComparison.Ordinal)
+                ? input.RemotePassword.Trim()
+                : string.Empty);
 
     private static MonitorTargetDefinition ParseDeviceLine(
         string line,

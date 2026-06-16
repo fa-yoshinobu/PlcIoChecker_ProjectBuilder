@@ -142,12 +142,35 @@ public partial class MainWindow
         }
     }
 
-    private static void RemoveSelectedRows<T>(DataGrid grid, ObservableCollection<T> source)
+    private void RemoveSelectedRows<T>(DataGrid grid, ObservableCollection<T> source)
     {
         var selectedRows = grid.SelectedItems.OfType<T>().ToList();
-        foreach (var row in selectedRows)
+        if (selectedRows.Count == 0)
+        {
+            return;
+        }
+
+        var removals = selectedRows
+            .Select(row => (row, index: source.IndexOf(row)))
+            .OrderBy(pair => pair.index)
+            .ToList();
+
+        foreach (var (row, _) in removals)
         {
             source.Remove(row);
         }
+
+        _undoStack.Push(() =>
+        {
+            foreach (var (row, index) in removals)
+            {
+                source.Insert(Math.Min(index, source.Count), row);
+            }
+
+            SelectRows(grid, removals.Select(pair => pair.row));
+            SetStatus(Tf("status.undone", removals.Count));
+        });
+
+        SetStatus(Tf("status.deleted", selectedRows.Count));
     }
 }

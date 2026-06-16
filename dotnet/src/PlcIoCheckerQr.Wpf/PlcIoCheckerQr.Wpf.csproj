@@ -27,6 +27,11 @@
     <PackageReference Include="QRCoder" Version="1.6.0" />
   </ItemGroup>
   <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
+      <_Parameter1>PlcIoCheckerQr.Wpf.Tests</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
+  <ItemGroup>
     <Resource Include="..\..\..\icon.ico" Link="icon.ico" />
     <Content Include="Languages\*.json"
              CopyToOutputDirectory="PreserveNewest"

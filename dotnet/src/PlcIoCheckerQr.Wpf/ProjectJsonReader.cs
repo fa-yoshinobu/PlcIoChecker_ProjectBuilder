@@ -5,18 +5,18 @@ namespace PlcIoCheckerQr.Wpf;
 
 internal static class ProjectJsonReader
 {
-    internal static void RequireProjectJsonV2(JsonElement root)
+    internal static void RequireProjectJsonV3(JsonElement root)
     {
         var schema = ReadRequiredString(root, "schema");
         if (schema != "plc-io-checker-project")
         {
-            throw new InvalidOperationException($"Unsupported project schema: {schema}");
+            throw new ProjectJsonException("error.jsonSchemaInvalid", schema);
         }
 
         var version = ReadRequiredInt(root, "schemaVersion");
         if (version != 3)
         {
-            throw new InvalidOperationException($"Unsupported project schema version: {version}");
+            throw new ProjectJsonException("error.jsonVersionInvalid", version.ToString(CultureInfo.InvariantCulture));
         }
     }
 
@@ -119,4 +119,10 @@ internal static class ProjectJsonReader
 
         return value.GetBoolean();
     }
+}
+
+internal sealed class ProjectJsonException(string localizationKey, string detail)
+    : InvalidOperationException(detail)
+{
+    internal string LocalizationKey { get; } = localizationKey;
 }

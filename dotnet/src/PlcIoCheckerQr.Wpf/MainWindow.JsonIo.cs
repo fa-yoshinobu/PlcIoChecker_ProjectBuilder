@@ -90,6 +90,12 @@ public partial class MainWindow
             ShowInputScreen();
             SetStatus(Tf("status.jsonLoaded", Path.GetFileName(dialog.FileName)));
         }
+        catch (ProjectJsonException ex)
+        {
+            var msg = Tf(ex.LocalizationKey, ex.Message);
+            SetStatus(msg, isError: true);
+            MessageBox.Show(this, msg, Title, MessageBoxButton.OK, MessageBoxImage.Error);
+        }
         catch (Exception ex)
         {
             SetStatus(Tf("status.jsonLoadError", ex.Message), isError: true);
@@ -111,7 +117,15 @@ public partial class MainWindow
             var jsonBytes = ProjectQrPayload.ProjectJsonBytes(BuildProject());
             _lastJson = Encoding.UTF8.GetString(jsonBytes);
             File.WriteAllBytes(dialog.FileName, jsonBytes);
-            SetStatus(Tf("status.jsonSaved", Path.GetFileName(dialog.FileName)));
+            var jsonSavedName = Path.GetFileName(dialog.FileName);
+            if (!string.IsNullOrEmpty(_remotePassword.Password))
+            {
+                SetStatus(Tf("status.savedWithPassword", Tf("status.jsonSaved", jsonSavedName)), isError: false);
+            }
+            else
+            {
+                SetStatus(Tf("status.jsonSaved", jsonSavedName));
+            }
         }
         catch (Exception ex)
         {
@@ -153,7 +167,14 @@ public partial class MainWindow
             var jsonFileName = $"plcio-{_chunks[0].Session}.json";
             File.WriteAllBytes(Path.Combine(dialog.FolderName, jsonFileName), jsonBytes);
 
-            SetStatus(Tf("status.qrPngSaved", _chunks.Count, jsonFileName));
+            if (!string.IsNullOrEmpty(_remotePassword.Password))
+            {
+                SetStatus(Tf("status.savedWithPassword", Tf("status.qrPngSaved", _chunks.Count, jsonFileName)), isError: false);
+            }
+            else
+            {
+                SetStatus(Tf("status.qrPngSaved", _chunks.Count, jsonFileName));
+            }
         }
         catch (Exception ex)
         {
@@ -166,7 +187,7 @@ public partial class MainWindow
     {
         using var document = JsonDocument.Parse(json);
         var root = document.RootElement;
-        RequireProjectJsonV2(root);
+        RequireProjectJsonV3(root);
 
         _ = ReadRequiredString(root, "projectId");
         _ = ReadRequiredInt64(root, "updatedAtEpochMs");

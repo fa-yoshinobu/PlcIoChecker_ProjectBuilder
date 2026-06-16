@@ -34,6 +34,7 @@ public partial class MainWindow : Window
     private readonly ObservableCollection<DeviceRow> _devices = [];
     private readonly ObservableCollection<WatchRow> _watches = [];
     private readonly ObservableCollection<TrapRow> _traps = [];
+    private readonly Stack<Action> _undoStack = new();
 
     private IReadOnlyList<QrChunk> _chunks = [];
     private int _currentIndex;
@@ -363,5 +364,11 @@ public partial class MainWindow : Window
         {
             comboBox.SelectedItem = value;
         }
+    }
+
+    protected override void OnClosed(EventArgs e)
+    {
+        _autoQrTimer.Stop();
+        base.OnClosed(e);
     }
 }

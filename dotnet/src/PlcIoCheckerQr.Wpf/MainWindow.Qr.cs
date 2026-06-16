@@ -29,7 +29,14 @@ public partial class MainWindow
             _lastJson = Encoding.UTF8.GetString(ProjectQrPayload.ProjectJsonBytes(project));
             ShowCurrentQr();
             SetSummary(project);
-            SetStatus(Tf("status.qrGenerated", _chunks.Count));
+            if (showQrScreen && !string.IsNullOrEmpty(_remotePassword.Password))
+            {
+                SetStatus(Tf("status.qrWithPassword", _chunks.Count));
+            }
+            else
+            {
+                SetStatus(Tf("status.qrGenerated", _chunks.Count));
+            }
 
             if (showQrScreen)
             {
@@ -47,14 +54,27 @@ public partial class MainWindow
     {
         NormalizeGridRows();
 
+        var host = _host.Text.Trim();
+        if (Uri.CheckHostName(host) == UriHostNameType.Unknown)
+        {
+            throw new ArgumentException(T("error.invalidHost"));
+        }
+
+        var intervalMs = ParseRange(_interval, fallback: 500, min: 50, max: 60000);
+        var timeoutMs = ParseRange(_timeout, fallback: 2000, min: 100, max: 60000);
+        if (timeoutMs < intervalMs)
+        {
+            throw new ArgumentException(T("error.timeoutShorterThanInterval"));
+        }
+
         return ProjectFactory.MakeProject(new ProjectInput(
             Name: _projectName.Text,
             Vendor: Selected(_vendor),
             ConnectionMode: Selected(_connectionMode),
-            Host: _host.Text,
+            Host: host,
             Port: ParseRange(_port, fallback: 1025, min: 1, max: 65535),
-            MonitorIntervalMs: ParseRange(_interval, fallback: 500, min: 50, max: 60000),
-            TimeoutMs: ParseRange(_timeout, fallback: 2000, min: 100, max: 60000),
+            MonitorIntervalMs: intervalMs,
+            TimeoutMs: timeoutMs,
             MachineLabel: Selected(_model),
             KeyenceDeviceMode: Selected(_keyenceMode),
             TransportMode: Selected(_transport),
