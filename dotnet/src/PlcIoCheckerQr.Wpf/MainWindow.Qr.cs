@@ -29,14 +29,7 @@ public partial class MainWindow
             _lastJson = Encoding.UTF8.GetString(ProjectQrPayload.ProjectJsonBytes(project));
             ShowCurrentQr();
             SetSummary(project);
-            if (showQrScreen && !string.IsNullOrEmpty(_remotePassword.Password))
-            {
-                SetStatus(Tf("status.qrWithPassword", _chunks.Count));
-            }
-            else
-            {
-                SetStatus(Tf("status.qrGenerated", _chunks.Count));
-            }
+            SetStatus(Tf("status.qrGenerated", _chunks.Count));
 
             if (showQrScreen)
             {
@@ -82,7 +75,6 @@ public partial class MainWindow
             Station: ParseRange(_station, fallback: 255, min: 0, max: 255),
             ModuleIo: ParseHexRange(_moduleIo, fallback: 0x03FF, min: 0, max: 0xFFFF, width: 4),
             Multidrop: ParseHexRange(_multidrop, fallback: 0, min: 0, max: 0xFF, width: 2),
-            RemotePassword: Selected(_vendor) == "Melsec" ? _remotePassword.Password : "",
             DevicesText: DevicesText(),
             WatchText: WatchText(),
             TrapsText: TrapsText()));

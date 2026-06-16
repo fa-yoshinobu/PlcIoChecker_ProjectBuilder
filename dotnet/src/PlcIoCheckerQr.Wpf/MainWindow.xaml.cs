@@ -103,15 +103,9 @@ public partial class MainWindow : Window
         _multidropLabel.Visibility = melsecRoutingVisibility;
         _multidrop.Visibility = melsecRoutingVisibility;
         _resetRoutingDefaultsButton.Visibility = melsecRoutingVisibility;
-        _remotePasswordLabel.Visibility = melsecRoutingVisibility;
-        _remotePassword.Visibility = melsecRoutingVisibility;
         if (vendor != "Keyence")
         {
             SelectItem(_keyenceMode, "Normal");
-        }
-        else
-        {
-            _remotePassword.Password = "";
         }
 
         ApplyDeviceContextToRows();

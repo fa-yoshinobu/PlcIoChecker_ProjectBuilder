@@ -25,7 +25,7 @@ public sealed class ProjectQrPayloadTests
         using var document = JsonDocument.Parse(decoded);
         var root = document.RootElement;
         Assert.Equal("plc-io-checker-project", root.GetProperty("schema").GetString());
-        Assert.Equal(3, root.GetProperty("schemaVersion").GetInt32());
+        Assert.Equal(4, root.GetProperty("schemaVersion").GetInt32());
         Assert.Equal("unit-project-123", root.GetProperty("projectId").GetString());
         Assert.Equal("MELSEC", root.GetProperty("plc").GetProperty("vendor").GetString());
         Assert.Equal("melsec:iq-r", root.GetProperty("plc").GetProperty("cpuModel").GetString());
@@ -35,7 +35,7 @@ public sealed class ProjectQrPayloadTests
         Assert.Equal(255, melsec.GetProperty("stationNo").GetInt32());
         Assert.Equal("0x03FF", melsec.GetProperty("moduleIoNo").GetString());
         Assert.Equal("0x00", melsec.GetProperty("multidropNo").GetString());
-        Assert.Equal("secret1", melsec.GetProperty("remotePassword").GetString());
+        Assert.False(melsec.TryGetProperty("remotePassword", out _));
         Assert.Equal("GREATER_OR_EQUAL", root.GetProperty("traps")[0].GetProperty("condition").GetString());
         Assert.Equal("Start input", root.GetProperty("deviceList")[0].GetProperty("comment").GetString());
         Assert.False(root.GetProperty("deviceList")[0].TryGetProperty("watch", out _));
@@ -60,7 +60,6 @@ public sealed class ProjectQrPayloadTests
             Station: 255,
             ModuleIo: 1023,
             Multidrop: 0,
-            RemotePassword: "ignored",
             DevicesText: "R000\r\nDM100,UInt16",
             WatchText: "R000",
             TrapsText: "DM100,Change,,true"),
@@ -179,7 +178,6 @@ public sealed class ProjectQrPayloadTests
 
         var keyenceProject = ProjectFactory.MakeProject(ProjectInputBuilder.MakeInput(
             Vendor: "Keyence",
-            RemotePassword: "",
             DevicesText: "R100",
             WatchText: "",
             TrapsText: "R100,Rise,,true"));
@@ -190,7 +188,6 @@ public sealed class ProjectQrPayloadTests
 
         Assert.Throws<ArgumentException>(() => ProjectFactory.MakeProject(ProjectInputBuilder.MakeInput(
             Vendor: "Keyence",
-            RemotePassword: "",
             DevicesText: "R100",
             WatchText: "",
             TrapsText: "R100,GreaterOrEqual,1,true")));
@@ -235,7 +232,6 @@ public sealed class ProjectQrPayloadTests
             Vendor: vendor,
             KeyenceDeviceMode: keyenceDeviceMode,
             MachineLabel: machineLabel,
-            RemotePassword: vendor == "Melsec" ? "secret1" : "",
             DevicesText: address,
             WatchText: address,
             TrapsText: $"{address},{expectedDataType},{condition},{threshold},true"));
@@ -267,7 +263,6 @@ public sealed class ProjectQrPayloadTests
         var exception = Assert.Throws<ArgumentException>(() => ProjectFactory.MakeProject(ProjectInputBuilder.MakeInput(
             Vendor: vendor,
             KeyenceDeviceMode: keyenceDeviceMode,
-            RemotePassword: vendor == "Melsec" ? "secret1" : "",
             DevicesText: address,
             WatchText: "",
             TrapsText: "")));
@@ -292,7 +287,6 @@ public sealed class ProjectQrPayloadTests
             Vendor: vendor,
             KeyenceDeviceMode: keyenceDeviceMode,
             MachineLabel: machineLabel,
-            RemotePassword: vendor == "Melsec" ? "secret1" : "",
             DevicesText: address,
             WatchText: "",
             TrapsText: "")));
@@ -344,7 +338,6 @@ public sealed class ProjectQrPayloadTests
         var project = ProjectFactory.MakeProject(ProjectInputBuilder.MakeInput(
             Vendor: vendor,
             KeyenceDeviceMode: keyenceDeviceMode,
-            RemotePassword: "",
             DevicesText: address,
             WatchText: address,
             TrapsText: ""));
@@ -408,7 +401,6 @@ public sealed class ProjectQrPayloadTests
         Station: 255,
         ModuleIo: 1023,
         Multidrop: 0,
-        RemotePassword: "secret1",
         DevicesText: "X000,Bit,Start input\r\nD100,Int16,Speed word",
         WatchText: "X000\r\nD100",
         TrapsText: "D100,GreaterOrEqual,100,true"),

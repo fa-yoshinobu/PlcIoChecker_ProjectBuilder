@@ -95,7 +95,6 @@ public partial class MainWindow
         _moduleIoLabel.Text = T("field.moduleIo");
         _multidropLabel.Text = T("field.multidrop");
         _resetRoutingDefaultsButton.Content = T("button.resetRoutingDefaults");
-        _remotePasswordLabel.Text = T("field.remotePassword");
 
         _devicesGrid.ToolTip = T("tooltip.devicesGrid");
         _watchGrid.ToolTip = T("tooltip.watchGrid");

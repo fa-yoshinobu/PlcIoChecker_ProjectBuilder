@@ -32,7 +32,7 @@ They should live behind secondary tabs or output/export areas.
 
 ## Project JSON Compatibility
 
-Use the shared `plc-io-checker-project` schema v3 as the source of truth for
+Use the shared `plc-io-checker-project` schema v4 as the source of truth for
 JSON structure and selection values:
 
 - `schema`

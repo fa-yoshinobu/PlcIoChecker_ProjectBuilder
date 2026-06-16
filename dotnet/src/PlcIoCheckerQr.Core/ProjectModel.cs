@@ -28,8 +28,7 @@ public sealed record PlcConnection(
     int Network,
     int Station,
     int ModuleIo,
-    int Multidrop,
-    string RemotePassword);
+    int Multidrop);
 
 public sealed record DeviceDefinition(string Address, string DataType, string Comment = "");
 
@@ -61,7 +60,6 @@ public sealed record ProjectInput(
     int Station,
     int ModuleIo,
     int Multidrop,
-    string RemotePassword,
     string DevicesText,
     string WatchText,
     string TrapsText);
@@ -394,10 +392,7 @@ public static partial class ProjectFactory
             input.Network,
             input.Station,
             input.ModuleIo,
-            input.Multidrop,
-            string.Equals(input.Vendor, "Melsec", StringComparison.Ordinal)
-                ? input.RemotePassword.Trim()
-                : string.Empty);
+            input.Multidrop);
 
     private static MonitorTargetDefinition ParseDeviceLine(
         string line,

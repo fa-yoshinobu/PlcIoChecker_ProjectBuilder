@@ -118,14 +118,7 @@ public partial class MainWindow
             _lastJson = Encoding.UTF8.GetString(jsonBytes);
             File.WriteAllBytes(dialog.FileName, jsonBytes);
             var jsonSavedName = Path.GetFileName(dialog.FileName);
-            if (!string.IsNullOrEmpty(_remotePassword.Password))
-            {
-                SetStatus(Tf("status.savedWithPassword", Tf("status.jsonSaved", jsonSavedName)), isError: false);
-            }
-            else
-            {
-                SetStatus(Tf("status.jsonSaved", jsonSavedName));
-            }
+            SetStatus(Tf("status.jsonSaved", jsonSavedName));
         }
         catch (Exception ex)
         {
@@ -167,14 +160,7 @@ public partial class MainWindow
             var jsonFileName = $"plcio-{_chunks[0].Session}.json";
             File.WriteAllBytes(Path.Combine(dialog.FolderName, jsonFileName), jsonBytes);
 
-            if (!string.IsNullOrEmpty(_remotePassword.Password))
-            {
-                SetStatus(Tf("status.savedWithPassword", Tf("status.qrPngSaved", _chunks.Count, jsonFileName)), isError: false);
-            }
-            else
-            {
-                SetStatus(Tf("status.qrPngSaved", _chunks.Count, jsonFileName));
-            }
+            SetStatus(Tf("status.qrPngSaved", _chunks.Count, jsonFileName));
         }
         catch (Exception ex)
         {
@@ -187,7 +173,7 @@ public partial class MainWindow
     {
         using var document = JsonDocument.Parse(json);
         var root = document.RootElement;
-        RequireProjectJsonV3(root);
+        RequireProjectJsonV4(root);
 
         _ = ReadRequiredString(root, "projectId");
         _ = ReadRequiredInt64(root, "updatedAtEpochMs");
@@ -223,11 +209,10 @@ public partial class MainWindow
             _station.Text = ReadRequiredInt(melsec, "stationNo").ToString(CultureInfo.InvariantCulture);
             _moduleIo.Text = FormatPrefixedHex(ReadRequiredHexInt(melsec, "moduleIoNo", 0, 0xFFFF), 4);
             _multidrop.Text = FormatPrefixedHex(ReadRequiredHexInt(melsec, "multidropNo", 0, 0xFF), 2);
-            _remotePassword.Password = ReadRequiredString(melsec, "remotePassword");
-        }
-        else
-        {
-            _remotePassword.Password = "";
+            if (melsec.TryGetProperty("remotePassword", out _))
+            {
+                throw new ProjectJsonException("error.remotePasswordUnsupported", "plc.melsec.remotePassword");
+            }
         }
 
         var devicesElement = ReadRequiredArray(root, "deviceList");

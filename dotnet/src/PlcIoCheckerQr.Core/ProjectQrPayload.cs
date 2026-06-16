@@ -138,7 +138,7 @@ public static class ProjectQrPayload
     private static object ToJsonShape(PlcProject project) => new
     {
         schema = "plc-io-checker-project",
-        schemaVersion = 3,
+        schemaVersion = 4,
         projectId = project.Id,
         projectName = project.Name,
         plc = new
@@ -161,7 +161,6 @@ public static class ProjectQrPayload
                     stationNo = project.Connection.Station,
                     moduleIoNo = FormatPrefixedHex(project.Connection.ModuleIo, 4),
                     multidropNo = FormatPrefixedHex(project.Connection.Multidrop, 2),
-                    remotePassword = project.Connection.RemotePassword,
                 }
                 : null,
             keyence = IsVendor(project.Connection.Vendor, "Keyence")

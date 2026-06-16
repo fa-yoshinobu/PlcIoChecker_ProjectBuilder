@@ -5,7 +5,7 @@ namespace PlcIoCheckerQr.Wpf;
 
 internal static class ProjectJsonReader
 {
-    internal static void RequireProjectJsonV3(JsonElement root)
+    internal static void RequireProjectJsonV4(JsonElement root)
     {
         var schema = ReadRequiredString(root, "schema");
         if (schema != "plc-io-checker-project")
@@ -14,7 +14,7 @@ internal static class ProjectJsonReader
         }
 
         var version = ReadRequiredInt(root, "schemaVersion");
-        if (version != 3)
+        if (version != 4)
         {
             throw new ProjectJsonException("error.jsonVersionInvalid", version.ToString(CultureInfo.InvariantCulture));
         }

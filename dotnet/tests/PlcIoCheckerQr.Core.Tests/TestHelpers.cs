@@ -19,7 +19,6 @@ internal static class ProjectInputBuilder
         int Station = 255,
         int ModuleIo = 1023,
         int Multidrop = 0,
-        string RemotePassword = "secret1",
         string DevicesText = "D100",
         string WatchText = "",
         string TrapsText = "") => new(
@@ -37,7 +36,6 @@ internal static class ProjectInputBuilder
         Station: Station,
         ModuleIo: ModuleIo,
         Multidrop: Multidrop,
-        RemotePassword: RemotePassword,
         DevicesText: DevicesText,
         WatchText: WatchText,
         TrapsText: TrapsText);

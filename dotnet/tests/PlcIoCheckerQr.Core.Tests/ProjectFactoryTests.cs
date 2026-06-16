@@ -84,11 +84,10 @@ public sealed class ProjectFactoryTests
     }
 
     [Fact]
-    public void MakeProjectNormalizesNameIdPasswordAndDistinctWatchAddresses()
+    public void MakeProjectNormalizesNameIdAndDistinctWatchAddresses()
     {
         var project = ProjectFactory.MakeProject(ProjectInputBuilder.MakeInput(
             Name: "  ",
-            RemotePassword: "  secret1  ",
             DevicesText: "d100,uint16,Speed\r\nx0,Bit,Start",
             WatchText: "D100\r\nd100\r\nX0",
             TrapsText: "D100,GreaterOrEqual,12.5,false"),
@@ -96,27 +95,10 @@ public sealed class ProjectFactoryTests
 
         Assert.Equal("PLC QR Project", project.Name);
         Assert.Equal("plc-qr-project-456", project.Id);
-        Assert.Equal("secret1", project.Connection.RemotePassword);
         Assert.Equal(["D100", "X0"], project.TimeChart.Select(target => target.Address).ToArray());
         Assert.Equal("UInt16", project.Devices[0].DataType);
         Assert.Equal(12.5, project.Traps.Single().Threshold);
         Assert.False(project.Traps.Single().Enabled);
-    }
-
-    [Fact]
-    public void MakeProjectClearsRemotePasswordForKeyence()
-    {
-        var project = ProjectFactory.MakeProject(ProjectInputBuilder.MakeInput(
-            Vendor: "Keyence",
-            MachineLabel: "KV-8000",
-            Port: 8501,
-            RemotePassword: "secret1",
-            DevicesText: "R000",
-            WatchText: "",
-            TrapsText: ""),
-            nowEpochMs: 789);
-
-        Assert.Equal("", project.Connection.RemotePassword);
     }
 
 }
