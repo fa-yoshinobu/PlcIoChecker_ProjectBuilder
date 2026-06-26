@@ -77,7 +77,8 @@ public partial class MainWindow
             Multidrop: ParseHexRange(_multidrop, fallback: 0, min: 0, max: 0xFF, width: 2),
             DevicesText: DevicesText(),
             WatchText: WatchText(),
-            TrapsText: TrapsText()));
+            TrapsText: TrapsText(),
+            CommentsText: CommentsText()));
     }
 
     private void ShowCurrentQr()
@@ -149,11 +150,27 @@ public partial class MainWindow
                 var dataType = string.IsNullOrWhiteSpace(row.DataType)
                     ? ProjectFactory.GuessDataType(address, Selected(_vendor), SelectedKeyenceDeviceMode())
                     : NormalizeDeviceDataType(row.DataType.Trim(), address);
-                var comment = NormalizeDeviceComment(row.Comment);
-                return string.IsNullOrWhiteSpace(comment)
-                    ? $"{address},{dataType}"
-                    : $"{address},{dataType},{comment}";
+                return $"{address},{dataType}";
             }));
+
+    private string CommentsText() => string.Join(Environment.NewLine,
+        ProjectCommentRows()
+            .Where(row => !string.IsNullOrWhiteSpace(row.Address))
+            .Select(row =>
+            {
+                var address = row.Address.Trim();
+                var dataType = string.IsNullOrWhiteSpace(row.DataType)
+                    ? ProjectFactory.GuessDataType(address, Selected(_vendor), SelectedKeyenceDeviceMode())
+                    : NormalizeDeviceDataType(row.DataType.Trim(), address);
+                var comment = NormalizeDeviceComment(row.Comment);
+                return $"{address},{dataType},{comment}";
+            }));
+
+    private IEnumerable<DataTypedAddressRow> ProjectCommentRows() =>
+        _comments.Cast<DataTypedAddressRow>()
+            .Concat(_devices.Where(row => !string.IsNullOrWhiteSpace(row.Comment)))
+            .Concat(_watches.Where(row => !string.IsNullOrWhiteSpace(row.Comment)))
+            .Concat(_traps.Where(row => !string.IsNullOrWhiteSpace(row.Comment)));
 
     private string WatchText() => string.Join(Environment.NewLine,
         _watches
@@ -231,7 +248,7 @@ public partial class MainWindow
 
     private void CommitGridEdits()
     {
-        foreach (var grid in new[] { _devicesGrid, _watchGrid, _trapsGrid })
+        foreach (var grid in new[] { _devicesGrid, _commentsGrid, _watchGrid, _trapsGrid })
         {
             grid.CommitEdit(DataGridEditingUnit.Cell, exitEditingMode: true);
             grid.CommitEdit(DataGridEditingUnit.Row, exitEditingMode: true);

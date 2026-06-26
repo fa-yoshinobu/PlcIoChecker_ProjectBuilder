@@ -41,7 +41,19 @@ public partial class MainWindow
     private void MoveDeviceDown_Click(object sender, RoutedEventArgs e) =>
         MoveSelectedRows(_devicesGrid, _devices, 1, T("noun.device"));
 
-    private void DeleteDevice_Click(object sender, RoutedEventArgs e) => RemoveSelectedRows(_devicesGrid, _devices);
+    private void AddComment_Click(object sender, RoutedEventArgs e)
+    {
+        var row = new CommentRow();
+        row.SetDeviceContext(Selected(_vendor), SelectedKeyenceDeviceMode());
+        _comments.Add(row);
+        SelectNewRow(_commentsGrid, row);
+    }
+
+    private void MoveCommentUp_Click(object sender, RoutedEventArgs e) =>
+        MoveSelectedRows(_commentsGrid, _comments, -1, T("noun.comment"));
+
+    private void MoveCommentDown_Click(object sender, RoutedEventArgs e) =>
+        MoveSelectedRows(_commentsGrid, _comments, 1, T("noun.comment"));
 
     private void AddWatch_Click(object sender, RoutedEventArgs e)
     {
@@ -71,36 +83,6 @@ public partial class MainWindow
     private void MoveWatchDown_Click(object sender, RoutedEventArgs e) =>
         MoveSelectedRows(_watchGrid, _watches, 1, T("noun.watch"));
 
-    private void DeleteWatch_Click(object sender, RoutedEventArgs e) => RemoveSelectedRows(_watchGrid, _watches);
-
-    private void AddWatchBlock_Click(object sender, RoutedEventArgs e)
-    {
-        try
-        {
-            CommitGridEdits();
-            var rows = BuildWatchBlockRows(_watchBlockStart, _watchBlockCount, maxCount: ProjectFactory.MaxTimeChartTargets).ToList();
-            var candidate = _watches.Concat(rows).ToList();
-            var uniqueCount = UniqueWatchAddressCount(candidate);
-            if (uniqueCount > ProjectFactory.MaxTimeChartTargets)
-            {
-                SetStatus(Tf("status.timeChartMax", ProjectFactory.MaxTimeChartTargets), isError: true);
-                return;
-            }
-
-            foreach (var row in rows)
-            {
-                _watches.Add(row);
-            }
-
-            SelectRows(_watchGrid, rows);
-            SetStatus(Tf("status.watchBlockAdded", rows.Count, uniqueCount, ProjectFactory.MaxTimeChartTargets));
-        }
-        catch (Exception ex)
-        {
-            SetStatus(ex.Message, isError: true);
-        }
-    }
-
     private void AddTrap_Click(object sender, RoutedEventArgs e)
     {
         if (_traps.Count >= ProjectFactory.MaxTrapDefinitions)
@@ -129,8 +111,6 @@ public partial class MainWindow
 
     private void MoveTrapDown_Click(object sender, RoutedEventArgs e) =>
         MoveSelectedRows(_trapsGrid, _traps, 1, T("noun.trap"));
-
-    private void DeleteTrap_Click(object sender, RoutedEventArgs e) => RemoveSelectedRows(_trapsGrid, _traps);
 
     private static void SelectNewRow(DataGrid grid, object row)
     {

@@ -9,7 +9,9 @@ public partial class MainWindow
     public abstract class DataTypedAddressRow : INotifyPropertyChanged
     {
         private string _address = "";
+        private string _comment = "";
         private string _dataType = "Bit";
+        private bool _isUnsupportedDevice;
         private string _keyenceDeviceMode = "Normal";
         private string _vendor = "Melsec";
 
@@ -45,6 +47,37 @@ public partial class MainWindow
                 }
 
                 _dataType = next;
+                OnPropertyChanged();
+            }
+        }
+
+        public string Comment
+        {
+            get => _comment;
+            set
+            {
+                var next = value ?? "";
+                if (_comment == next)
+                {
+                    return;
+                }
+
+                _comment = next;
+                OnPropertyChanged();
+            }
+        }
+
+        public bool IsUnsupportedDevice
+        {
+            get => _isUnsupportedDevice;
+            set
+            {
+                if (_isUnsupportedDevice == value)
+                {
+                    return;
+                }
+
+                _isUnsupportedDevice = value;
                 OnPropertyChanged();
             }
         }
@@ -109,23 +142,10 @@ public partial class MainWindow
 
     public sealed class DeviceRow : DataTypedAddressRow
     {
-        private string _comment = "";
+    }
 
-        public string Comment
-        {
-            get => _comment;
-            set
-            {
-                var next = value ?? "";
-                if (_comment == next)
-                {
-                    return;
-                }
-
-                _comment = next;
-                OnPropertyChanged();
-            }
-        }
+    public sealed class CommentRow : DataTypedAddressRow
+    {
     }
 
     public sealed class WatchRow : DataTypedAddressRow

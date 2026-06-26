@@ -10,6 +10,7 @@ public sealed record PlcProject(
     IReadOnlyList<DeviceDefinition> Devices,
     IReadOnlyList<MonitorTargetDefinition> TimeChart,
     IReadOnlyList<TrapDefinition> Traps,
+    IReadOnlyList<DeviceCommentDefinition> Comments,
     long UpdatedAtEpochMs)
 {
     public IReadOnlyList<string> TimeChartAddresses { get; } = TimeChart.Select(target => target.Address).ToArray();
@@ -31,6 +32,8 @@ public sealed record PlcConnection(
     int Multidrop);
 
 public sealed record DeviceDefinition(string Address, string DataType, string Comment = "");
+
+public sealed record DeviceCommentDefinition(string Address, string DataType, string Comment);
 
 public sealed record MonitorTargetDefinition(string Address, string DataType);
 
@@ -62,7 +65,8 @@ public sealed record ProjectInput(
     int Multidrop,
     string DevicesText,
     string WatchText,
-    string TrapsText);
+    string TrapsText,
+    string CommentsText = "");
 
 public static partial class ProjectFactory
 {
@@ -199,35 +203,35 @@ public static partial class ProjectFactory
 
     private static readonly DeviceFamilyRule[] KeyenceNormalDeviceFamilies =
     [
-        Bit("R", DeviceAddressNumberFormat.KeyenceBitBank),
-        Bit("B", DeviceAddressNumberFormat.Hex),
-        Bit("MR", DeviceAddressNumberFormat.KeyenceBitBank),
-        Bit("LR", DeviceAddressNumberFormat.KeyenceBitBank),
-        Bit("CR", DeviceAddressNumberFormat.KeyenceBitBank),
-        Word("DM"),
-        Word("EM"),
-        Word("FM"),
-        Word("ZF"),
-        Word("W", DeviceAddressNumberFormat.Hex),
-        Word("TM"),
-        Word("CM"),
+        Bit("R", DeviceAddressNumberFormat.KeyenceBitBank, maxNumber: 199915),
+        Bit("B", DeviceAddressNumberFormat.Hex, maxNumber: 0x7FFF),
+        Bit("MR", DeviceAddressNumberFormat.KeyenceBitBank, maxNumber: 399915),
+        Bit("LR", DeviceAddressNumberFormat.KeyenceBitBank, maxNumber: 99915),
+        Bit("CR", DeviceAddressNumberFormat.KeyenceBitBank, maxNumber: 7915),
+        Word("DM", maxNumber: 65534),
+        Word("EM", maxNumber: 65534),
+        Word("FM", maxNumber: 32767),
+        Word("ZF", maxNumber: 524287),
+        Word("W", DeviceAddressNumberFormat.Hex, maxNumber: 0x7FFF),
+        Word("TM", maxNumber: 511),
+        Word("CM", maxNumber: 7599),
     ];
 
     private static readonly DeviceFamilyRule[] KeyenceXymDeviceFamilies =
     [
-        Bit("B", DeviceAddressNumberFormat.Hex),
-        Bit("CR", DeviceAddressNumberFormat.KeyenceBitBank),
-        Word("ZF"),
-        Word("W", DeviceAddressNumberFormat.Hex),
-        Word("TM"),
-        Word("CM"),
-        Bit("X", DeviceAddressNumberFormat.KeyenceXymBit),
-        Bit("Y", DeviceAddressNumberFormat.KeyenceXymBit),
-        Bit("M"),
-        Bit("L"),
-        Word("D"),
-        Word("E"),
-        Word("F"),
+        Bit("B", DeviceAddressNumberFormat.Hex, maxNumber: 0x7FFF),
+        Bit("CR", DeviceAddressNumberFormat.KeyenceBitBank, maxNumber: 7915),
+        Word("ZF", maxNumber: 524287),
+        Word("W", DeviceAddressNumberFormat.Hex, maxNumber: 0x7FFF),
+        Word("TM", maxNumber: 511),
+        Word("CM", maxNumber: 7599),
+        Bit("X", DeviceAddressNumberFormat.KeyenceXymBit, maxNumber: 1999 * 16 + 15),
+        Bit("Y", DeviceAddressNumberFormat.KeyenceXymBit, maxNumber: 1999 * 16 + 15),
+        Bit("M", maxNumber: 63999),
+        Bit("L", maxNumber: 15999),
+        Word("D", maxNumber: 65534),
+        Word("E", maxNumber: 65534),
+        Word("F", maxNumber: 32767),
     ];
 
     public static PlcProject MakeProject(ProjectInput input, long? nowEpochMs = null)
@@ -241,6 +245,10 @@ public static partial class ProjectFactory
         var name = string.IsNullOrWhiteSpace(input.Name) ? "PLC QR Project" : input.Name.Trim();
 
         var devices = ParseDevices(input.DevicesText, input.Vendor, input.KeyenceDeviceMode, input.MachineLabel);
+        var comments = MergeDeviceComments(
+            devices,
+            ParseComments(input.CommentsText, input.Vendor, input.KeyenceDeviceMode, input.MachineLabel));
+        devices = ApplyDeviceComments(devices, comments);
         var deviceTypesByAddress = devices
             .GroupBy(device => device.Address, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(group => group.Key, group => group.First().DataType, StringComparer.OrdinalIgnoreCase);
@@ -256,7 +264,45 @@ public static partial class ProjectFactory
             Devices: projectDevices,
             TimeChart: projectTimeChart,
             Traps: projectTraps,
+            Comments: comments,
             UpdatedAtEpochMs: now);
+    }
+
+    private static List<DeviceCommentDefinition> MergeDeviceComments(
+        IEnumerable<DeviceDefinition> devices,
+        IEnumerable<DeviceCommentDefinition> explicitComments)
+    {
+        var commentsByAddress = new Dictionary<string, DeviceCommentDefinition>(StringComparer.OrdinalIgnoreCase);
+        foreach (var comment in explicitComments)
+        {
+            if (!commentsByAddress.TryAdd(comment.Address, comment) &&
+                string.IsNullOrWhiteSpace(commentsByAddress[comment.Address].Comment) &&
+                !string.IsNullOrWhiteSpace(comment.Comment))
+            {
+                commentsByAddress[comment.Address] = comment;
+            }
+        }
+
+        foreach (var device in devices.Where(device => !string.IsNullOrWhiteSpace(device.Comment)))
+        {
+            commentsByAddress.TryAdd(device.Address, new DeviceCommentDefinition(device.Address, device.DataType, device.Comment));
+        }
+
+        return commentsByAddress.Values.ToList();
+    }
+
+    private static List<DeviceDefinition> ApplyDeviceComments(
+        IEnumerable<DeviceDefinition> devices,
+        IReadOnlyCollection<DeviceCommentDefinition> comments)
+    {
+        var commentsByAddress = comments.ToDictionary(
+            comment => comment.Address,
+            comment => comment.Comment,
+            StringComparer.OrdinalIgnoreCase);
+
+        return devices
+            .Select(device => device with { Comment = commentsByAddress.GetValueOrDefault(device.Address, "") })
+            .ToList();
     }
 
     private static (
@@ -300,8 +346,7 @@ public static partial class ProjectFactory
                 continue;
             }
 
-            var address = parts[0].ToUpperInvariant();
-            ValidateDeviceAddress(address, vendor, keyenceDeviceMode, machineLabel);
+            var address = NormalizeDeviceAddress(parts[0], vendor, keyenceDeviceMode, machineLabel);
             var hasDataType = false;
             var dataType = GuessDataType(address, vendor, keyenceDeviceMode, machineLabel);
             if (parts.Length > 1 && TryNormalizeDeviceDataType(parts[1], out var parsedDataType))
@@ -322,6 +367,37 @@ public static partial class ProjectFactory
         return parsedDevices
             .Select(device => device with { Comment = commentsByAddress.GetValueOrDefault(device.Address, "") })
             .ToList();
+    }
+
+    private static List<DeviceCommentDefinition> ParseComments(
+        string commentsText,
+        string vendor,
+        string keyenceDeviceMode,
+        string machineLabel)
+    {
+        var comments = new List<DeviceCommentDefinition>();
+        foreach (var line in ParseLines(commentsText))
+        {
+            var parts = line.Split(',').Select(part => part.Trim()).ToArray();
+            if (parts.Length == 0 || string.IsNullOrWhiteSpace(parts[0]))
+            {
+                continue;
+            }
+
+            var address = NormalizeDeviceAddress(parts[0], vendor, keyenceDeviceMode, machineLabel);
+            var parsedDataType = "";
+            var hasDataType = parts.Length > 1 && TryNormalizeDeviceDataType(parts[1], out parsedDataType);
+            var dataType = GuessDataType(address, vendor, keyenceDeviceMode, machineLabel);
+            if (hasDataType)
+            {
+                dataType = ValidateDataTypeForAddress(address, parsedDataType, vendor, keyenceDeviceMode, machineLabel, "comment data type");
+            }
+
+            var commentIndex = hasDataType ? 2 : 1;
+            comments.Add(new DeviceCommentDefinition(address, dataType, DeviceCommentFromParts(parts, commentIndex)));
+        }
+
+        return comments;
     }
 
     private static List<MonitorTargetDefinition> ParseTimeChart(
@@ -360,8 +436,7 @@ public static partial class ProjectFactory
                 continue;
             }
 
-            var address = parts[0].ToUpperInvariant();
-            ValidateDeviceAddress(address, vendor, keyenceDeviceMode, machineLabel);
+            var address = NormalizeDeviceAddress(parts[0], vendor, keyenceDeviceMode, machineLabel);
             var hasDataType = parts.Length >= 3 && DeviceDataTypes.Contains(parts[1], StringComparer.Ordinal);
             var dataType = hasDataType
                 ? parts[1]
@@ -433,8 +508,7 @@ public static partial class ProjectFactory
         IReadOnlyDictionary<string, string> registeredDeviceTypes)
     {
         var parts = line.Split(',').Select(part => part.Trim()).ToArray();
-        var address = parts[0].ToUpperInvariant();
-        ValidateDeviceAddress(address, vendor, keyenceDeviceMode, machineLabel);
+        var address = NormalizeDeviceAddress(parts[0], vendor, keyenceDeviceMode, machineLabel);
         var dataType = parts.Length > 1 && !string.IsNullOrWhiteSpace(parts[1])
             ? parts[1]
             : registeredDeviceTypes.GetValueOrDefault(address, GuessDataType(address, vendor, keyenceDeviceMode, machineLabel));
@@ -576,8 +650,8 @@ public static partial class ProjectFactory
         _ => false,
     };
 
-    public static IReadOnlyList<string> SupportedDeviceNames(string vendor, string keyenceDeviceMode = "Normal") =>
-        AllowedDeviceFamilyCodes(vendor, keyenceDeviceMode).ToArray();
+    public static IReadOnlyList<string> SupportedDeviceNames(string vendor, string keyenceDeviceMode = "Normal", string? machineLabel = null) =>
+        AllowedDeviceFamilyCodes(vendor, keyenceDeviceMode, machineLabel).ToArray();
 
     public static void ValidateDeviceAddress(string address, string vendor, string keyenceDeviceMode = "Normal", string? machineLabel = null)
     {
@@ -589,7 +663,18 @@ public static partial class ProjectFactory
         var context = vendor.Equals("Keyence", StringComparison.OrdinalIgnoreCase)
             ? $"KEYENCE {keyenceDeviceMode.ToUpperInvariant()}"
             : "MELSEC";
-        throw new ArgumentException($"Unsupported device for {context}: {address}. Use one of: {string.Join(", ", AllowedDeviceFamilyCodes(vendor, keyenceDeviceMode))}");
+        throw new ArgumentException($"Unsupported device for {context}: {address}. Use one of: {string.Join(", ", AllowedDeviceFamilyCodes(vendor, keyenceDeviceMode, machineLabel))}");
+    }
+
+    public static string NormalizeDeviceAddress(string address, string vendor, string keyenceDeviceMode = "Normal", string? machineLabel = null)
+    {
+        if (TryResolveDeviceFamily(address, vendor, keyenceDeviceMode, machineLabel, out var family, out var parsedAddress))
+        {
+            return FormatDeviceAddress(family, parsedAddress.Number, width: 0);
+        }
+
+        ValidateDeviceAddress(address, vendor, keyenceDeviceMode, machineLabel);
+        return address.Trim().ToUpperInvariant();
     }
 
     public static IReadOnlyList<string> BuildDeviceBlock(string startAddress, int count, string vendor, string keyenceDeviceMode = "Normal", string? machineLabel = null)
@@ -610,6 +695,12 @@ public static partial class ProjectFactory
         {
             var nextLogicalNumber = checked(startLogicalNumber + (uint)offset);
             var nextNumber = FromLogicalNumber(nextLogicalNumber, family.NumberFormat);
+            if (nextNumber < family.MinNumber ||
+                (family.MaxNumber is not null && nextNumber > family.MaxNumber.Value))
+            {
+                throw new ArgumentOutOfRangeException(nameof(count), count, $"Device block exceeds supported range for {family.Code}.");
+            }
+
             addresses.Add(FormatDeviceAddress(family, nextNumber, parsedAddress.Width));
         }
 
@@ -673,7 +764,9 @@ public static partial class ProjectFactory
             }
 
             var numberText = normalized[candidate.Code.Length..];
-            if (TryParseAddressNumber(numberText, candidate.NumberFormat, out var number))
+            if (TryParseAddressNumber(numberText, candidate.NumberFormat, out var number) &&
+                number >= candidate.MinNumber &&
+                (candidate.MaxNumber is null || number <= candidate.MaxNumber.Value))
             {
                 family = candidate;
                 parsedAddress = new DeviceAddressParse(number, numberText.Length);
@@ -696,8 +789,8 @@ public static partial class ProjectFactory
             : KeyenceNormalDeviceFamilies;
     }
 
-    private static IEnumerable<string> AllowedDeviceFamilyCodes(string vendor, string keyenceDeviceMode) =>
-        DeviceFamiliesFor(vendor, keyenceDeviceMode).Select(family => family.Code);
+    private static IEnumerable<string> AllowedDeviceFamilyCodes(string vendor, string keyenceDeviceMode, string? machineLabel) =>
+        DeviceFamiliesFor(vendor, keyenceDeviceMode, machineLabel).Select(family => family.Code);
 
     private static bool ModelUsesOctalDirectIo(string? machineLabel) =>
         string.Equals(machineLabel?.Trim(), "iQ-F", StringComparison.OrdinalIgnoreCase);
@@ -759,8 +852,15 @@ public static partial class ProjectFactory
             return false;
         }
 
-        number = checked(bank * 16 + bit);
-        return true;
+        try
+        {
+            number = checked(bank * 16 + bit);
+            return true;
+        }
+        catch (OverflowException)
+        {
+            return false;
+        }
     }
 
     private static bool TryParseNumber(string numberText, bool usesHexAddressing, out uint number)
@@ -818,11 +918,19 @@ public static partial class ProjectFactory
         return bank.ToString(CultureInfo.InvariantCulture) + bit.ToString("X", CultureInfo.InvariantCulture);
     }
 
-    private static DeviceFamilyRule Bit(string code, DeviceAddressNumberFormat numberFormat = DeviceAddressNumberFormat.Decimal) =>
-        new(code, true, numberFormat);
+    private static DeviceFamilyRule Bit(
+        string code,
+        DeviceAddressNumberFormat numberFormat = DeviceAddressNumberFormat.Decimal,
+        uint minNumber = 0,
+        uint? maxNumber = null) =>
+        new(code, true, numberFormat, minNumber, maxNumber);
 
-    private static DeviceFamilyRule Word(string code, DeviceAddressNumberFormat numberFormat = DeviceAddressNumberFormat.Decimal) =>
-        new(code, false, numberFormat);
+    private static DeviceFamilyRule Word(
+        string code,
+        DeviceAddressNumberFormat numberFormat = DeviceAddressNumberFormat.Decimal,
+        uint minNumber = 0,
+        uint? maxNumber = null) =>
+        new(code, false, numberFormat, minNumber, maxNumber);
 
     [GeneratedRegex("[^a-z0-9]+")]
     private static partial Regex SlugRegex();
@@ -836,7 +944,12 @@ public static partial class ProjectFactory
         KeyenceXymBit,
     }
 
-    private readonly record struct DeviceFamilyRule(string Code, bool IsBit, DeviceAddressNumberFormat NumberFormat);
+    private readonly record struct DeviceFamilyRule(
+        string Code,
+        bool IsBit,
+        DeviceAddressNumberFormat NumberFormat,
+        uint MinNumber,
+        uint? MaxNumber);
 
     private readonly record struct DeviceAddressParse(uint Number, int Width);
 }

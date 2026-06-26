@@ -5,12 +5,47 @@ namespace PlcIoCheckerQr.Core.Tests;
 public sealed class ProjectFactoryTests
 {
     [Theory]
+    [InlineData("Melsec", "Normal", "iQ-R", " d001 ", "D1")]
+    [InlineData("Melsec", "Normal", "iQ-R", "x00f", "XF")]
+    [InlineData("Melsec", "Normal", "iQ-F", "x010", "X10")]
+    [InlineData("Keyence", "Normal", "KV-8000", "r001", "R001")]
+    [InlineData("Keyence", "Xym", "KV-8000", "x03f", "X3F")]
+    public void NormalizeDeviceAddressFormatsAddressLikeMobileApps(
+        string vendor,
+        string keyenceDeviceMode,
+        string machineLabel,
+        string input,
+        string expected)
+    {
+        Assert.Equal(expected, ProjectFactory.NormalizeDeviceAddress(input, vendor, keyenceDeviceMode, machineLabel));
+    }
+
+    [Fact]
+    public void MakeProjectNormalizesAddressesInAllInputSections()
+    {
+        var project = ProjectFactory.MakeProject(ProjectInputBuilder.MakeInput(
+            DevicesText: "d001",
+            WatchText: "x00f",
+            TrapsText: "stc000,Rise,,true",
+            CommentsText: "sd000,Int16,System word"));
+
+        Assert.Equal("D1", project.Devices.Single().Address);
+        Assert.Equal("XF", project.TimeChart.Single().Address);
+        Assert.Equal("STC0", project.Traps.Single().Address);
+        Assert.Equal("SD0", project.Comments.Single().Address);
+    }
+
+    [Theory]
     [InlineData("Melsec", "Normal", "iQ-R", "XFF", true, "Bit")]
+    [InlineData("Melsec", "Normal", "iQ-R", "STC0", true, "Bit")]
+    [InlineData("Melsec", "Normal", "iQ-R", "SD0", false, "Int16")]
     [InlineData("Melsec", "Normal", "iQ-R", "SWFF", false, "Int16")]
     [InlineData("Melsec", "Normal", "iQ-F", "X77", true, "Bit")]
     [InlineData("Keyence", "Normal", "KV-8000", "R015", true, "Bit")]
+    [InlineData("Keyence", "Normal", "KV-8000", "CM100", false, "Int16")]
     [InlineData("Keyence", "Normal", "KV-8000", "DM100", false, "Int16")]
     [InlineData("Keyence", "Xym", "KV-8000", "X39F", true, "Bit")]
+    [InlineData("Keyence", "Xym", "KV-8000", "M100", true, "Bit")]
     [InlineData("Keyence", "Xym", "KV-8000", "D100", false, "Int16")]
     public void GuessDataTypeAndBitDetectionAreVendorModeAndModelAware(
         string vendor,

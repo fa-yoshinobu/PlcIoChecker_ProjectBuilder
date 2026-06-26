@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using PlcIoCheckerQr.Core;
 using static PlcIoCheckerQr.Wpf.ClipboardImport;
@@ -32,6 +33,11 @@ public partial class MainWindow
 
     private void DevicesGrid_PreviewKeyDown(object sender, KeyEventArgs e)
     {
+        if (TryHandleRowDeleteShortcut(e, _devicesGrid, _devices))
+        {
+            return;
+        }
+
         if (TryHandleMoveShortcut(e, _devicesGrid, _devices, T("noun.device")))
         {
             return;
@@ -90,6 +96,25 @@ public partial class MainWindow
         }
 
         return false;
+    }
+
+    private bool TryHandleRowDeleteShortcut<T>(
+        KeyEventArgs e,
+        DataGrid grid,
+        ObservableCollection<T> source)
+    {
+        var key = e.Key == Key.System ? e.SystemKey : e.Key;
+        if (key != Key.Delete ||
+            Keyboard.Modifiers != ModifierKeys.None ||
+            e.OriginalSource is TextBoxBase or ComboBox ||
+            !grid.SelectedItems.OfType<T>().Any(row => source.Contains(row)))
+        {
+            return false;
+        }
+
+        RemoveSelectedRows(grid, source);
+        e.Handled = true;
+        return true;
     }
 
     private void CopySelectedDevicesToClipboard()
@@ -154,6 +179,8 @@ public partial class MainWindow
             }
         }
 
+        MergeRowComments(rows);
+
         _devicesGrid.SelectedItems.Clear();
         foreach (var row in rows)
         {
@@ -194,7 +221,7 @@ public partial class MainWindow
             }
 
             isFirstRow = false;
-            var address = fields[0].Trim();
+            var address = NormalizeAddressText(fields[0]);
             if (string.IsNullOrWhiteSpace(address))
             {
                 skipped++;
@@ -220,8 +247,137 @@ public partial class MainWindow
     private string NormalizeDeviceDataType(string text, string address) =>
         ClipboardImport.NormalizeDeviceDataType(text, address, Selected(_vendor), SelectedKeyenceDeviceMode());
 
+    private void MergeRowComments(IEnumerable<DataTypedAddressRow> rows)
+    {
+        foreach (var row in rows.Where(row =>
+                     !string.IsNullOrWhiteSpace(row.Address) && !string.IsNullOrWhiteSpace(row.Comment)))
+        {
+            AddOrFillCommentRow(row.Address, NormalizeDeviceComment(row.Comment), row.DataType, overwriteComment: true);
+            ApplyCommentToRows(row.Address, NormalizeDeviceComment(row.Comment));
+        }
+    }
+
+    private void CommentsGrid_PreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (TryHandleRowDeleteShortcut(e, _commentsGrid, _comments))
+        {
+            return;
+        }
+
+        if (TryHandleMoveShortcut(e, _commentsGrid, _comments, T("noun.comment")))
+        {
+            return;
+        }
+
+        if ((Keyboard.Modifiers & ModifierKeys.Control) != ModifierKeys.Control)
+        {
+            return;
+        }
+
+        if (e.Key == Key.Z && _undoStack.TryPop(out var undo))
+        {
+            undo();
+            e.Handled = true;
+            return;
+        }
+
+        if (e.Key == Key.C)
+        {
+            CopySelectedCommentsToClipboard();
+            e.Handled = true;
+            return;
+        }
+
+        if (e.Key == Key.V)
+        {
+            PasteCommentsFromClipboard();
+            e.Handled = true;
+        }
+    }
+
+    private void CopySelectedCommentsToClipboard()
+    {
+        _commentsGrid.CommitEdit(DataGridEditingUnit.Cell, exitEditingMode: true);
+        _commentsGrid.CommitEdit(DataGridEditingUnit.Row, exitEditingMode: true);
+
+        var rows = SelectedRows(_commentsGrid, _comments);
+        if (rows.Count == 0)
+        {
+            return;
+        }
+
+        Clipboard.SetText(string.Join(Environment.NewLine, rows.Select(row =>
+            $"{row.Address}\t{row.DataType}\t{NormalizeDeviceComment(row.Comment)}")));
+        SetStatus(Tf("status.copiedCommentRows", rows.Count));
+    }
+
+    private void PasteCommentsFromClipboard()
+    {
+        if (!Clipboard.ContainsText())
+        {
+            return;
+        }
+
+        var rows = ParseCommentClipboardRows(Clipboard.GetText()).ToList();
+        if (rows.Count == 0)
+        {
+            SetStatus(T("status.noCommentRowsPasted"), isError: true);
+            return;
+        }
+
+        _commentsGrid.CommitEdit(DataGridEditingUnit.Cell, exitEditingMode: true);
+        _commentsGrid.CommitEdit(DataGridEditingUnit.Row, exitEditingMode: true);
+
+        var startIndex = SelectedIndexOrAppend(_commentsGrid, _comments);
+        ApplyRows(_comments, startIndex, rows);
+        SelectRows(_commentsGrid, rows);
+        SetStatus(Tf("status.pastedCommentRows", rows.Count));
+    }
+
+    private IEnumerable<CommentRow> ParseCommentClipboardRows(string text)
+    {
+        var isFirstRow = true;
+        foreach (var rawLine in text.Split(["\r\n", "\n"], StringSplitOptions.None))
+        {
+            var fields = SplitClipboardLine(rawLine.TrimEnd('\r'));
+            if (fields.Length == 0 || fields.All(string.IsNullOrWhiteSpace))
+            {
+                continue;
+            }
+
+            if (isFirstRow && IsCommentClipboardHeader(fields))
+            {
+                isFirstRow = false;
+                continue;
+            }
+
+            isFirstRow = false;
+            var address = NormalizeAddressText(fields[0]);
+            if (string.IsNullOrWhiteSpace(address))
+            {
+                continue;
+            }
+
+            var hasDataType = fields.Length > 1 && IsDeviceDataTypeField(fields[1]);
+            var row = new CommentRow();
+            row.SetDeviceContext(Selected(_vendor), SelectedKeyenceDeviceMode());
+            row.Address = address;
+            row.DataType = hasDataType
+                ? NormalizeDeviceDataType(fields[1], address)
+                : ProjectFactory.GuessDataType(address, Selected(_vendor), SelectedKeyenceDeviceMode());
+            var commentIndex = hasDataType ? 2 : fields.Length > 2 && string.IsNullOrWhiteSpace(fields[1]) ? 2 : 1;
+            row.Comment = DeviceCommentFromFields(fields, commentIndex);
+            yield return row;
+        }
+    }
+
     private void WatchGrid_PreviewKeyDown(object sender, KeyEventArgs e)
     {
+        if (TryHandleRowDeleteShortcut(e, _watchGrid, _watches))
+        {
+            return;
+        }
+
         if (TryHandleMoveShortcut(e, _watchGrid, _watches, T("noun.watch")))
         {
             return;
@@ -264,7 +420,8 @@ public partial class MainWindow
             return;
         }
 
-        Clipboard.SetText(string.Join(Environment.NewLine, rows.Select(row => $"{row.Address}\t{row.DataType}")));
+        Clipboard.SetText(string.Join(Environment.NewLine, rows.Select(row =>
+            $"{row.Address}\t{row.DataType}\t{NormalizeDeviceComment(row.Comment)}")));
         SetStatus(Tf("status.copiedWatchRows", rows.Count));
     }
 
@@ -296,6 +453,7 @@ public partial class MainWindow
         }
 
         ApplyRows(_watches, startIndex, rows);
+        MergeRowComments(rows);
         SelectRows(_watchGrid, rows);
         SetStatus(Tf("status.pastedWatchRows", rows.Count, uniqueCount, ProjectFactory.MaxTimeChartTargets));
     }
@@ -318,13 +476,15 @@ public partial class MainWindow
             }
 
             isFirstRow = false;
-            var address = fields[0].Trim();
+            var address = NormalizeAddressText(fields[0]);
             if (!string.IsNullOrWhiteSpace(address))
             {
                 var row = new WatchRow();
                 row.SetDeviceContext(Selected(_vendor), SelectedKeyenceDeviceMode());
                 row.Address = address;
-                row.DataType = fields.Length > 1 ? NormalizeDeviceDataType(fields[1], address) : ProjectFactory.GuessDataType(address, Selected(_vendor), SelectedKeyenceDeviceMode());
+                var hasDataType = fields.Length > 1 && IsDeviceDataTypeField(fields[1]);
+                row.DataType = hasDataType ? NormalizeDeviceDataType(fields[1], address) : ProjectFactory.GuessDataType(address, Selected(_vendor), SelectedKeyenceDeviceMode());
+                row.Comment = DeviceCommentFromFields(fields, hasDataType ? 2 : 1);
                 yield return row;
             }
         }
@@ -338,6 +498,11 @@ public partial class MainWindow
 
     private void TrapsGrid_PreviewKeyDown(object sender, KeyEventArgs e)
     {
+        if (TryHandleRowDeleteShortcut(e, _trapsGrid, _traps))
+        {
+            return;
+        }
+
         if (TryHandleMoveShortcut(e, _trapsGrid, _traps, T("noun.trap")))
         {
             return;
@@ -381,7 +546,7 @@ public partial class MainWindow
         }
 
         Clipboard.SetText(string.Join(Environment.NewLine, rows.Select(row =>
-            $"{row.Address}\t{row.DataType}\t{row.ConditionDisplayText}\t{row.Threshold}\t{(row.Enabled ? "TRUE" : "FALSE")}")));
+            $"{row.Address}\t{row.DataType}\t{NormalizeDeviceComment(row.Comment)}\t{row.ConditionDisplayText}\t{row.Threshold}\t{(row.Enabled ? "TRUE" : "FALSE")}")));
         SetStatus(Tf("status.copiedTrapRows", rows.Count));
     }
 
@@ -411,6 +576,7 @@ public partial class MainWindow
         }
 
         ApplyRows(_traps, startIndex, rows);
+        MergeRowComments(rows);
         SelectRows(_trapsGrid, rows);
         SetStatus(Tf("status.pastedTrapRows", rows.Count));
     }
@@ -433,7 +599,7 @@ public partial class MainWindow
             }
 
             isFirstRow = false;
-            var address = fields[0].Trim();
+            var address = NormalizeAddressText(fields[0]);
             if (string.IsNullOrWhiteSpace(address))
             {
                 continue;
@@ -442,11 +608,19 @@ public partial class MainWindow
             var row = new TrapRow();
             row.SetDeviceContext(Selected(_vendor), SelectedKeyenceDeviceMode());
             row.Address = address;
-            var hasDataType = fields.Length > 2 && ProjectFactory.DeviceDataTypes.Any(dataType => dataType.Equals(fields[1].Trim(), StringComparison.OrdinalIgnoreCase));
+            var hasDataType = fields.Length > 1 && IsDeviceDataTypeField(fields[1]);
             row.DataType = hasDataType ? NormalizeDeviceDataType(fields[1], address) : ProjectFactory.GuessDataType(address, Selected(_vendor), SelectedKeyenceDeviceMode());
             var conditionIndex = hasDataType ? 2 : 1;
-            var thresholdIndex = hasDataType ? 3 : 2;
-            var enabledIndex = hasDataType ? 4 : 3;
+            if (fields.Length > conditionIndex &&
+                !IsTrapConditionField(fields[conditionIndex]) &&
+                fields.Length > conditionIndex + 1)
+            {
+                row.Comment = NormalizeDeviceComment(fields[conditionIndex]);
+                conditionIndex++;
+            }
+
+            var thresholdIndex = conditionIndex + 1;
+            var enabledIndex = conditionIndex + 2;
             row.Condition = fields.Length > conditionIndex
                 ? NormalizeTrapCondition(fields[conditionIndex], address)
                 : ProjectFactory.DefaultTrapConditionForAddress(address, Selected(_vendor), SelectedKeyenceDeviceMode());
@@ -486,22 +660,6 @@ public partial class MainWindow
         foreach (var address in ProjectFactory.BuildDeviceBlock(startTextBox.Text, count, vendor, keyenceDeviceMode, machineLabel))
         {
             var row = new DeviceRow();
-            row.SetDeviceContext(vendor, keyenceDeviceMode);
-            row.Address = address;
-            row.DataType = ProjectFactory.GuessDataType(address, vendor, keyenceDeviceMode, machineLabel);
-            yield return row;
-        }
-    }
-
-    private IEnumerable<WatchRow> BuildWatchBlockRows(TextBox startTextBox, TextBox countTextBox, int maxCount)
-    {
-        var vendor = Selected(_vendor);
-        var keyenceDeviceMode = SelectedKeyenceDeviceMode();
-        var machineLabel = Selected(_model);
-        var count = ParseRange(countTextBox, fallback: 1, min: 1, max: maxCount);
-        foreach (var address in ProjectFactory.BuildDeviceBlock(startTextBox.Text, count, vendor, keyenceDeviceMode, machineLabel))
-        {
-            var row = new WatchRow();
             row.SetDeviceContext(vendor, keyenceDeviceMode);
             row.Address = address;
             row.DataType = ProjectFactory.GuessDataType(address, vendor, keyenceDeviceMode, machineLabel);

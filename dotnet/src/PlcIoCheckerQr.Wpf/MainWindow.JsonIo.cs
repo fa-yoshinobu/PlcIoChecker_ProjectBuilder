@@ -216,6 +216,17 @@ public partial class MainWindow
         }
 
         var deviceMetaByAddress = ReadDeviceMetaByAddress(root);
+        _comments.Clear();
+        foreach (var (address, meta) in deviceMetaByAddress)
+        {
+            var row = new CommentRow();
+            row.SetDeviceContext(Selected(_vendor), SelectedKeyenceDeviceMode());
+            row.Address = NormalizeAddressText(address);
+            row.DataType = NormalizeDeviceDataType(meta.DataType, row.Address);
+            row.Comment = meta.Comment;
+            _comments.Add(row);
+        }
+
         var devicesElement = ReadRequiredArray(root, "deviceList");
         _devices.Clear();
         foreach (var device in devicesElement.EnumerateArray())
@@ -224,8 +235,8 @@ public partial class MainWindow
             var meta = RequireDeviceMeta(deviceMetaByAddress, address);
             var row = new DeviceRow();
             row.SetDeviceContext(Selected(_vendor), SelectedKeyenceDeviceMode());
-            row.Address = address;
-            row.DataType = NormalizeDeviceDataType(meta.DataType, address);
+            row.Address = NormalizeAddressText(address);
+            row.DataType = NormalizeDeviceDataType(meta.DataType, row.Address);
             row.Comment = meta.Comment;
             _devices.Add(row);
         }
@@ -238,8 +249,9 @@ public partial class MainWindow
             var meta = RequireDeviceMeta(deviceMetaByAddress, address);
             var row = new WatchRow();
             row.SetDeviceContext(Selected(_vendor), SelectedKeyenceDeviceMode());
-            row.Address = address;
-            row.DataType = NormalizeDeviceDataType(meta.DataType, address);
+            row.Address = NormalizeAddressText(address);
+            row.DataType = NormalizeDeviceDataType(meta.DataType, row.Address);
+            row.Comment = meta.Comment;
             _watches.Add(row);
         }
 
@@ -260,9 +272,11 @@ public partial class MainWindow
 
             var row = new TrapRow();
             row.SetDeviceContext(Selected(_vendor), SelectedKeyenceDeviceMode());
-            row.Address = ReadRequiredString(trap, "address");
-            var meta = RequireDeviceMeta(deviceMetaByAddress, row.Address);
+            var address = ReadRequiredString(trap, "address");
+            var meta = RequireDeviceMeta(deviceMetaByAddress, address);
+            row.Address = NormalizeAddressText(address);
             row.DataType = NormalizeDeviceDataType(meta.DataType, row.Address);
+            row.Comment = meta.Comment;
             row.Condition = ToUiTrapCondition(ReadRequiredString(trap, "condition"));
             row.Threshold = threshold;
             row.Enabled = ReadRequiredBool(trap, "enabled");

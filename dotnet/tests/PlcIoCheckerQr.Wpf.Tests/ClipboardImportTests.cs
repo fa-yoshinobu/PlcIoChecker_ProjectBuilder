@@ -61,6 +61,16 @@ public sealed class ClipboardImportTests
     }
 
     [Theory]
+    [InlineData("Address\tComment", true)]
+    [InlineData("アドレス\tコメント", true)]
+    [InlineData("D100\tSpeed word", false)]
+    public void IsCommentClipboardHeaderDetectsHeaders(string line, bool expected)
+    {
+        var fields = ClipboardImport.SplitClipboardLine(line);
+        Assert.Equal(expected, ClipboardImport.IsCommentClipboardHeader(fields));
+    }
+
+    [Theory]
     [InlineData("Address", true)]
     [InlineData("アドレス", true)]
     [InlineData("タイムチャート", true)]

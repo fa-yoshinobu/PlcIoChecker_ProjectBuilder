@@ -205,21 +205,28 @@ public static class ProjectQrPayload
     {
         var indexByAddress = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
         var result = new List<DeviceMeta>();
+        var commentsByAddress = project.Comments.ToDictionary(
+            comment => comment.Address,
+            comment => comment,
+            StringComparer.OrdinalIgnoreCase);
 
         void AddOrFillComment(string address, string dataType, string comment = "")
         {
+            var resolvedComment = commentsByAddress.TryGetValue(address, out var configuredComment)
+                ? configuredComment.Comment
+                : comment;
             if (indexByAddress.TryGetValue(address, out var index))
             {
                 var existing = result[index];
-                if (string.IsNullOrWhiteSpace(existing.Comment) && !string.IsNullOrWhiteSpace(comment))
+                if (string.IsNullOrWhiteSpace(existing.Comment) && !string.IsNullOrWhiteSpace(resolvedComment))
                 {
-                    result[index] = existing with { Comment = comment };
+                    result[index] = existing with { Comment = resolvedComment };
                 }
                 return;
             }
 
             indexByAddress[address] = result.Count;
-            result.Add(new DeviceMeta(address, dataType, comment));
+            result.Add(new DeviceMeta(address, dataType, resolvedComment));
         }
 
         foreach (var device in project.Devices)
@@ -235,6 +242,11 @@ public static class ProjectQrPayload
         foreach (var trap in project.Traps)
         {
             AddOrFillComment(trap.Address, trap.DataType);
+        }
+
+        foreach (var comment in project.Comments)
+        {
+            AddOrFillComment(comment.Address, comment.DataType, comment.Comment);
         }
 
         return result;
