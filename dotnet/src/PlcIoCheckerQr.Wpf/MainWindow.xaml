@@ -315,7 +315,7 @@
                   <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <StackPanel Grid.Column="0" Orientation="Vertical" Margin="0,0,20,0">
-                  <TextBlock x:Name="_watchTitle" Text="Time Chart Targets" Style="{StaticResource SectionTitle}"/>
+                  <TextBlock x:Name="_watchTitle" Text="Time Chart" Style="{StaticResource SectionTitle}"/>
                   <TextBlock x:Name="_watchMeta" Text="Choose addresses shown in the mobile app time chart, up to 20." Style="{StaticResource SectionMeta}"/>
                 </StackPanel>
                 <StackPanel Grid.Column="1"
@@ -398,7 +398,7 @@
           </Border>
         </TabItem>
 
-        <TabItem x:Name="_projectTab" Header="PLC Setting">
+        <TabItem x:Name="_projectTab" Header="PLC settings">
           <ScrollViewer VerticalScrollBarVisibility="Auto">
             <Grid>
               <Grid.ColumnDefinitions>
@@ -439,7 +439,7 @@
                   <TextBlock x:Name="_modelLabel" Grid.Row="4" Grid.Column="0" Text="CPU model" Style="{StaticResource FormLabel}" Margin="0,6,14,6"/>
                   <ComboBox x:Name="_model" Grid.Row="4" Grid.Column="1" Margin="0,4,0,4"/>
 
-                  <TextBlock x:Name="_keyenceModeLabel" Grid.Row="5" Grid.Column="0" Text="Device mode" Style="{StaticResource FormLabel}" Margin="0,6,14,6"/>
+                  <TextBlock x:Name="_keyenceModeLabel" Grid.Row="5" Grid.Column="0" Text="KEYENCE device mode" Style="{StaticResource FormLabel}" Margin="0,6,14,6"/>
                   <ComboBox x:Name="_keyenceMode" Grid.Row="5" Grid.Column="1" Margin="0,4,0,4" ItemTemplate="{StaticResource UppercaseComboBoxItemTemplate}"/>
 
                   <TextBlock x:Name="_supportedDevicesLabel" Grid.Row="6" Grid.Column="0" Text="Supported devices" Style="{StaticResource FormLabel}" Margin="0,6,14,6"/>
@@ -483,7 +483,7 @@
                   <TextBlock x:Name="_connectionModeLabel" Grid.Row="2" Grid.Column="0" Text="Connection mode" Style="{StaticResource FormLabel}" Margin="0,6,14,6"/>
                   <ComboBox x:Name="_connectionMode" Grid.Row="2" Grid.Column="1" Margin="0,4,0,4" ItemTemplate="{StaticResource UppercaseComboBoxItemTemplate}"/>
 
-                  <TextBlock x:Name="_hostLabel" Grid.Row="3" Grid.Column="0" Text="PLC IP/host" Style="{StaticResource FormLabel}" Margin="0,6,14,6"/>
+                  <TextBlock x:Name="_hostLabel" Grid.Row="3" Grid.Column="0" Text="PLC IP / host" Style="{StaticResource FormLabel}" Margin="0,6,14,6"/>
                   <TextBox x:Name="_host" Grid.Row="3" Grid.Column="1" Text="192.168.250.100" Margin="0,4,0,4"/>
 
                   <TextBlock x:Name="_portLabel" Grid.Row="4" Grid.Column="0" Text="Port" Style="{StaticResource FormLabel}" Margin="0,6,14,6"/>

@@ -484,7 +484,8 @@ public partial class MainWindow
                 row.Address = address;
                 var hasDataType = fields.Length > 1 && IsDeviceDataTypeField(fields[1]);
                 row.DataType = hasDataType ? NormalizeDeviceDataType(fields[1], address) : ProjectFactory.GuessDataType(address, Selected(_vendor), SelectedKeyenceDeviceMode());
-                row.Comment = DeviceCommentFromFields(fields, hasDataType ? 2 : 1);
+                var commentIndex = hasDataType ? 2 : fields.Length > 2 && string.IsNullOrWhiteSpace(fields[1]) ? 2 : 1;
+                row.Comment = DeviceCommentFromFields(fields, commentIndex);
                 yield return row;
             }
         }
