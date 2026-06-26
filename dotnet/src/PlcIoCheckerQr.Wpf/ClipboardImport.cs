@@ -11,6 +11,7 @@ internal static class ClipboardImport
         "import.alias.header.address",
         "import.alias.header.comment",
         "import.alias.header.condition",
+        "import.alias.header.dataType",
         "import.alias.header.watch",
         "import.alias.trap.change",
         "import.alias.trap.equal",
@@ -97,7 +98,7 @@ internal static class ClipboardImport
         var first = fields[0].Trim();
         var second = fields.Count > 1 ? fields[1].Trim() : "";
         return MatchesImportAlias(first, "import.alias.header.address") ||
-               second.Equals("Data type", StringComparison.OrdinalIgnoreCase);
+               MatchesImportAlias(second, "import.alias.header.dataType");
     }
 
     internal static bool IsCommentClipboardHeader(IReadOnlyList<string> fields)

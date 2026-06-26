@@ -60,6 +60,13 @@ public sealed class ClipboardImportTests
         Assert.True(ClipboardImport.IsDeviceClipboardHeader(fields));
     }
 
+    [Fact]
+    public void IsDeviceClipboardHeaderDetectsJapaneseDataTypeColumnAsHeader()
+    {
+        var fields = ClipboardImport.SplitClipboardLine("X\tデータ型\tY");
+        Assert.True(ClipboardImport.IsDeviceClipboardHeader(fields));
+    }
+
     [Theory]
     [InlineData("Address\tComment", true)]
     [InlineData("アドレス\tコメント", true)]
