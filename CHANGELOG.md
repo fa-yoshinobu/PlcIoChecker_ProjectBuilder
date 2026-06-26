@@ -20,6 +20,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Project JSON: Project JSON を初回公開向けの schema v1 として整理しました。
 - Project JSON: QR payload prefix を `PLCIOC1|ZSTD` に変更しました。
 - Project JSON: Project JSON のコメントと表示型を、アドレス別の `deviceMeta` に一本化しました。
+- Project JSON: JSON / QR 出力に出力元とバージョンを示す `exportInfo` を追加しました。
 - Project JSON: `deviceList` / `timeChart` は `address` のみを持つ形にし、Trap 側も表示型を持たず `deviceMeta` から解決する形にしました。
 - App: ProjectBuilder の JSON import は schema v1 を必須にし、`deviceMeta` から各行の表示型とコメントを復元するようにしました。
 - App: UI 表記を Android/iOS 側に合わせ、`PLC settings`、`PLC IP / host`、`KEYENCE device mode`、`List`、`Trap`、`Comment`、`Time Chart` に整理しました。

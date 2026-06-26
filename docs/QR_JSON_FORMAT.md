@@ -19,6 +19,7 @@ Top-level fields:
 
 - `schema`
 - `schemaVersion`
+- `exportInfo`
 - `projectId`
 - `projectName`
 - `plc`
@@ -27,6 +28,13 @@ Top-level fields:
 - `deviceMeta`
 - `traps`
 - `updatedAtEpochMs`
+
+Exporters should emit fields in this order for diff readability. Importers must
+still treat JSON object order as non-semantic.
+
+`exportInfo` is an output memo overwritten by the exporting app. It contains
+`source` (`PROJECT_BUILDER`, `ANDROID`, or `IOS`) and `version` (the exporter app
+version). Importers must not treat this as project identity.
 
 `deviceList` and `timeChart` entries contain only `address`.
 `deviceMeta` entries contain `address`, `dataType`, and optional `comment`.

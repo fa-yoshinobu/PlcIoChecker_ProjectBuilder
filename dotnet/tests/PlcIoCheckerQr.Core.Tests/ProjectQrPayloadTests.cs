@@ -26,6 +26,9 @@ public sealed class ProjectQrPayloadTests
         var root = document.RootElement;
         Assert.Equal("plc-io-checker-project", root.GetProperty("schema").GetString());
         Assert.Equal(1, root.GetProperty("schemaVersion").GetInt32());
+        var exportInfo = root.GetProperty("exportInfo");
+        Assert.Equal("PROJECT_BUILDER", exportInfo.GetProperty("source").GetString());
+        Assert.Equal("1.0.0", exportInfo.GetProperty("version").GetString());
         Assert.Equal("unit-project-123", root.GetProperty("projectId").GetString());
         Assert.Equal("MELSEC", root.GetProperty("plc").GetProperty("vendor").GetString());
         Assert.Equal("melsec:iq-r", root.GetProperty("plc").GetProperty("cpuModel").GetString());

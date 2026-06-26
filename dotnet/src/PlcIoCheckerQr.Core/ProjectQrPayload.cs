@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Reflection;
 using ZstdSharp;
 
 namespace PlcIoCheckerQr.Core;
@@ -142,6 +143,11 @@ public static class ProjectQrPayload
     {
         schema = "plc-io-checker-project",
         schemaVersion = 1,
+        exportInfo = new
+        {
+            source = "PROJECT_BUILDER",
+            version = ExporterVersion(),
+        },
         projectId = project.Id,
         projectName = project.Name,
         plc = new
@@ -311,6 +317,14 @@ public static class ProjectQrPayload
 
     private static string Sha256Hex(byte[] data) =>
         Convert.ToHexString(SHA256.HashData(data)).ToLowerInvariant();
+
+    private static string ExporterVersion()
+    {
+        var assembly = typeof(ProjectQrPayload).Assembly;
+        return assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
+            ?? assembly.GetName().Version?.ToString()
+            ?? "unknown";
+    }
 
     private static string Base64UrlEncode(byte[] data) =>
         Convert.ToBase64String(data).TrimEnd('=').Replace('+', '-').Replace('/', '_');
