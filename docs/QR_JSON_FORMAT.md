@@ -5,15 +5,15 @@ The README is intentionally kept as a user guide.
 
 ## Project JSON
 
-The generated JSON uses the shared `plc-io-checker-project` schema v4 consumed
+The generated JSON uses the shared `plc-io-checker-project` schema v5 consumed
 by Android and iOS.
 
-Generated project JSON includes only shared v4 schema fields. UI-only
+Generated project JSON includes only shared v5 schema fields. UI-only
 preferences and runtime observation values are not emitted.
 
-ProjectBuilder may emit `deviceList[].comment` when a device comment is set.
-If the same device address is registered more than once, the first non-empty
-comment for that address is copied to each matching `deviceList` entry.
+ProjectBuilder emits shared address metadata in `deviceMeta`. Comments and data
+types are stored there once per address. `deviceList`, `timeChart`, and `traps`
+store membership and trap settings only.
 
 Top-level fields:
 
@@ -24,11 +24,14 @@ Top-level fields:
 - `plc`
 - `deviceList`
 - `timeChart`
+- `deviceMeta`
 - `traps`
 - `updatedAtEpochMs`
 
-`deviceList` entries contain `address` and `dataType`. They may also contain
-`comment` when a ProjectBuilder device comment is set.
+`deviceList` and `timeChart` entries contain only `address`.
+`deviceMeta` entries contain `address`, `dataType`, and optional `comment`.
+Trap entries contain `id`, `enabled`, `address`, `condition`, and
+`comparisonValue`; trap data types are resolved through `deviceMeta`.
 
 MELSEC routing uses decimal `networkNo` / `stationNo` values and `0x`-prefixed
 hexadecimal `moduleIoNo` / `multidropNo` strings. Remote passwords are never
@@ -36,9 +39,9 @@ emitted in JSON or QR payloads; the mobile apps store them in device-local
 secure storage after the user enters them.
 
 `plc.cpuModel` is the mobile app canonical connection model key. ProjectBuilder
-keeps friendly labels such as `iQ-R` and `KV-8000` in the UI, but schema v4 JSON
+keeps friendly labels such as `iQ-R` and `KV-8000` in the UI, but schema v5 JSON
 emits values such as `melsec:iq-r` and `keyence:kv-8000`. ProjectBuilder must
-not emit a separate `plcProfile` field in schema v4.
+not emit a separate `plcProfile` field in schema v5.
 
 ProjectBuilder enforces the mobile app registration limits: up to 20 time chart
 targets and up to 20 trap definitions.

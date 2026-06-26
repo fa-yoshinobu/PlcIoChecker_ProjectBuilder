@@ -135,10 +135,13 @@ public static class ProjectQrPayload
         return decompressor.Unwrap(data).ToArray();
     }
 
-    private static object ToJsonShape(PlcProject project) => new
+    private static object ToJsonShape(PlcProject project)
+    {
+        var deviceMeta = ProjectDeviceMeta(project);
+        return new
     {
         schema = "plc-io-checker-project",
-        schemaVersion = 4,
+        schemaVersion = 5,
         projectId = project.Id,
         projectName = project.Name,
         plc = new
@@ -173,25 +176,69 @@ public static class ProjectQrPayload
         deviceList = project.Devices.Select(device => new
         {
             address = device.Address,
-            dataType = FormatDataType(device.DataType),
-            comment = string.IsNullOrWhiteSpace(device.Comment) ? null : device.Comment,
         }),
         timeChart = project.TimeChart.Select(target => new
         {
             address = target.Address,
-            dataType = FormatDataType(target.DataType),
+        }),
+        deviceMeta = deviceMeta.Select(meta => new
+        {
+            address = meta.Address,
+            dataType = FormatDataType(meta.DataType),
+            comment = string.IsNullOrWhiteSpace(meta.Comment) ? null : meta.Comment,
         }),
         traps = project.Traps.Select(trap => new
         {
             id = trap.Id,
             enabled = trap.Enabled,
             address = trap.Address,
-            dataType = FormatDataType(trap.DataType),
             condition = FormatTrapCondition(trap.Condition),
             comparisonValue = trap.Threshold,
         }),
         updatedAtEpochMs = project.UpdatedAtEpochMs,
     };
+    }
+
+    private sealed record DeviceMeta(string Address, string DataType, string Comment);
+
+    private static IReadOnlyList<DeviceMeta> ProjectDeviceMeta(PlcProject project)
+    {
+        var indexByAddress = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        var result = new List<DeviceMeta>();
+
+        void AddOrFillComment(string address, string dataType, string comment = "")
+        {
+            if (indexByAddress.TryGetValue(address, out var index))
+            {
+                var existing = result[index];
+                if (string.IsNullOrWhiteSpace(existing.Comment) && !string.IsNullOrWhiteSpace(comment))
+                {
+                    result[index] = existing with { Comment = comment };
+                }
+                return;
+            }
+
+            indexByAddress[address] = result.Count;
+            result.Add(new DeviceMeta(address, dataType, comment));
+        }
+
+        foreach (var device in project.Devices)
+        {
+            AddOrFillComment(device.Address, device.DataType, device.Comment);
+        }
+
+        foreach (var target in project.TimeChart)
+        {
+            AddOrFillComment(target.Address, target.DataType);
+        }
+
+        foreach (var trap in project.Traps)
+        {
+            AddOrFillComment(trap.Address, trap.DataType);
+        }
+
+        return result;
+    }
 
     private static bool IsVendor(string value, string expected) =>
         string.Equals(value, expected, StringComparison.OrdinalIgnoreCase);

@@ -247,15 +247,46 @@ public static partial class ProjectFactory
 
         var timeChart = ParseTimeChart(input.WatchText, input.Vendor, input.KeyenceDeviceMode, input.MachineLabel, deviceTypesByAddress);
         var traps = ParseTraps(input.TrapsText, input.Vendor, input.KeyenceDeviceMode, input.MachineLabel, deviceTypesByAddress);
+        var (projectDevices, projectTimeChart, projectTraps) = CommonizeDeviceDataTypes(devices, timeChart, traps);
 
         return new PlcProject(
             Id: $"{Slugify(name)}-{now}",
             Name: name,
             Connection: BuildConnection(input),
-            Devices: devices,
-            TimeChart: timeChart,
-            Traps: traps,
+            Devices: projectDevices,
+            TimeChart: projectTimeChart,
+            Traps: projectTraps,
             UpdatedAtEpochMs: now);
+    }
+
+    private static (
+        List<DeviceDefinition> Devices,
+        List<MonitorTargetDefinition> TimeChart,
+        List<TrapDefinition> Traps) CommonizeDeviceDataTypes(
+            List<DeviceDefinition> devices,
+            List<MonitorTargetDefinition> timeChart,
+            List<TrapDefinition> traps)
+    {
+        var dataTypesByAddress = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var device in devices)
+        {
+            dataTypesByAddress.TryAdd(device.Address, device.DataType);
+        }
+
+        foreach (var target in timeChart)
+        {
+            dataTypesByAddress.TryAdd(target.Address, target.DataType);
+        }
+
+        foreach (var trap in traps)
+        {
+            dataTypesByAddress.TryAdd(trap.Address, trap.DataType);
+        }
+
+        return (
+            devices.Select(device => device with { DataType = dataTypesByAddress[device.Address] }).ToList(),
+            timeChart.Select(target => target with { DataType = dataTypesByAddress[target.Address] }).ToList(),
+            traps.Select(trap => trap with { DataType = dataTypesByAddress[trap.Address] }).ToList());
     }
 
     private static List<DeviceDefinition> ParseDevices(string devicesText, string vendor, string keyenceDeviceMode, string machineLabel)

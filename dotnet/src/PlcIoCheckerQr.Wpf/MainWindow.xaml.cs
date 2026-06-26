@@ -210,10 +210,70 @@ public partial class MainWindow : Window
                 : NormalizeDeviceDataType(row.DataType, row.Address);
             row.Condition = ProjectFactory.CoerceTrapConditionForAddress(row.Address, row.Condition, Selected(_vendor), SelectedKeyenceDeviceMode());
         }
+        CommonizeDeviceDataTypes();
 
         _devicesGrid.Items.Refresh();
         _watchGrid.Items.Refresh();
         _trapsGrid.Items.Refresh();
+    }
+
+    private void CommonizeDeviceDataTypes()
+    {
+        var dataTypesByAddress = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        void Remember(DataTypedAddressRow row)
+        {
+            if (string.IsNullOrWhiteSpace(row.Address) || string.IsNullOrWhiteSpace(row.DataType))
+            {
+                return;
+            }
+
+            dataTypesByAddress.TryAdd(row.Address.Trim().ToUpperInvariant(), row.DataType);
+        }
+
+        foreach (var row in _devices)
+        {
+            Remember(row);
+        }
+
+        foreach (var row in _watches)
+        {
+            Remember(row);
+        }
+
+        foreach (var row in _traps)
+        {
+            Remember(row);
+        }
+
+        void Apply(DataTypedAddressRow row)
+        {
+            if (string.IsNullOrWhiteSpace(row.Address))
+            {
+                return;
+            }
+
+            var address = row.Address.Trim().ToUpperInvariant();
+            if (dataTypesByAddress.TryGetValue(address, out var dataType))
+            {
+                row.DataType = dataType;
+            }
+        }
+
+        foreach (var row in _devices)
+        {
+            Apply(row);
+        }
+
+        foreach (var row in _watches)
+        {
+            Apply(row);
+        }
+
+        foreach (var row in _traps)
+        {
+            Apply(row);
+        }
     }
 
     private void CommonizeDeviceComments()

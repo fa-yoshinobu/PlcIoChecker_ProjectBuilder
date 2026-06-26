@@ -173,7 +173,7 @@ public partial class MainWindow
     {
         using var document = JsonDocument.Parse(json);
         var root = document.RootElement;
-        RequireProjectJsonV4(root);
+        RequireProjectJsonV5(root);
 
         _ = ReadRequiredString(root, "projectId");
         _ = ReadRequiredInt64(root, "updatedAtEpochMs");
@@ -215,16 +215,18 @@ public partial class MainWindow
             }
         }
 
+        var deviceMetaByAddress = ReadDeviceMetaByAddress(root);
         var devicesElement = ReadRequiredArray(root, "deviceList");
         _devices.Clear();
         foreach (var device in devicesElement.EnumerateArray())
         {
             var address = ReadRequiredString(device, "address");
+            var meta = RequireDeviceMeta(deviceMetaByAddress, address);
             var row = new DeviceRow();
             row.SetDeviceContext(Selected(_vendor), SelectedKeyenceDeviceMode());
             row.Address = address;
-            row.DataType = NormalizeDeviceDataType(ToUiDataType(ReadRequiredString(device, "dataType")), address);
-            row.Comment = ReadOptionalString(device, "comment");
+            row.DataType = NormalizeDeviceDataType(meta.DataType, address);
+            row.Comment = meta.Comment;
             _devices.Add(row);
         }
 
@@ -233,10 +235,11 @@ public partial class MainWindow
         foreach (var target in timeChartElement.EnumerateArray())
         {
             var address = ReadRequiredString(target, "address");
+            var meta = RequireDeviceMeta(deviceMetaByAddress, address);
             var row = new WatchRow();
             row.SetDeviceContext(Selected(_vendor), SelectedKeyenceDeviceMode());
             row.Address = address;
-            row.DataType = NormalizeDeviceDataType(ToUiDataType(ReadRequiredString(target, "dataType")), address);
+            row.DataType = NormalizeDeviceDataType(meta.DataType, address);
             _watches.Add(row);
         }
 
@@ -258,7 +261,8 @@ public partial class MainWindow
             var row = new TrapRow();
             row.SetDeviceContext(Selected(_vendor), SelectedKeyenceDeviceMode());
             row.Address = ReadRequiredString(trap, "address");
-            row.DataType = NormalizeDeviceDataType(ToUiDataType(ReadRequiredString(trap, "dataType")), row.Address);
+            var meta = RequireDeviceMeta(deviceMetaByAddress, row.Address);
+            row.DataType = NormalizeDeviceDataType(meta.DataType, row.Address);
             row.Condition = ToUiTrapCondition(ReadRequiredString(trap, "condition"));
             row.Threshold = threshold;
             row.Enabled = ReadRequiredBool(trap, "enabled");
@@ -266,5 +270,40 @@ public partial class MainWindow
         }
 
         CommonizeDeviceComments();
+        CommonizeDeviceDataTypes();
+    }
+
+    private sealed record ProjectDeviceMeta(string DataType, string Comment);
+
+    private static Dictionary<string, ProjectDeviceMeta> ReadDeviceMetaByAddress(JsonElement root)
+    {
+        var result = new Dictionary<string, ProjectDeviceMeta>(StringComparer.OrdinalIgnoreCase);
+        foreach (var meta in ReadRequiredArray(root, "deviceMeta").EnumerateArray())
+        {
+            var address = ReadRequiredString(meta, "address").Trim().ToUpperInvariant();
+            if (string.IsNullOrWhiteSpace(address))
+            {
+                throw new InvalidOperationException("Project JSON value 'deviceMeta.address' must not be empty.");
+            }
+
+            result.TryAdd(address, new ProjectDeviceMeta(
+                DataType: ToUiDataType(ReadRequiredString(meta, "dataType")),
+                Comment: ReadOptionalString(meta, "comment")));
+        }
+
+        return result;
+    }
+
+    private static ProjectDeviceMeta RequireDeviceMeta(
+        IReadOnlyDictionary<string, ProjectDeviceMeta> deviceMetaByAddress,
+        string address)
+    {
+        var normalizedAddress = address.Trim().ToUpperInvariant();
+        if (deviceMetaByAddress.TryGetValue(normalizedAddress, out var meta))
+        {
+            return meta;
+        }
+
+        throw new InvalidOperationException($"Project JSON value 'deviceMeta' is missing address '{normalizedAddress}'.");
     }
 }

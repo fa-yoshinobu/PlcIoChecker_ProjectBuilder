@@ -1,6 +1,6 @@
 # Development History
 
-Last consolidated: 2026-06-11
+Last consolidated: 2026-06-26
 
 This document preserves the useful content that used to live in the temporary
 ProjectBuilder refactor memo. Keep this file as the durable engineering record
@@ -12,9 +12,8 @@ for the Windows desktop Project Builder.
 - Preserve the current QR payload contract used by the mobile apps.
 - Preserve localization behavior.
 - Preserve UI behavior unless a visible change is explicitly requested.
-- Do not rename historical compatibility functions only for style. In
-  particular, `RequireProjectJsonV2` still has a historical name even though the
-  current schema version is newer.
+- Keep project JSON schema checks explicit so obsolete schema versions fail
+  visibly.
 
 ## Project Shape
 
@@ -90,13 +89,30 @@ Effect:
 - Future UI refactors can rely on the core tests to catch project-format
   regressions.
 
+### Project JSON Schema v5
+
+Completed in the 2026-06-26 schema alignment pass.
+
+Completed work:
+
+- Updated ProjectBuilder output from schema v4 to schema v5.
+- Moved shared comments and data types into top-level `deviceMeta`.
+- Kept `deviceList`, `timeChart`, and `traps` focused on registration and trap
+  settings.
+- Updated JSON import to require schema v5 and resolve row data types/comments
+  from `deviceMeta`.
+
+Effect:
+
+- ProjectBuilder now matches Android and iOS project JSON import/export.
+- A single address has one shared display data type across List, Time Chart, and
+  Trap rows.
+
 ## Work Intentionally Not Done
 
 - No MVVM rewrite.
 - No QR format change.
-- No project JSON format change.
 - No localization redesign.
-- No schema-version compatibility rename for `RequireProjectJsonV2`.
 - No broad `dotnet format` enforcement was introduced in the refactor pass.
 
 ## Future Notes

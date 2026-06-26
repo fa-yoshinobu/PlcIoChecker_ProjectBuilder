@@ -25,7 +25,7 @@ public sealed class ProjectQrPayloadTests
         using var document = JsonDocument.Parse(decoded);
         var root = document.RootElement;
         Assert.Equal("plc-io-checker-project", root.GetProperty("schema").GetString());
-        Assert.Equal(4, root.GetProperty("schemaVersion").GetInt32());
+        Assert.Equal(5, root.GetProperty("schemaVersion").GetInt32());
         Assert.Equal("unit-project-123", root.GetProperty("projectId").GetString());
         Assert.Equal("MELSEC", root.GetProperty("plc").GetProperty("vendor").GetString());
         Assert.Equal("melsec:iq-r", root.GetProperty("plc").GetProperty("cpuModel").GetString());
@@ -37,7 +37,9 @@ public sealed class ProjectQrPayloadTests
         Assert.Equal("0x00", melsec.GetProperty("multidropNo").GetString());
         Assert.False(melsec.TryGetProperty("remotePassword", out _));
         Assert.Equal("GREATER_OR_EQUAL", root.GetProperty("traps")[0].GetProperty("condition").GetString());
-        Assert.Equal("Start input", root.GetProperty("deviceList")[0].GetProperty("comment").GetString());
+        Assert.False(root.GetProperty("deviceList")[0].TryGetProperty("dataType", out _));
+        Assert.False(root.GetProperty("deviceList")[0].TryGetProperty("comment", out _));
+        Assert.Equal("Start input", root.GetProperty("deviceMeta")[0].GetProperty("comment").GetString());
         Assert.False(root.GetProperty("deviceList")[0].TryGetProperty("watch", out _));
         Assert.False(root.TryGetProperty("settings", out _));
     }
@@ -71,7 +73,8 @@ public sealed class ProjectQrPayloadTests
         Assert.DoesNotContain("\"plcProfile\"", json);
         Assert.Contains("\"mode\":\"DEMO_MOCK\"", json);
         Assert.Contains("\"deviceMode\":\"NORMAL\"", json);
-        Assert.Contains("\"timeChart\":[{\"address\":\"R000\",\"dataType\":\"BIT\"}]", json);
+        Assert.Contains("\"timeChart\":[{\"address\":\"R000\"}]", json);
+        Assert.Contains("\"deviceMeta\":[{\"address\":\"R000\",\"dataType\":\"BIT\"}", json);
         Assert.DoesNotContain("\"melsec\"", json);
         Assert.DoesNotContain("\"remotePassword\"", json);
     }
@@ -134,9 +137,34 @@ public sealed class ProjectQrPayloadTests
         var json = Encoding.UTF8.GetString(ProjectQrPayload.ProjectJsonBytes(project));
         using var document = JsonDocument.Parse(json);
         var deviceList = document.RootElement.GetProperty("deviceList");
-        Assert.Equal("Speed word", deviceList[0].GetProperty("comment").GetString());
-        Assert.Equal("Speed word", deviceList[1].GetProperty("comment").GetString());
-        Assert.Equal("Alarm word", deviceList[2].GetProperty("comment").GetString());
+        Assert.False(deviceList[0].TryGetProperty("comment", out _));
+        Assert.False(deviceList[0].TryGetProperty("dataType", out _));
+        var deviceMeta = document.RootElement.GetProperty("deviceMeta");
+        Assert.Equal("D100", deviceMeta[0].GetProperty("address").GetString());
+        Assert.Equal("INT16", deviceMeta[0].GetProperty("dataType").GetString());
+        Assert.Equal("Speed word", deviceMeta[0].GetProperty("comment").GetString());
+        Assert.Equal("D101", deviceMeta[1].GetProperty("address").GetString());
+        Assert.Equal("Alarm word", deviceMeta[1].GetProperty("comment").GetString());
+    }
+
+    [Fact]
+    public void ProjectFactoryCommonizesDeviceDataTypesByAddress()
+    {
+        var project = ProjectFactory.MakeProject(ProjectInputBuilder.MakeInput(
+            DevicesText: "D100,UInt16,Speed word",
+            WatchText: "D100,Float32",
+            TrapsText: "D100,Int32,GreaterOrEqual,1,true"));
+
+        Assert.Equal("UInt16", project.Devices.Single().DataType);
+        Assert.Equal("UInt16", project.TimeChart.Single().DataType);
+        Assert.Equal("UInt16", project.Traps.Single().DataType);
+
+        var json = Encoding.UTF8.GetString(ProjectQrPayload.ProjectJsonBytes(project));
+        using var document = JsonDocument.Parse(json);
+        var deviceMeta = document.RootElement.GetProperty("deviceMeta");
+        Assert.Single(deviceMeta.EnumerateArray());
+        Assert.Equal("D100", deviceMeta[0].GetProperty("address").GetString());
+        Assert.Equal("UINT16", deviceMeta[0].GetProperty("dataType").GetString());
     }
 
     [Fact]
