@@ -205,15 +205,13 @@ public partial class MainWindow
         var skipped = 0;
         var isFirstRow = true;
 
-        foreach (var rawLine in text.Split(["\r\n", "\n"], StringSplitOptions.None))
+        foreach (var fields in SplitClipboardRows(text))
         {
-            var line = rawLine.TrimEnd('\r');
-            if (string.IsNullOrWhiteSpace(line))
+            if (fields.Length == 0 || fields.All(string.IsNullOrWhiteSpace))
             {
                 continue;
             }
 
-            var fields = SplitClipboardLine(line);
             if (isFirstRow && IsDeviceClipboardHeader(fields))
             {
                 isFirstRow = false;
@@ -232,7 +230,7 @@ public partial class MainWindow
             var dataType = hasDataType
                 ? NormalizeDeviceDataType(fields[1], address)
                 : ProjectFactory.GuessDataType(address, Selected(_vendor), SelectedKeyenceDeviceMode());
-            var commentIndex = hasDataType ? 2 : fields.Length > 2 && string.IsNullOrWhiteSpace(fields[1]) ? 2 : 1;
+            var commentIndex = FirstValueIndexAfterOptionalDataType(fields, hasDataType);
             var row = new DeviceRow();
             row.SetDeviceContext(Selected(_vendor), SelectedKeyenceDeviceMode());
             row.Address = address;
@@ -337,9 +335,8 @@ public partial class MainWindow
     private IEnumerable<CommentRow> ParseCommentClipboardRows(string text)
     {
         var isFirstRow = true;
-        foreach (var rawLine in text.Split(["\r\n", "\n"], StringSplitOptions.None))
+        foreach (var fields in SplitClipboardRows(text))
         {
-            var fields = SplitClipboardLine(rawLine.TrimEnd('\r'));
             if (fields.Length == 0 || fields.All(string.IsNullOrWhiteSpace))
             {
                 continue;
@@ -365,7 +362,7 @@ public partial class MainWindow
             row.DataType = hasDataType
                 ? NormalizeDeviceDataType(fields[1], address)
                 : ProjectFactory.GuessDataType(address, Selected(_vendor), SelectedKeyenceDeviceMode());
-            var commentIndex = hasDataType ? 2 : fields.Length > 2 && string.IsNullOrWhiteSpace(fields[1]) ? 2 : 1;
+            var commentIndex = FirstValueIndexAfterOptionalDataType(fields, hasDataType);
             row.Comment = DeviceCommentFromFields(fields, commentIndex);
             yield return row;
         }
@@ -461,9 +458,8 @@ public partial class MainWindow
     private IEnumerable<WatchRow> ParseWatchClipboardRows(string text)
     {
         var isFirstRow = true;
-        foreach (var rawLine in text.Split(["\r\n", "\n"], StringSplitOptions.None))
+        foreach (var fields in SplitClipboardRows(text))
         {
-            var fields = SplitClipboardLine(rawLine.TrimEnd('\r'));
             if (fields.Length == 0 || fields.All(string.IsNullOrWhiteSpace))
             {
                 continue;
@@ -484,7 +480,7 @@ public partial class MainWindow
                 row.Address = address;
                 var hasDataType = fields.Length > 1 && IsDeviceDataTypeField(fields[1]);
                 row.DataType = hasDataType ? NormalizeDeviceDataType(fields[1], address) : ProjectFactory.GuessDataType(address, Selected(_vendor), SelectedKeyenceDeviceMode());
-                var commentIndex = hasDataType ? 2 : fields.Length > 2 && string.IsNullOrWhiteSpace(fields[1]) ? 2 : 1;
+                var commentIndex = FirstValueIndexAfterOptionalDataType(fields, hasDataType);
                 row.Comment = DeviceCommentFromFields(fields, commentIndex);
                 yield return row;
             }
@@ -585,9 +581,8 @@ public partial class MainWindow
     private IEnumerable<TrapRow> ParseTrapClipboardRows(string text)
     {
         var isFirstRow = true;
-        foreach (var rawLine in text.Split(["\r\n", "\n"], StringSplitOptions.None))
+        foreach (var fields in SplitClipboardRows(text))
         {
-            var fields = SplitClipboardLine(rawLine.TrimEnd('\r'));
             if (fields.Length == 0 || fields.All(string.IsNullOrWhiteSpace))
             {
                 continue;
@@ -611,7 +606,7 @@ public partial class MainWindow
             row.Address = address;
             var hasDataType = fields.Length > 1 && IsDeviceDataTypeField(fields[1]);
             row.DataType = hasDataType ? NormalizeDeviceDataType(fields[1], address) : ProjectFactory.GuessDataType(address, Selected(_vendor), SelectedKeyenceDeviceMode());
-            var conditionIndex = hasDataType ? 2 : 1;
+            var conditionIndex = FirstValueIndexAfterOptionalDataType(fields, hasDataType);
             if (fields.Length > conditionIndex &&
                 !IsTrapConditionField(fields[conditionIndex]) &&
                 fields.Length > conditionIndex + 1)

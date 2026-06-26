@@ -5,7 +5,7 @@
 [![.NET 8](https://img.shields.io/badge/.NET-8.0-512BD4?logo=dotnet)](https://dotnet.microsoft.com/)
 [![.NET CI](https://github.com/fa-yoshinobu/PlcIoChecker_ProjectBuilder/actions/workflows/dotnet-ci.yml/badge.svg)](https://github.com/fa-yoshinobu/PlcIoChecker_ProjectBuilder/actions/workflows/dotnet-ci.yml)
 ![Windows WPF](https://img.shields.io/badge/platform-Windows%20WPF-0078D4?logo=windows)
-![Project JSON v2](https://img.shields.io/badge/project%20JSON-v2-2ea44f)
+![Project JSON v1](https://img.shields.io/badge/project%20JSON-v1-2ea44f)
 ![QR Zstd](https://img.shields.io/badge/QR-Zstd-f97316)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
@@ -39,13 +39,13 @@ Related repositories:
 Primary configuration areas:
 
 - PLC connection settings
-- Device registration
-- Time chart targets
+- List registration
+- Time Chart targets
 - Trap settings
 
 This repository contains only the PC-side project builder and QR export tool. The Android and iOS PLC IO Checker apps are separate paid products, and their source code is not included in this repository.
 
-The supported desktop implementation is the .NET WPF app. The older Python prototype has been removed.
+The supported desktop implementation is the .NET WPF app.
 
 ## Usage
 
@@ -55,12 +55,12 @@ The supported desktop implementation is the .NET WPF app. The older Python proto
    - Vendor
    - CPU model
    - IP address, port, and transport
-3. Register monitored addresses in `Devices`.
+3. Register monitored addresses in `List`.
    - Rows can be pasted from Excel.
    - Columns are `Address / Data type / Comment`.
 4. Register graph targets in `Time Chart`.
    - Up to 20 channels can be imported.
-5. Register trigger rules in `Traps`.
+5. Register trigger rules in `Trap`.
    - Examples: rising edge, change, greater than or equal.
    - Up to 20 traps can be imported.
 6. Save JSON or generate QR pages.
@@ -73,7 +73,7 @@ For multi-page QR output, import completes after the mobile app has scanned ever
 - Display each QR as large as possible.
 - Scan one page before moving to the next.
 - If a device cannot read the QR reliably, reduce the QR chunk size so the tool generates more smaller QR pages.
-- After import, confirm that the project name and device list changed in the mobile app.
+- After import, confirm that the project name and List contents changed in the mobile app.
 
 ## Documents
 

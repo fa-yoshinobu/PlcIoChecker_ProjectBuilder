@@ -8,7 +8,7 @@ The README is intentionally kept as a user guide.
 The generated JSON uses the shared `plc-io-checker-project` schema v1 consumed
 by Android and iOS.
 
-Generated project JSON includes only shared v5 schema fields. UI-only
+Generated project JSON includes only shared schema v1 fields. UI-only
 preferences and runtime observation values are not emitted.
 
 ProjectBuilder emits shared address metadata in `deviceMeta`. Comments and data
@@ -43,7 +43,7 @@ keeps friendly labels such as `iQ-R` and `KV-8000` in the UI, but schema v1 JSON
 emits values such as `melsec:iq-r` and `keyence:kv-8000`. ProjectBuilder must
 not emit a separate `plcProfile` field in schema v1.
 
-ProjectBuilder enforces the mobile app registration limits: up to 20 time chart
+ProjectBuilder enforces the mobile app registration limits: up to 20 Time Chart
 targets and up to 20 trap definitions.
 
 ## Value Sets
@@ -73,7 +73,7 @@ PLCIOC1|ZSTD|<session>|<index>|<total>|<sha256>|<payload-chunk>
 ## Compression Requirements
 
 `PLCIOC1|ZSTD` uses a Zstandard frame and requires Zstd support in the importing
-app. Older `PLCIOC2D` raw-deflate QR payloads are intentionally unsupported.
+app.
 
 ## Compatibility Policy
 

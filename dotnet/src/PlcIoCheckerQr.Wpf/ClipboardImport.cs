@@ -1,3 +1,4 @@
+using System.Text;
 using PlcIoCheckerQr.Core;
 using PlcIoCheckerQr.Wpf.Localization;
 
@@ -83,10 +84,99 @@ internal static class ClipboardImport
             .Select(item => item.Condition)
             .FirstOrDefault();
 
+    internal static IReadOnlyList<string[]> SplitClipboardRows(string text)
+    {
+        var delimiter = text.Contains('\t', StringComparison.Ordinal) ? '\t' : ',';
+        var rows = new List<string[]>();
+        var fields = new List<string>();
+        var field = new StringBuilder();
+        var inQuotes = false;
+        var atFieldStart = true;
+        var justEndedRow = false;
+
+        void AddField()
+        {
+            fields.Add(field.ToString());
+            field.Clear();
+            atFieldStart = true;
+        }
+
+        void AddRow()
+        {
+            AddField();
+            rows.Add(fields.ToArray());
+            fields.Clear();
+            justEndedRow = true;
+        }
+
+        for (var index = 0; index < text.Length; index++)
+        {
+            var ch = text[index];
+            if (inQuotes)
+            {
+                if (ch == '"')
+                {
+                    if (index + 1 < text.Length && text[index + 1] == '"')
+                    {
+                        field.Append('"');
+                        index++;
+                    }
+                    else
+                    {
+                        inQuotes = false;
+                    }
+                }
+                else
+                {
+                    field.Append(ch);
+                }
+
+                justEndedRow = false;
+                continue;
+            }
+
+            if (ch == '"' && atFieldStart)
+            {
+                inQuotes = true;
+                atFieldStart = false;
+                justEndedRow = false;
+                continue;
+            }
+
+            if (ch == delimiter)
+            {
+                AddField();
+                justEndedRow = false;
+                continue;
+            }
+
+            if (ch is '\r' or '\n')
+            {
+                if (ch == '\r' && index + 1 < text.Length && text[index + 1] == '\n')
+                {
+                    index++;
+                }
+
+                AddRow();
+                continue;
+            }
+
+            field.Append(ch);
+            atFieldStart = false;
+            justEndedRow = false;
+        }
+
+        if (!justEndedRow || field.Length > 0 || fields.Count > 0)
+        {
+            AddField();
+            rows.Add(fields.ToArray());
+        }
+
+        return rows;
+    }
+
     internal static string[] SplitClipboardLine(string line) =>
-        line.Contains('\t', StringComparison.Ordinal)
-            ? line.Split('\t')
-            : line.Split(',');
+        line.Length == 0 ? [""] : SplitClipboardRows(line).FirstOrDefault() ?? [""];
 
     internal static bool IsDeviceClipboardHeader(IReadOnlyList<string> fields)
     {
@@ -118,10 +208,18 @@ internal static class ClipboardImport
     internal static bool IsDeviceDataTypeField(string text) =>
         ProjectFactory.DeviceDataTypes.Any(dataType => dataType.Equals(text.Trim(), StringComparison.OrdinalIgnoreCase));
 
+    internal static int FirstValueIndexAfterOptionalDataType(IReadOnlyList<string> fields, bool hasDataType) =>
+        hasDataType || fields.Count > 2 && string.IsNullOrWhiteSpace(fields[1]) ? 2 : 1;
+
     internal static string DeviceCommentFromFields(IReadOnlyList<string> fields, int startIndex) =>
         startIndex >= fields.Count
             ? ""
-            : NormalizeDeviceComment(string.Join(",", fields.Skip(startIndex)));
+            : NormalizeDeviceComment(string.Join(
+                ",",
+                fields.Skip(startIndex)
+                    .Reverse()
+                    .SkipWhile(string.IsNullOrWhiteSpace)
+                    .Reverse()));
 
     internal static string NormalizeDeviceDataType(string text, string address, string vendor, string keyenceDeviceMode)
     {
@@ -168,6 +266,11 @@ internal static class ClipboardImport
 
     internal static bool IsAddressClipboardHeader(IReadOnlyList<string> fields)
     {
+        if (fields.Count == 0)
+        {
+            return false;
+        }
+
         var first = fields[0].Trim();
         return MatchesImportAlias(first, "import.alias.header.address") ||
                MatchesImportAlias(first, "import.alias.header.watch");

@@ -32,6 +32,26 @@ public sealed class ClipboardImportTests
         Assert.Equal(["A", "B", "C"], ClipboardImport.SplitClipboardLine("A,B,C"));
     }
 
+    [Fact]
+    public void SplitClipboardRowsKeepsQuotedNewlinesInsideField()
+    {
+        var rows = ClipboardImport.SplitClipboardRows("D00\tBIT\t\"モーター\r\nポンプ\"\r\nD01\tBIT\tOK");
+
+        Assert.Collection(
+            rows,
+            row => Assert.Equal(["D00", "BIT", "モーター\r\nポンプ"], row),
+            row => Assert.Equal(["D01", "BIT", "OK"], row));
+    }
+
+    [Fact]
+    public void SplitClipboardRowsUnescapesQuotedDoubleQuotes()
+    {
+        var rows = ClipboardImport.SplitClipboardRows("D00\tBIT\t\"A \"\"quoted\"\" comment\"");
+
+        var row = Assert.Single(rows);
+        Assert.Equal(["D00", "BIT", "A \"quoted\" comment"], row);
+    }
+
     [Theory]
     [InlineData("normal", "normal")]
     [InlineData("line1\r\nline2", "line1  line2")]
@@ -40,6 +60,34 @@ public sealed class ClipboardImportTests
     public void NormalizeDeviceCommentCollapsesLineBreaks(string input, string expected)
     {
         Assert.Equal(expected, ClipboardImport.NormalizeDeviceComment(input));
+    }
+
+    [Fact]
+    public void DeviceCommentFromFieldsIgnoresTrailingEmptyFields()
+    {
+        Assert.Equal("モーター", ClipboardImport.DeviceCommentFromFields(["D00", "BIT", "モーター", ""], 2));
+    }
+
+    [Fact]
+    public void DeviceCommentFromFieldsNormalizesQuotedExcelNewlineComment()
+    {
+        var row = Assert.Single(ClipboardImport.SplitClipboardRows("D00\tBIT\t\"モーター\r\nポンプ\""));
+
+        Assert.Equal("モーター  ポンプ", ClipboardImport.DeviceCommentFromFields(row, 2));
+    }
+
+    [Theory]
+    [InlineData(true, 2)]
+    [InlineData(false, 2)]
+    public void FirstValueIndexAfterOptionalDataTypeSkipsBlankDataTypeColumn(bool hasDataType, int expected)
+    {
+        Assert.Equal(expected, ClipboardImport.FirstValueIndexAfterOptionalDataType(["D00", "", "モーター"], hasDataType));
+    }
+
+    [Fact]
+    public void FirstValueIndexAfterOptionalDataTypeUsesSecondColumnWhenItIsNotBlank()
+    {
+        Assert.Equal(1, ClipboardImport.FirstValueIndexAfterOptionalDataType(["D00", "モーター"], hasDataType: false));
     }
 
     [Theory]
@@ -85,6 +133,12 @@ public sealed class ClipboardImportTests
     public void IsAddressClipboardHeaderDetectsHeaders(string first, bool expected)
     {
         Assert.Equal(expected, ClipboardImport.IsAddressClipboardHeader([first]));
+    }
+
+    [Fact]
+    public void IsAddressClipboardHeaderReturnsFalseForEmptyFields()
+    {
+        Assert.False(ClipboardImport.IsAddressClipboardHeader([]));
     }
 
     [Fact]

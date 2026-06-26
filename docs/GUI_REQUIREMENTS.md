@@ -8,13 +8,15 @@ JSON v1 and QR codes for Android and iOS.
 
 The main screen should prioritize:
 
-- Devices
-  - Device rows should allow an optional comment. Duplicate rows with the same
+- List
+  - List rows should allow an optional comment. Duplicate rows with the same
     address share one comment.
-- Time chart targets
+- Time Chart
   - Limit registration to 20 targets to match the mobile apps.
-- Traps
+- Trap
   - Limit registration to 20 definitions to match the mobile apps.
+- Comment
+  - Edit address comments and data types stored in `deviceMeta`.
 
 These are the project settings users need to enter and edit most often.
 
@@ -24,11 +26,13 @@ These settings are necessary, but they are not the product focus:
 
 - Project name
 - Vendor and CPU model
-- Connection settings
-  - MELSEC connection settings include a remote password field.
+- PLC settings
+  - Project name, vendor, CPU model, connection mode, PLC IP / host, port,
+    transport, monitor interval, timeout, and MELSEC routing fields.
 - QR chunk size, QR display size, QR error correction
 
-They should live behind secondary tabs or output/export areas.
+They should live in the editor, with output/export controls kept separate from
+the row editing grids.
 
 ## Project JSON Compatibility
 
