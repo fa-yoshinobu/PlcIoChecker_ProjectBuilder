@@ -5,7 +5,7 @@ The README is intentionally kept as a user guide.
 
 ## Project JSON
 
-The generated JSON uses the shared `plc-io-checker-project` schema v5 consumed
+The generated JSON uses the shared `plc-io-checker-project` schema v1 consumed
 by Android and iOS.
 
 Generated project JSON includes only shared v5 schema fields. UI-only
@@ -39,9 +39,9 @@ emitted in JSON or QR payloads; the mobile apps store them in device-local
 secure storage after the user enters them.
 
 `plc.cpuModel` is the mobile app canonical connection model key. ProjectBuilder
-keeps friendly labels such as `iQ-R` and `KV-8000` in the UI, but schema v5 JSON
+keeps friendly labels such as `iQ-R` and `KV-8000` in the UI, but schema v1 JSON
 emits values such as `melsec:iq-r` and `keyence:kv-8000`. ProjectBuilder must
-not emit a separate `plcProfile` field in schema v5.
+not emit a separate `plcProfile` field in schema v1.
 
 ProjectBuilder enforces the mobile app registration limits: up to 20 time chart
 targets and up to 20 trap definitions.
@@ -61,7 +61,7 @@ targets and up to 20 trap definitions.
 Each QR contains:
 
 ```text
-PLCIOC3|ZSTD|<session>|<index>|<total>|<sha256>|<payload-chunk>
+PLCIOC1|ZSTD|<session>|<index>|<total>|<sha256>|<payload-chunk>
 ```
 
 - `index` is 1-based.
@@ -72,7 +72,7 @@ PLCIOC3|ZSTD|<session>|<index>|<total>|<sha256>|<payload-chunk>
 
 ## Compression Requirements
 
-`PLCIOC3|ZSTD` uses a Zstandard frame and requires Zstd support in the importing
+`PLCIOC1|ZSTD` uses a Zstandard frame and requires Zstd support in the importing
 app. Older `PLCIOC2D` raw-deflate QR payloads are intentionally unsupported.
 
 ## Compatibility Policy

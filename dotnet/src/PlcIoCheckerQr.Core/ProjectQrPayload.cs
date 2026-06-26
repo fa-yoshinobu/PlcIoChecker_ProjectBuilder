@@ -13,7 +13,7 @@ public sealed record QrChunk(
     string Checksum,
     string Payload)
 {
-    public const string Prefix = "PLCIOC3";
+    public const string Prefix = "PLCIOC1";
     public const string ZstdAlgorithm = "ZSTD";
 
     public string Text => $"{Prefix}|{ZstdAlgorithm}|{Session}|{Index}|{Total}|{Checksum}|{Payload}";
@@ -141,7 +141,7 @@ public static class ProjectQrPayload
         return new
     {
         schema = "plc-io-checker-project",
-        schemaVersion = 5,
+        schemaVersion = 1,
         projectId = project.Id,
         projectName = project.Name,
         plc = new

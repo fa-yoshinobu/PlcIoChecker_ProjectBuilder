@@ -95,11 +95,11 @@ Completed in the 2026-06-26 schema alignment pass.
 
 Completed work:
 
-- Updated ProjectBuilder output from schema v4 to schema v5.
+- Defined ProjectBuilder output as schema v1 before public release.
 - Moved shared comments and data types into top-level `deviceMeta`.
 - Kept `deviceList`, `timeChart`, and `traps` focused on registration and trap
   settings.
-- Updated JSON import to require schema v5 and resolve row data types/comments
+- Updated JSON import to require schema v1 and resolve row data types/comments
   from `deviceMeta`.
 
 Effect:

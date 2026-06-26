@@ -14,7 +14,7 @@ public sealed class ProjectQrPayloadTests
 
         Assert.All(chunks, chunk =>
         {
-            Assert.StartsWith("PLCIOC3|ZSTD|", chunk.Text);
+            Assert.StartsWith("PLCIOC1|ZSTD|", chunk.Text);
             Assert.Equal(chunk, ProjectQrPayload.ParseChunkText(chunk.Text));
         });
         Assert.True(chunks.Count >= 1);
@@ -25,7 +25,7 @@ public sealed class ProjectQrPayloadTests
         using var document = JsonDocument.Parse(decoded);
         var root = document.RootElement;
         Assert.Equal("plc-io-checker-project", root.GetProperty("schema").GetString());
-        Assert.Equal(5, root.GetProperty("schemaVersion").GetInt32());
+        Assert.Equal(1, root.GetProperty("schemaVersion").GetInt32());
         Assert.Equal("unit-project-123", root.GetProperty("projectId").GetString());
         Assert.Equal("MELSEC", root.GetProperty("plc").GetProperty("vendor").GetString());
         Assert.Equal("melsec:iq-r", root.GetProperty("plc").GetProperty("cpuModel").GetString());

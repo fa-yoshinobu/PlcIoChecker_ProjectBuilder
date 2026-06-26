@@ -173,7 +173,7 @@ public partial class MainWindow
     {
         using var document = JsonDocument.Parse(json);
         var root = document.RootElement;
-        RequireProjectJsonV5(root);
+        RequireProjectJsonV1(root);
 
         _ = ReadRequiredString(root, "projectId");
         _ = ReadRequiredInt64(root, "updatedAtEpochMs");
