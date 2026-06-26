@@ -236,7 +236,7 @@
     <!-- Row 2: content -->
     <Grid x:Name="_inputView" Grid.Row="2">
       <TabControl x:Name="_mainTabs">
-        <TabItem x:Name="_devicesTab" Header="Devices">
+        <TabItem x:Name="_devicesTab" Header="List">
           <Border Style="{StaticResource PanelBorder}">
             <Grid>
               <Grid.RowDefinitions>
@@ -251,8 +251,8 @@
                   <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <StackPanel Grid.Column="0" Orientation="Vertical" Margin="0,0,20,0">
-                  <TextBlock x:Name="_devicesTitle" Text="Devices" Style="{StaticResource SectionTitle}"/>
-                  <TextBlock x:Name="_devicesMeta" Text="Edit addresses and data types." Style="{StaticResource SectionMeta}"/>
+                  <TextBlock x:Name="_devicesTitle" Text="List" Style="{StaticResource SectionTitle}"/>
+                  <TextBlock x:Name="_devicesMeta" Text="Edit List addresses and data types." Style="{StaticResource SectionMeta}"/>
                 </StackPanel>
                 <StackPanel Grid.Column="1"
                             Orientation="Horizontal"
@@ -261,13 +261,13 @@
                   <Button x:Name="_moveDeviceUpButton"
                           Content="^  Up"
                           Style="{StaticResource GhostButton}"
-                          ToolTip="Move selected device rows up. Alt+Up also works."
+                          ToolTip="Move selected List rows up. Alt+Up also works."
                           Margin="0,0,8,0"
                           Click="MoveDeviceUp_Click"/>
                   <Button x:Name="_moveDeviceDownButton"
                           Content="v  Down"
                           Style="{StaticResource GhostButton}"
-                          ToolTip="Move selected device rows down. Alt+Down also works."
+                          ToolTip="Move selected List rows down. Alt+Down also works."
                           Margin="0,0,8,0"
                           Click="MoveDeviceDown_Click"/>
                   <Button x:Name="_addDeviceButton"
@@ -288,12 +288,8 @@
                   <Button x:Name="_addDeviceBlockButton"
                           Content="+  Block"
                           Style="{StaticResource AppButton}"
-                          Margin="0,0,8,0"
+                          Margin="0"
                           Click="AddDeviceBlock_Click"/>
-                  <Button x:Name="_deleteDeviceButton"
-                          Content="-  Delete"
-                          Style="{StaticResource GhostButton}"
-                          Click="DeleteDevice_Click"/>
                 </StackPanel>
               </Grid>
 
@@ -341,27 +337,8 @@
                   <Button x:Name="_addWatchButton"
                           Content="+  Add row"
                           Style="{StaticResource AppButton}"
-                          Margin="0,0,8,0"
+                          Margin="0"
                           Click="AddWatch_Click"/>
-                  <TextBox x:Name="_watchBlockStart"
-                           Width="86"
-                           Text="X0"
-                           ToolTip="Block start address"
-                           Margin="0,0,6,0"/>
-                  <TextBox x:Name="_watchBlockCount"
-                           Width="54"
-                           Text="16"
-                           ToolTip="Block point count"
-                           Margin="0,0,8,0"/>
-                  <Button x:Name="_addWatchBlockButton"
-                          Content="+  Block"
-                          Style="{StaticResource AppButton}"
-                          Margin="0,0,8,0"
-                          Click="AddWatchBlock_Click"/>
-                  <Button x:Name="_deleteWatchButton"
-                          Content="-  Delete"
-                          Style="{StaticResource GhostButton}"
-                          Click="DeleteWatch_Click"/>
                 </StackPanel>
               </Grid>
 
@@ -372,7 +349,7 @@
           </Border>
         </TabItem>
 
-        <TabItem x:Name="_trapsTab" Header="Traps">
+        <TabItem x:Name="_trapsTab" Header="Trap">
           <Border Style="{StaticResource PanelBorder}">
             <Grid>
               <Grid.RowDefinitions>
@@ -387,8 +364,8 @@
                   <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <StackPanel Grid.Column="0" Orientation="Vertical" Margin="0,0,20,0">
-                  <TextBlock x:Name="_trapsTitle" Text="Traps" Style="{StaticResource SectionTitle}"/>
-                  <TextBlock x:Name="_trapsMeta" Text="Edit conditions, thresholds, and enabled state." Style="{StaticResource SectionMeta}"/>
+                  <TextBlock x:Name="_trapsTitle" Text="Trap" Style="{StaticResource SectionTitle}"/>
+                  <TextBlock x:Name="_trapsMeta" Text="Edit Trap conditions, thresholds, and enabled state." Style="{StaticResource SectionMeta}"/>
                 </StackPanel>
                 <StackPanel Grid.Column="1"
                             Orientation="Horizontal"
@@ -397,24 +374,20 @@
                   <Button x:Name="_moveTrapUpButton"
                           Content="^  Up"
                           Style="{StaticResource GhostButton}"
-                          ToolTip="Move selected trap rows up. Alt+Up also works."
+                          ToolTip="Move selected Trap rows up. Alt+Up also works."
                           Margin="0,0,8,0"
                           Click="MoveTrapUp_Click"/>
                   <Button x:Name="_moveTrapDownButton"
                           Content="v  Down"
                           Style="{StaticResource GhostButton}"
-                          ToolTip="Move selected trap rows down. Alt+Down also works."
+                          ToolTip="Move selected Trap rows down. Alt+Down also works."
                           Margin="0,0,8,0"
                           Click="MoveTrapDown_Click"/>
                   <Button x:Name="_addTrapButton"
                           Content="+  Add row"
                           Style="{StaticResource AppButton}"
-                          Margin="0,0,8,0"
+                          Margin="0"
                           Click="AddTrap_Click"/>
-                  <Button x:Name="_deleteTrapButton"
-                          Content="-  Delete"
-                          Style="{StaticResource GhostButton}"
-                          Click="DeleteTrap_Click"/>
                 </StackPanel>
               </Grid>
 
@@ -425,7 +398,7 @@
           </Border>
         </TabItem>
 
-        <TabItem x:Name="_projectTab" Header="Project / Connection">
+        <TabItem x:Name="_projectTab" Header="PLC Setting">
           <ScrollViewer VerticalScrollBarVisibility="Auto">
             <Grid>
               <Grid.ColumnDefinitions>
@@ -466,7 +439,7 @@
                   <TextBlock x:Name="_modelLabel" Grid.Row="4" Grid.Column="0" Text="CPU model" Style="{StaticResource FormLabel}" Margin="0,6,14,6"/>
                   <ComboBox x:Name="_model" Grid.Row="4" Grid.Column="1" Margin="0,4,0,4"/>
 
-                  <TextBlock x:Name="_keyenceModeLabel" Grid.Row="5" Grid.Column="0" Text="KEYENCE display" Style="{StaticResource FormLabel}" Margin="0,6,14,6"/>
+                  <TextBlock x:Name="_keyenceModeLabel" Grid.Row="5" Grid.Column="0" Text="Device mode" Style="{StaticResource FormLabel}" Margin="0,6,14,6"/>
                   <ComboBox x:Name="_keyenceMode" Grid.Row="5" Grid.Column="1" Margin="0,4,0,4" ItemTemplate="{StaticResource UppercaseComboBoxItemTemplate}"/>
 
                   <TextBlock x:Name="_supportedDevicesLabel" Grid.Row="6" Grid.Column="0" Text="Supported devices" Style="{StaticResource FormLabel}" Margin="0,6,14,6"/>
@@ -510,7 +483,7 @@
                   <TextBlock x:Name="_connectionModeLabel" Grid.Row="2" Grid.Column="0" Text="Connection mode" Style="{StaticResource FormLabel}" Margin="0,6,14,6"/>
                   <ComboBox x:Name="_connectionMode" Grid.Row="2" Grid.Column="1" Margin="0,4,0,4" ItemTemplate="{StaticResource UppercaseComboBoxItemTemplate}"/>
 
-                  <TextBlock x:Name="_hostLabel" Grid.Row="3" Grid.Column="0" Text="IP address" Style="{StaticResource FormLabel}" Margin="0,6,14,6"/>
+                  <TextBlock x:Name="_hostLabel" Grid.Row="3" Grid.Column="0" Text="PLC IP/host" Style="{StaticResource FormLabel}" Margin="0,6,14,6"/>
                   <TextBox x:Name="_host" Grid.Row="3" Grid.Column="1" Text="192.168.250.100" Margin="0,4,0,4"/>
 
                   <TextBlock x:Name="_portLabel" Grid.Row="4" Grid.Column="0" Text="Port" Style="{StaticResource FormLabel}" Margin="0,6,14,6"/>
@@ -519,7 +492,7 @@
                   <TextBlock x:Name="_transportLabel" Grid.Row="5" Grid.Column="0" Text="Transport" Style="{StaticResource FormLabel}" Margin="0,6,14,6"/>
                   <ComboBox x:Name="_transport" Grid.Row="5" Grid.Column="1" Margin="0,4,0,4" ItemTemplate="{StaticResource UppercaseComboBoxItemTemplate}"/>
 
-                  <TextBlock x:Name="_intervalLabel" Grid.Row="6" Grid.Column="0" Text="Polling interval ms" Style="{StaticResource FormLabel}" Margin="0,6,14,6"/>
+                  <TextBlock x:Name="_intervalLabel" Grid.Row="6" Grid.Column="0" Text="Monitor interval ms" Style="{StaticResource FormLabel}" Margin="0,6,14,6"/>
                   <TextBox x:Name="_interval" Grid.Row="6" Grid.Column="1" Text="500" Margin="0,4,0,4"/>
 
                   <TextBlock x:Name="_timeoutLabel" Grid.Row="7" Grid.Column="0" Text="Timeout ms" Style="{StaticResource FormLabel}" Margin="0,6,14,6"/>
@@ -551,6 +524,55 @@
               </Border>
             </Grid>
           </ScrollViewer>
+        </TabItem>
+
+        <TabItem x:Name="_commentsTab" Header="Comment">
+          <Border Style="{StaticResource PanelBorder}">
+            <Grid>
+              <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="16"/>
+                <RowDefinition Height="*"/>
+              </Grid.RowDefinitions>
+
+              <Grid Grid.Row="0">
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="*"/>
+                  <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0" Orientation="Vertical" Margin="0,0,20,0">
+                  <TextBlock x:Name="_commentsTitle" Text="Comment" Style="{StaticResource SectionTitle}"/>
+                  <TextBlock x:Name="_commentsMeta" Text="Edit comments for each address." Style="{StaticResource SectionMeta}"/>
+                </StackPanel>
+                <StackPanel Grid.Column="1"
+                            Orientation="Horizontal"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Center">
+                  <Button x:Name="_moveCommentUpButton"
+                          Content="^  Up"
+                          Style="{StaticResource GhostButton}"
+                          ToolTip="Move selected Comment rows up. Alt+Up also works."
+                          Margin="0,0,8,0"
+                          Click="MoveCommentUp_Click"/>
+                  <Button x:Name="_moveCommentDownButton"
+                          Content="v  Down"
+                          Style="{StaticResource GhostButton}"
+                          ToolTip="Move selected Comment rows down. Alt+Down also works."
+                          Margin="0,0,8,0"
+                          Click="MoveCommentDown_Click"/>
+                  <Button x:Name="_addCommentButton"
+                          Content="+  Add row"
+                          Style="{StaticResource AppButton}"
+                          Margin="0"
+                          Click="AddComment_Click"/>
+                </StackPanel>
+              </Grid>
+
+              <DataGrid x:Name="_commentsGrid"
+                        Grid.Row="2"
+                        AlternationCount="2"/>
+            </Grid>
+          </Border>
         </TabItem>
       </TabControl>
     </Grid>

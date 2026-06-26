@@ -9,6 +9,7 @@ internal static class ClipboardImport
     [
         "import.alias.boolean.true",
         "import.alias.header.address",
+        "import.alias.header.comment",
         "import.alias.header.condition",
         "import.alias.header.watch",
         "import.alias.trap.change",
@@ -99,6 +100,20 @@ internal static class ClipboardImport
                second.Equals("Data type", StringComparison.OrdinalIgnoreCase);
     }
 
+    internal static bool IsCommentClipboardHeader(IReadOnlyList<string> fields)
+    {
+        if (fields.Count == 0)
+        {
+            return false;
+        }
+
+        var first = fields[0].Trim();
+        var second = fields.Count > 1 ? fields[1].Trim() : "";
+        return MatchesImportAlias(first, "import.alias.header.address") ||
+               MatchesImportAlias(first, "import.alias.header.comment") ||
+               MatchesImportAlias(second, "import.alias.header.comment");
+    }
+
     internal static bool IsDeviceDataTypeField(string text) =>
         ProjectFactory.DeviceDataTypes.Any(dataType => dataType.Equals(text.Trim(), StringComparison.OrdinalIgnoreCase));
 
@@ -140,6 +155,14 @@ internal static class ClipboardImport
                         ?? ImportTrapConditionAlias(normalized)
                         ?? ProjectFactory.DefaultTrapConditionForAddress(address, vendor, keyenceDeviceMode);
         return ProjectFactory.CoerceTrapConditionForAddress(address, condition, vendor, keyenceDeviceMode);
+    }
+
+    internal static bool IsTrapConditionField(string text)
+    {
+        var value = text.Trim();
+        var normalized = NormalizeAlias(value);
+        return ProjectFactory.TrapConditions.Any(item => item.Equals(value, StringComparison.OrdinalIgnoreCase)) ||
+               ImportTrapConditionAlias(normalized) is not null;
     }
 
     internal static bool IsAddressClipboardHeader(IReadOnlyList<string> fields)

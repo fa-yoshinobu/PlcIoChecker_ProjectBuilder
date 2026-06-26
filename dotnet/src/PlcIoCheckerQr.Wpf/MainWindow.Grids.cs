@@ -39,35 +39,39 @@ public partial class MainWindow
     {
         _devicesGrid.ItemsSource = _devices;
         _devicesGrid.PreviewKeyDown += DevicesGrid_PreviewKeyDown;
-        _devicesGrid.Columns.Add(new DataGridTextColumn
-        {
-            Binding = new Binding(nameof(DeviceRow.Address)) { UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged },
-            Width = new DataGridLength(1, DataGridLengthUnitType.Star),
-        });
+        _devicesGrid.CellEditEnding += AddressGrid_CellEditEnding;
+        _devicesGrid.CurrentCellChanged += Grid_CurrentCellChanged;
+        _devicesGrid.LostKeyboardFocus += Grid_LostKeyboardFocus;
+        _devicesGrid.Columns.Add(AddressColumn<DeviceRow>());
         _devicesGrid.Columns.Add(DeviceDataTypeColumn<DeviceRow>());
-        _devicesGrid.Columns.Add(new DataGridTextColumn
-        {
-            Binding = new Binding(nameof(DeviceRow.Comment)) { UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged },
-            Width = new DataGridLength(1.4, DataGridLengthUnitType.Star),
-        });
+        _devicesGrid.Columns.Add(CommentColumn<DeviceRow>());
+
+        _commentsGrid.ItemsSource = _comments;
+        _commentsGrid.PreviewKeyDown += CommentsGrid_PreviewKeyDown;
+        _commentsGrid.CellEditEnding += AddressGrid_CellEditEnding;
+        _commentsGrid.CurrentCellChanged += Grid_CurrentCellChanged;
+        _commentsGrid.LostKeyboardFocus += Grid_LostKeyboardFocus;
+        _commentsGrid.Columns.Add(AddressColumn<CommentRow>());
+        _commentsGrid.Columns.Add(DeviceDataTypeColumn<CommentRow>());
+        _commentsGrid.Columns.Add(CommentColumn<CommentRow>());
 
         _watchGrid.ItemsSource = _watches;
         _watchGrid.PreviewKeyDown += WatchGrid_PreviewKeyDown;
-        _watchGrid.Columns.Add(new DataGridTextColumn
-        {
-            Binding = new Binding(nameof(WatchRow.Address)) { UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged },
-            Width = new DataGridLength(1, DataGridLengthUnitType.Star),
-        });
+        _watchGrid.CellEditEnding += AddressGrid_CellEditEnding;
+        _watchGrid.CurrentCellChanged += Grid_CurrentCellChanged;
+        _watchGrid.LostKeyboardFocus += Grid_LostKeyboardFocus;
+        _watchGrid.Columns.Add(AddressColumn<WatchRow>());
         _watchGrid.Columns.Add(DeviceDataTypeColumn<WatchRow>());
+        _watchGrid.Columns.Add(CommentColumn<WatchRow>());
 
         _trapsGrid.ItemsSource = _traps;
         _trapsGrid.PreviewKeyDown += TrapsGrid_PreviewKeyDown;
-        _trapsGrid.Columns.Add(new DataGridTextColumn
-        {
-            Binding = new Binding(nameof(TrapRow.Address)) { UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged },
-            Width = new DataGridLength(1, DataGridLengthUnitType.Star),
-        });
+        _trapsGrid.CellEditEnding += AddressGrid_CellEditEnding;
+        _trapsGrid.CurrentCellChanged += Grid_CurrentCellChanged;
+        _trapsGrid.LostKeyboardFocus += Grid_LostKeyboardFocus;
+        _trapsGrid.Columns.Add(AddressColumn<TrapRow>());
         _trapsGrid.Columns.Add(DeviceDataTypeColumn<TrapRow>());
+        _trapsGrid.Columns.Add(CommentColumn<TrapRow>());
         _trapsGrid.Columns.Add(new DataGridTemplateColumn
         {
             CellTemplate = TrapConditionCellTemplate(),
@@ -87,11 +91,55 @@ public partial class MainWindow
         });
     }
 
+    private static DataGridTextColumn AddressColumn<T>() where T : DataTypedAddressRow =>
+        new()
+        {
+            Binding = new Binding(nameof(DataTypedAddressRow.Address)) { UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged },
+            ElementStyle = UnsupportedDeviceTextStyle<TextBlock>(TextBlock.ForegroundProperty, TextBlock.FontWeightProperty),
+            EditingElementStyle = UnsupportedDeviceTextStyle<TextBox>(TextBox.ForegroundProperty, Control.FontWeightProperty),
+            Width = new DataGridLength(1, DataGridLengthUnitType.Star),
+        };
+
+    private static DataGridTextColumn CommentColumn<T>() where T : DataTypedAddressRow =>
+        new()
+        {
+            Binding = new Binding(nameof(DataTypedAddressRow.Comment)) { UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged },
+            Width = new DataGridLength(1.5, DataGridLengthUnitType.Star),
+        };
+
+    private static Style UnsupportedDeviceTextStyle<T>(
+        DependencyProperty foregroundProperty,
+        DependencyProperty fontWeightProperty) where T : FrameworkElement
+    {
+        var style = new Style(typeof(T), Application.Current.TryFindResource(typeof(T)) as Style);
+        if (typeof(T) == typeof(TextBox))
+        {
+            style.Setters.Add(new Setter(FrameworkElement.MinHeightProperty, 0d));
+            style.Setters.Add(new Setter(Control.PaddingProperty, new Thickness(0)));
+            style.Setters.Add(new Setter(Control.BorderThicknessProperty, new Thickness(0)));
+            style.Setters.Add(new Setter(Control.VerticalContentAlignmentProperty, VerticalAlignment.Center));
+        }
+
+        style.Triggers.Add(new DataTrigger
+        {
+            Binding = new Binding(nameof(DataTypedAddressRow.IsUnsupportedDevice)),
+            Value = true,
+            Setters =
+            {
+                new Setter(foregroundProperty, new DynamicResourceExtension("ErrorFg")),
+                new Setter(fontWeightProperty, FontWeights.SemiBold),
+            },
+        });
+
+        return style;
+    }
+
     private static DataGridTemplateColumn DeviceDataTypeColumn<T>() where T : DataTypedAddressRow =>
         new()
         {
             CellTemplate = DeviceDataTypeCellTemplate<T>(),
             CellEditingTemplate = DeviceDataTypeEditingTemplate<T>(),
+            SortMemberPath = nameof(DataTypedAddressRow.DataType),
             Width = new DataGridLength(170),
         };
 

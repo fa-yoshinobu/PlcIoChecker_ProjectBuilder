@@ -148,6 +148,61 @@ public sealed class ProjectQrPayloadTests
     }
 
     [Fact]
+    public void ProjectFactoryStoresCommentTabRowsInDeviceMeta()
+    {
+        var project = ProjectFactory.MakeProject(ProjectInputBuilder.MakeInput(
+            DevicesText: "",
+            WatchText: "D100",
+            TrapsText: "D101,Change,,true",
+            CommentsText: "D100,Watch comment\r\nD101,Trap comment"));
+
+        var json = Encoding.UTF8.GetString(ProjectQrPayload.ProjectJsonBytes(project));
+        using var document = JsonDocument.Parse(json);
+        var deviceMeta = document.RootElement.GetProperty("deviceMeta");
+        Assert.Equal("D100", deviceMeta[0].GetProperty("address").GetString());
+        Assert.Equal("Watch comment", deviceMeta[0].GetProperty("comment").GetString());
+        Assert.Equal("D101", deviceMeta[1].GetProperty("address").GetString());
+        Assert.Equal("Trap comment", deviceMeta[1].GetProperty("comment").GetString());
+    }
+
+    [Fact]
+    public void ProjectFactoryPrefersCommentTabRowsOverLegacyListComments()
+    {
+        var project = ProjectFactory.MakeProject(ProjectInputBuilder.MakeInput(
+            DevicesText: "D100,Int16,Legacy comment",
+            WatchText: "",
+            TrapsText: "",
+            CommentsText: "D100,Comment tab value"));
+
+        Assert.Equal("Comment tab value", project.Devices.Single().Comment);
+
+        var json = Encoding.UTF8.GetString(ProjectQrPayload.ProjectJsonBytes(project));
+        using var document = JsonDocument.Parse(json);
+        Assert.Equal("Comment tab value", document.RootElement
+            .GetProperty("deviceMeta")[0]
+            .GetProperty("comment")
+            .GetString());
+    }
+
+    [Fact]
+    public void ProjectFactoryEmitsCommentOnlyRowsAsDeviceMeta()
+    {
+        var project = ProjectFactory.MakeProject(ProjectInputBuilder.MakeInput(
+            DevicesText: "",
+            WatchText: "",
+            TrapsText: "",
+            CommentsText: "D100,Comment only"));
+
+        var json = Encoding.UTF8.GetString(ProjectQrPayload.ProjectJsonBytes(project));
+        using var document = JsonDocument.Parse(json);
+        var deviceMeta = document.RootElement.GetProperty("deviceMeta");
+        Assert.Single(deviceMeta.EnumerateArray());
+        Assert.Equal("D100", deviceMeta[0].GetProperty("address").GetString());
+        Assert.Equal("INT16", deviceMeta[0].GetProperty("dataType").GetString());
+        Assert.Equal("Comment only", deviceMeta[0].GetProperty("comment").GetString());
+    }
+
+    [Fact]
     public void ProjectFactoryCommonizesDeviceDataTypesByAddress()
     {
         var project = ProjectFactory.MakeProject(ProjectInputBuilder.MakeInput(
@@ -276,13 +331,18 @@ public sealed class ProjectQrPayloadTests
     [InlineData("Melsec", "Normal", "DM100")]
     [InlineData("Melsec", "Normal", "TS0")]
     [InlineData("Melsec", "Normal", "CN0")]
+    [InlineData("Melsec", "Normal", "V0")]
+    [InlineData("Melsec", "Normal", "DX0")]
+    [InlineData("Melsec", "Normal", "TN0")]
     [InlineData("Melsec", "Normal", @"U3E0\G10")]
     [InlineData("Keyence", "Normal", "D100")]
     [InlineData("Keyence", "Normal", "X0")]
     [InlineData("Keyence", "Normal", "VB0")]
+    [InlineData("Keyence", "Normal", "Z0")]
     [InlineData("Keyence", "Xym", "DM100")]
     [InlineData("Keyence", "Xym", "MR000")]
     [InlineData("Keyence", "Xym", "R100")]
+    [InlineData("Keyence", "Xym", "VB0")]
     public void ProjectFactoryRejectsDeviceNamesUnsupportedByMobileApps(
         string vendor,
         string keyenceDeviceMode,
@@ -303,8 +363,11 @@ public sealed class ProjectQrPayloadTests
     [InlineData("Melsec", "Normal", "iQ-F", "X78")]
     [InlineData("Keyence", "Normal", "KV-8000", "R016")]
     [InlineData("Keyence", "Normal", "KV-8000", "CR7916")]
+    [InlineData("Keyence", "Normal", "KV-8000", "DM65535")]
+    [InlineData("Keyence", "Normal", "KV-8000", "B8000")]
     [InlineData("Keyence", "Xym", "KV-8000", "X3A0")]
     [InlineData("Keyence", "Xym", "KV-8000", "Y19A0")]
+    [InlineData("Keyence", "Xym", "KV-8000", "X20000")]
     public void ProjectFactoryRejectsInvalidDeviceAddressNumberFormats(
         string vendor,
         string keyenceDeviceMode,
@@ -346,6 +409,9 @@ public sealed class ProjectQrPayloadTests
             ["X", "Y", "M", "D", "L", "F", "B", "SB", "SM", "STC", "TC", "CC", "W", "SW", "R", "ZR", "SD"],
             ProjectFactory.SupportedDeviceNames("Melsec"));
         Assert.Equal(
+            ["X", "Y", "M", "D", "L", "F", "B", "SB", "SM", "STC", "TC", "CC", "W", "SW", "R", "ZR", "SD"],
+            ProjectFactory.SupportedDeviceNames("Melsec", "Normal", "iQ-F"));
+        Assert.Equal(
             ["R", "B", "MR", "LR", "CR", "DM", "EM", "FM", "ZF", "W", "TM", "CM"],
             ProjectFactory.SupportedDeviceNames("Keyence", "Normal"));
         Assert.Equal(
@@ -354,14 +420,15 @@ public sealed class ProjectQrPayloadTests
     }
 
     [Theory]
-    [InlineData("Keyence", "Normal", "DM100", "Int16")]
-    [InlineData("Keyence", "Xym", "D100", "Int16")]
-    [InlineData("Keyence", "Xym", "X0", "Bit")]
+    [InlineData("Keyence", "Normal", "DM100", "Int16", "DM100")]
+    [InlineData("Keyence", "Xym", "D100", "Int16", "D100")]
+    [InlineData("Keyence", "Xym", "X0", "Bit", "X00")]
     public void ProjectFactoryAllowsDeviceFamiliesSupportedBySelectedKeyenceMode(
         string vendor,
         string keyenceDeviceMode,
         string address,
-        string expectedDataType)
+        string expectedDataType,
+        string expectedAddress)
     {
         var project = ProjectFactory.MakeProject(ProjectInputBuilder.MakeInput(
             Vendor: vendor,
@@ -371,7 +438,7 @@ public sealed class ProjectQrPayloadTests
             TrapsText: ""));
 
         Assert.Equal(expectedDataType, project.Devices.Single().DataType);
-        Assert.Equal(address, project.TimeChart.Single().Address);
+        Assert.Equal(expectedAddress, project.TimeChart.Single().Address);
     }
 
     [Fact]
@@ -392,6 +459,10 @@ public sealed class ProjectQrPayloadTests
         Assert.Equal(
             ["X00", "X01", "X02", "X03", "X04", "X05", "X06", "X07", "X08", "X09", "X0A", "X0B", "X0C", "X0D", "X0E", "X0F", "X10"],
             ProjectFactory.BuildDeviceBlock("X0", 17, "Keyence", "Xym"));
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            ProjectFactory.BuildDeviceBlock("X1999F", 2, "Keyence", "Xym"));
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            ProjectFactory.BuildDeviceBlock("R199915", 2, "Keyence", "Normal"));
     }
 
     [Theory]
@@ -411,7 +482,10 @@ public sealed class ProjectQrPayloadTests
     public void ProjectFactoryReportsAvailableDataTypesByDeviceKind()
     {
         Assert.Equal(["Bit"], ProjectFactory.DeviceDataTypesForAddress("X0", "Melsec"));
+        Assert.Equal(["Bit"], ProjectFactory.DeviceDataTypesForAddress("STC0", "Melsec"));
+        Assert.Equal(["Bit"], ProjectFactory.DeviceDataTypesForAddress("X39F", "Keyence", "Xym"));
         Assert.DoesNotContain("Bit", ProjectFactory.DeviceDataTypesForAddress("D0", "Melsec"));
+        Assert.DoesNotContain("Bit", ProjectFactory.DeviceDataTypesForAddress("SD0", "Melsec"));
     }
 
     private static PlcProject SampleProject() => ProjectFactory.MakeProject(new ProjectInput(

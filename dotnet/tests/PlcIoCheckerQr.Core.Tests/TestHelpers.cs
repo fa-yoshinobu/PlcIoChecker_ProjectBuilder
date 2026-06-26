@@ -21,7 +21,8 @@ internal static class ProjectInputBuilder
         int Multidrop = 0,
         string DevicesText = "D100",
         string WatchText = "",
-        string TrapsText = "") => new(
+        string TrapsText = "",
+        string CommentsText = "") => new(
         Name: Name,
         Vendor: Vendor,
         ConnectionMode: ConnectionMode,
@@ -38,5 +39,6 @@ internal static class ProjectInputBuilder
         Multidrop: Multidrop,
         DevicesText: DevicesText,
         WatchText: WatchText,
-        TrapsText: TrapsText);
+        TrapsText: TrapsText,
+        CommentsText: CommentsText);
 }

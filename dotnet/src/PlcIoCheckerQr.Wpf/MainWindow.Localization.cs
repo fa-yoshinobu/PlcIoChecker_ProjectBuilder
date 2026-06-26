@@ -48,31 +48,35 @@ public partial class MainWindow
         UpdateAutoQrUi();
 
         _devicesTab.Header = T("tab.devices");
+        _commentsTab.Header = T("tab.comments");
         _watchTab.Header = T("tab.watch");
         _trapsTab.Header = T("tab.traps");
         _projectTab.Header = T("tab.project");
 
         _devicesTitle.Text = T("section.devices.title");
         _devicesMeta.Text = T("section.devices.meta");
+        _commentsTitle.Text = T("section.comments.title");
+        _commentsMeta.Text = T("section.comments.meta");
         _watchTitle.Text = T("section.watch.title");
         _watchMeta.Text = Tf("section.watch.meta", ProjectFactory.MaxTimeChartTargets);
         _trapsTitle.Text = T("section.traps.title");
         _trapsMeta.Text = Tf("section.traps.meta", ProjectFactory.MaxTrapDefinitions);
 
-        _moveDeviceUpButton.Content = _moveWatchUpButton.Content = _moveTrapUpButton.Content = T("button.up");
-        _moveDeviceDownButton.Content = _moveWatchDownButton.Content = _moveTrapDownButton.Content = T("button.down");
-        _addDeviceButton.Content = _addWatchButton.Content = _addTrapButton.Content = T("button.addRow");
-        _addDeviceBlockButton.Content = _addWatchBlockButton.Content = T("button.addBlock");
-        _deleteDeviceButton.Content = _deleteWatchButton.Content = _deleteTrapButton.Content = T("button.delete");
+        _moveDeviceUpButton.Content = _moveCommentUpButton.Content = _moveWatchUpButton.Content = _moveTrapUpButton.Content = T("button.up");
+        _moveDeviceDownButton.Content = _moveCommentDownButton.Content = _moveWatchDownButton.Content = _moveTrapDownButton.Content = T("button.down");
+        _addDeviceButton.Content = _addCommentButton.Content = _addWatchButton.Content = _addTrapButton.Content = T("button.addRow");
+        _addDeviceBlockButton.Content = T("button.addBlock");
 
         _moveDeviceUpButton.ToolTip = T("tooltip.moveDeviceUp");
         _moveDeviceDownButton.ToolTip = T("tooltip.moveDeviceDown");
+        _moveCommentUpButton.ToolTip = T("tooltip.moveCommentUp");
+        _moveCommentDownButton.ToolTip = T("tooltip.moveCommentDown");
         _moveWatchUpButton.ToolTip = T("tooltip.moveWatchUp");
         _moveWatchDownButton.ToolTip = T("tooltip.moveWatchDown");
         _moveTrapUpButton.ToolTip = T("tooltip.moveTrapUp");
         _moveTrapDownButton.ToolTip = T("tooltip.moveTrapDown");
-        _deviceBlockStart.ToolTip = _watchBlockStart.ToolTip = T("tooltip.blockStart");
-        _deviceBlockCount.ToolTip = _watchBlockCount.ToolTip = T("tooltip.blockCount");
+        _deviceBlockStart.ToolTip = T("tooltip.blockStart");
+        _deviceBlockCount.ToolTip = T("tooltip.blockCount");
 
         _projectSectionTitle.Text = T("section.project.title");
         _projectSectionMeta.Text = T("section.project.meta");
@@ -97,6 +101,7 @@ public partial class MainWindow
         _resetRoutingDefaultsButton.Content = T("button.resetRoutingDefaults");
 
         _devicesGrid.ToolTip = T("tooltip.devicesGrid");
+        _commentsGrid.ToolTip = T("tooltip.commentsGrid");
         _watchGrid.ToolTip = T("tooltip.watchGrid");
         _trapsGrid.ToolTip = T("tooltip.trapsGrid");
         if (_devicesGrid.Columns.Count >= 3)
@@ -106,19 +111,28 @@ public partial class MainWindow
             _devicesGrid.Columns[2].Header = T("column.comment");
         }
 
-        if (_watchGrid.Columns.Count >= 2)
+        if (_commentsGrid.Columns.Count >= 3)
+        {
+            _commentsGrid.Columns[0].Header = T("column.address");
+            _commentsGrid.Columns[1].Header = T("column.dataType");
+            _commentsGrid.Columns[2].Header = T("column.comment");
+        }
+
+        if (_watchGrid.Columns.Count >= 3)
         {
             _watchGrid.Columns[0].Header = T("column.address");
             _watchGrid.Columns[1].Header = T("column.dataType");
+            _watchGrid.Columns[2].Header = T("column.comment");
         }
 
-        if (_trapsGrid.Columns.Count >= 5)
+        if (_trapsGrid.Columns.Count >= 6)
         {
             _trapsGrid.Columns[0].Header = T("column.address");
             _trapsGrid.Columns[1].Header = T("column.dataType");
-            _trapsGrid.Columns[2].Header = T("column.condition");
-            _trapsGrid.Columns[3].Header = T("column.threshold");
-            _trapsGrid.Columns[4].Header = T("column.enabled");
+            _trapsGrid.Columns[2].Header = T("column.comment");
+            _trapsGrid.Columns[3].Header = T("column.condition");
+            _trapsGrid.Columns[4].Header = T("column.threshold");
+            _trapsGrid.Columns[5].Header = T("column.enabled");
         }
 
         _trapsGrid.Items.Refresh();
