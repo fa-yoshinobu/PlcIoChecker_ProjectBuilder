@@ -104,8 +104,16 @@ public partial class MainWindow
         new()
         {
             Binding = new Binding(nameof(DataTypedAddressRow.Comment)) { UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged },
+            EditingElementStyle = CommentTextBoxStyle(),
             Width = new DataGridLength(1.5, DataGridLengthUnitType.Star),
         };
+
+    private static Style CommentTextBoxStyle()
+    {
+        var style = new Style(typeof(TextBox), Application.Current.TryFindResource(typeof(TextBox)) as Style);
+        style.Setters.Add(new Setter(TextBox.MaxLengthProperty, ProjectCommentRules.MaxCommentCharacters));
+        return style;
+    }
 
     private static Style UnsupportedDeviceTextStyle<T>(
         DependencyProperty foregroundProperty,

@@ -1,3 +1,4 @@
+using PlcIoCheckerQr.Core;
 using PlcIoCheckerQr.Wpf;
 
 namespace PlcIoCheckerQr.Wpf.Tests;
@@ -60,6 +61,14 @@ public sealed class ClipboardImportTests
     public void NormalizeDeviceCommentCollapsesLineBreaks(string input, string expected)
     {
         Assert.Equal(expected, ClipboardImport.NormalizeDeviceComment(input));
+    }
+
+    [Fact]
+    public void NormalizeDeviceCommentRejectsOverMaxComment()
+    {
+        var comment = new string('あ', ProjectCommentRules.MaxCommentCharacters + 1);
+
+        Assert.Throws<ArgumentException>(() => ClipboardImport.NormalizeDeviceComment(comment));
     }
 
     [Fact]

@@ -13,7 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - `Tests`: テスト、fixture、検証データ。
 - `Tooling`: ビルド、CLI、開発補助。
 
-## [Unreleased] - 2026-06-26
+## [Unreleased] - 2026-06-27
 
 ### Changed
 
@@ -29,11 +29,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - App: 行削除はグリッド行を明確に選択しているときだけ Delete キーで実行されるようにし、コメント編集中の文字削除と衝突しないようにしました。
 - Data: 同じアドレスのコメントと表示型が List / Time Chart / Trap / Comment でずれないよう、ProjectBuilder 内部でもアドレス単位で共通化しました。
 - Data: List / Time Chart / Trap にコメント列を追加し、貼り付けたコメントを `deviceMeta` に反映するようにしました。
+- Data: コメントを最大1024文字に制限し、GUI入力、貼り付け、Project JSON / QR 出力で同じ上限を適用するようにしました。
+- Data: コメント保存時の改行を空白へ正規化し、コメントを1行コメントとして扱うようにしました。
 - Data: スマホアプリで使えないデバイスは受け付けず、入力中に正規化とエラー表示を行うようにしました。
 - Docs: README、Build、GUI 要件、QR / Project JSON 仕様書を現在の schema v1 / `PLCIOC1` / List / Trap 表記に合わせました。
 
 ### Added
 
 - Tests: `deviceMeta` 形式、schema v1、`PLCIOC1|ZSTD` の出力を確認する Core テストを追加・更新しました。
-- Tests: モバイル対応デバイス、アドレス正規化、データ型共有、Trap 条件の Core テストを追加・更新しました。
+- Tests: モバイル対応デバイス、アドレス正規化、データ型共有、コメント1024文字制限、Trap 条件の Core テストを追加・更新しました。
 - Tests: Excel 貼り付けパーサーとヘッダー判定の WPF テストを追加しました。

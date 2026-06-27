@@ -547,9 +547,7 @@ public static partial class ProjectFactory
             : NormalizeDeviceComment(string.Join(",", parts.Skip(startIndex)));
 
     private static string NormalizeDeviceComment(string text) =>
-        text.Replace("\r", " ", StringComparison.Ordinal)
-            .Replace("\n", " ", StringComparison.Ordinal)
-            .Trim();
+        ProjectCommentRules.Normalize(text);
 
     public static string Slugify(string text, string fallback = "plc-project")
     {

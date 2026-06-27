@@ -230,9 +230,7 @@ internal static class ClipboardImport
     }
 
     internal static string NormalizeDeviceComment(string text) =>
-        text.Replace("\r", " ", StringComparison.Ordinal)
-            .Replace("\n", " ", StringComparison.Ordinal)
-            .Trim();
+        ProjectCommentRules.Normalize(text);
 
     internal static bool ParseClipboardBoolean(string text)
     {

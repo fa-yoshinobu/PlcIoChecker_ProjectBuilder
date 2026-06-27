@@ -54,6 +54,7 @@ JSON structure and selection values:
 Do not emit removed project keys, UI-only preferences, or runtime trap values.
 Store comments and data types once per address in `deviceMeta`; keep
 `deviceList`, `timeChart`, and `traps` scoped to their own registration data.
+Comments are normalized to one line and limited to 1024 characters.
 
 Use uppercase schema enum values in JSON:
 

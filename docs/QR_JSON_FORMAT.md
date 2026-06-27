@@ -38,6 +38,7 @@ version). Importers must not treat this as project identity.
 
 `deviceList` and `timeChart` entries contain only `address`.
 `deviceMeta` entries contain `address`, `dataType`, and optional `comment`.
+Comments are normalized to one line and must be 1024 characters or fewer.
 Trap entries contain `id`, `enabled`, `address`, `condition`, and
 `comparisonValue`; trap data types are resolved through `deviceMeta`.
 

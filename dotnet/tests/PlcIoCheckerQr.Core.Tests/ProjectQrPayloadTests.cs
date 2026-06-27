@@ -83,6 +83,17 @@ public sealed class ProjectQrPayloadTests
     }
 
     [Fact]
+    public void ProjectFactoryRejectsOverMaxComment()
+    {
+        var comment = new string('あ', ProjectCommentRules.MaxCommentCharacters + 1);
+
+        Assert.Throws<ArgumentException>(() => ProjectFactory.MakeProject(ProjectInputBuilder.MakeInput(
+            Name: "Comment Limit",
+            Vendor: "Melsec",
+            DevicesText: $"D100,Int16,{comment}")));
+    }
+
+    [Fact]
     public void ProjectFactoryMapsDisplayModelLabelsToCanonicalJsonLabels()
     {
         Assert.Equal("melsec:iq-r", ProjectFactory.ToCanonicalMachineLabel("Melsec", "iQ-R"));
