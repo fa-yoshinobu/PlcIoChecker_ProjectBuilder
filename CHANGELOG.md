@@ -32,6 +32,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Data: コメントを最大1024文字に制限し、GUI入力、貼り付け、Project JSON / QR 出力で同じ上限を適用するようにしました。
 - Data: コメント保存時の改行を空白へ正規化し、コメントを1行コメントとして扱うようにしました。
 - Data: スマホアプリで使えないデバイスは受け付けず、入力中に正規化とエラー表示を行うようにしました。
+- Data: KEYENCE XYM の X/Y アドレス生成を Android/iOS と同じ `X0` から `XF`、`X10` の表記に揃えました。
 - Docs: README、Build、GUI 要件、QR / Project JSON 仕様書を現在の schema v1 / `PLCIOC1` / List / Trap 表記に合わせました。
 
 ### Added

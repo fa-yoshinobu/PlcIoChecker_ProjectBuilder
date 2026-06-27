@@ -913,7 +913,9 @@ public static partial class ProjectFactory
     {
         var bank = logicalNumber / 16;
         var bit = logicalNumber % 16;
-        return bank.ToString(CultureInfo.InvariantCulture) + bit.ToString("X", CultureInfo.InvariantCulture);
+        return bank == 0
+            ? bit.ToString("X", CultureInfo.InvariantCulture)
+            : bank.ToString(CultureInfo.InvariantCulture) + bit.ToString("X", CultureInfo.InvariantCulture);
     }
 
     private static DeviceFamilyRule Bit(

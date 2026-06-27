@@ -436,7 +436,7 @@ public sealed class ProjectQrPayloadTests
     [Theory]
     [InlineData("Keyence", "Normal", "DM100", "Int16", "DM100")]
     [InlineData("Keyence", "Xym", "D100", "Int16", "D100")]
-    [InlineData("Keyence", "Xym", "X0", "Bit", "X00")]
+    [InlineData("Keyence", "Xym", "X0", "Bit", "X0")]
     public void ProjectFactoryAllowsDeviceFamiliesSupportedBySelectedKeyenceMode(
         string vendor,
         string keyenceDeviceMode,
@@ -471,7 +471,7 @@ public sealed class ProjectQrPayloadTests
             ["R015", "R100"],
             ProjectFactory.BuildDeviceBlock("R015", 2, "Keyence", "Normal"));
         Assert.Equal(
-            ["X00", "X01", "X02", "X03", "X04", "X05", "X06", "X07", "X08", "X09", "X0A", "X0B", "X0C", "X0D", "X0E", "X0F", "X10"],
+            ["X0", "X1", "X2", "X3", "X4", "X5", "X6", "X7", "X8", "X9", "XA", "XB", "XC", "XD", "XE", "XF", "X10"],
             ProjectFactory.BuildDeviceBlock("X0", 17, "Keyence", "Xym"));
         Assert.Throws<ArgumentOutOfRangeException>(() =>
             ProjectFactory.BuildDeviceBlock("X1999F", 2, "Keyence", "Xym"));
