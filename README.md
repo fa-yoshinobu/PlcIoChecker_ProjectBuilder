@@ -59,12 +59,18 @@ The supported desktop implementation is the .NET WPF app.
    - Rows can be pasted from Excel.
    - Columns are `Address / Data type / Comment`.
 4. Register graph targets in `Time Chart`.
+   - Pasted columns are `Address / Data type / Comment`.
    - Up to 20 channels can be imported.
 5. Register trigger rules in `Trap`.
+   - Pasted columns are `Address / Data type / Comment / Condition / Threshold / Enabled`.
    - Examples: rising edge, change, greater than or equal.
    - Up to 20 traps can be imported.
 6. Save JSON or generate QR pages.
 7. In the Android/iOS app, open `QR Import` and scan the displayed QR pages in order.
+
+Clipboard import uses canonical values only. Data type and trap condition must be
+explicit; localized aliases, guessed data types, and implicit trap conditions are
+not accepted.
 
 For multi-page QR output, import completes after the mobile app has scanned every page.
 

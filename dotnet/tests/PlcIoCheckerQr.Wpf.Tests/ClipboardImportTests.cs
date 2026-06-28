@@ -6,23 +6,27 @@ namespace PlcIoCheckerQr.Wpf.Tests;
 public sealed class ClipboardImportTests
 {
     [Theory]
-    [InlineData("1", true)]
     [InlineData("true", true)]
     [InlineData("TRUE", true)]
-    [InlineData("yes", true)]
-    [InlineData("on", true)]
-    [InlineData("checked", true)]
-    [InlineData("有効", true)]
-    [InlineData("○", true)]
-    [InlineData("〇", true)]
     [InlineData("  true  ", true)]
-    [InlineData("0", false)]
     [InlineData("false", false)]
-    [InlineData("no", false)]
-    [InlineData("", false)]
-    public void ParseClipboardBooleanHandlesAllAliases(string input, bool expected)
+    [InlineData("FALSE", false)]
+    public void ParseClipboardBooleanHandlesCanonicalValues(string input, bool expected)
     {
         Assert.Equal(expected, ClipboardImport.ParseClipboardBoolean(input));
+    }
+
+    [Theory]
+    [InlineData("1")]
+    [InlineData("yes")]
+    [InlineData("on")]
+    [InlineData("checked")]
+    [InlineData("有効")]
+    [InlineData("○")]
+    [InlineData("")]
+    public void ParseClipboardBooleanRejectsAliases(string input)
+    {
+        Assert.Throws<ArgumentException>(() => ClipboardImport.ParseClipboardBoolean(input));
     }
 
     [Fact]
@@ -101,7 +105,7 @@ public sealed class ClipboardImportTests
 
     [Theory]
     [InlineData("Address\tData type", true)]
-    [InlineData("アドレス\tデータ型", true)]
+    [InlineData("アドレス\tデータ型", false)]
     [InlineData("D100\tInt16", false)]
     [InlineData("", false)]
     public void IsDeviceClipboardHeaderDetectsHeaders(string line, bool expected)
@@ -121,12 +125,12 @@ public sealed class ClipboardImportTests
     public void IsDeviceClipboardHeaderDetectsJapaneseDataTypeColumnAsHeader()
     {
         var fields = ClipboardImport.SplitClipboardLine("X\tデータ型\tY");
-        Assert.True(ClipboardImport.IsDeviceClipboardHeader(fields));
+        Assert.False(ClipboardImport.IsDeviceClipboardHeader(fields));
     }
 
     [Theory]
     [InlineData("Address\tComment", true)]
-    [InlineData("アドレス\tコメント", true)]
+    [InlineData("アドレス\tコメント", false)]
     [InlineData("D100\tSpeed word", false)]
     public void IsCommentClipboardHeaderDetectsHeaders(string line, bool expected)
     {
@@ -136,8 +140,9 @@ public sealed class ClipboardImportTests
 
     [Theory]
     [InlineData("Address", true)]
-    [InlineData("アドレス", true)]
-    [InlineData("タイムチャート", true)]
+    [InlineData("アドレス", false)]
+    [InlineData("タイムチャート", false)]
+    [InlineData("Time chart", true)]
     [InlineData("D100", false)]
     public void IsAddressClipboardHeaderDetectsHeaders(string first, bool expected)
     {
@@ -153,20 +158,34 @@ public sealed class ClipboardImportTests
     [Fact]
     public void IsTrapClipboardHeaderDetectsHeaderOnFirstOrSecondColumn()
     {
-        Assert.True(ClipboardImport.IsTrapClipboardHeader(["アドレス"]));
-        Assert.True(ClipboardImport.IsTrapClipboardHeader(["D100", "検知条件"]));
+        Assert.True(ClipboardImport.IsTrapClipboardHeader(["Address"]));
+        Assert.True(ClipboardImport.IsTrapClipboardHeader(["D100", "Condition"]));
+        Assert.False(ClipboardImport.IsTrapClipboardHeader(["アドレス"]));
+        Assert.False(ClipboardImport.IsTrapClipboardHeader(["D100", "検知条件"]));
         Assert.False(ClipboardImport.IsTrapClipboardHeader(["D100", "Int16"]));
         Assert.False(ClipboardImport.IsTrapClipboardHeader([]));
     }
 
     [Fact]
-    public void LoadImportAliasesIncludesEnglishAndJapaneseAliases()
+    public void NormalizeDeviceDataTypeRejectsUnsupportedValues()
     {
-        var aliases = ClipboardImport.LoadImportAliases();
-        Assert.True(aliases.ContainsKey("import.alias.boolean.true"));
-        var boolAliases = aliases["import.alias.boolean.true"];
-        Assert.Contains("1", boolAliases);
-        Assert.Contains("有効", boolAliases, StringComparer.OrdinalIgnoreCase);
-        Assert.Contains("○", boolAliases);
+        Assert.Throws<ArgumentException>(() =>
+            ClipboardImport.NormalizeDeviceDataType("", "D100", "Melsec", "Normal"));
+        Assert.Throws<ArgumentException>(() =>
+            ClipboardImport.NormalizeDeviceDataType("Bit", "D100", "Melsec", "Normal"));
+        Assert.Throws<ArgumentException>(() =>
+            ClipboardImport.NormalizeDeviceDataType("Int16", "X0", "Melsec", "Normal"));
+    }
+
+    [Fact]
+    public void NormalizeTrapConditionRejectsAliasesAndWrongAddressKinds()
+    {
+        Assert.Equal("Rise", ClipboardImport.NormalizeTrapCondition("Rise", "X0", "Melsec", "Normal"));
+        Assert.Throws<ArgumentException>(() =>
+            ClipboardImport.NormalizeTrapCondition("立上り", "X0", "Melsec", "Normal"));
+        Assert.Throws<ArgumentException>(() =>
+            ClipboardImport.NormalizeTrapCondition("", "X0", "Melsec", "Normal"));
+        Assert.Throws<ArgumentException>(() =>
+            ClipboardImport.NormalizeTrapCondition("GreaterOrEqual", "X0", "Melsec", "Normal"));
     }
 }

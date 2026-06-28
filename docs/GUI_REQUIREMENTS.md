@@ -20,6 +20,10 @@ The main screen should prioritize:
 
 These are the project settings users need to enter and edit most often.
 
+Clipboard paste should use explicit canonical values. Do not silently accept
+localized aliases, guess missing data types, or apply default trap conditions for
+clipboard data.
+
 ## Supporting Workflows
 
 These settings are necessary, but they are not the product focus:

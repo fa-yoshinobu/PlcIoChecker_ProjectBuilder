@@ -53,8 +53,8 @@ public partial class MainWindow
             throw new ArgumentException(T("error.invalidHost"));
         }
 
-        var intervalMs = ParseRange(_interval, fallback: 500, min: 50, max: 60000);
-        var timeoutMs = ParseRange(_timeout, fallback: 2000, min: 100, max: 60000);
+        var intervalMs = ParseRange(_interval, min: 50, max: 60000);
+        var timeoutMs = ParseRange(_timeout, min: 100, max: 60000);
         if (timeoutMs < intervalMs)
         {
             throw new ArgumentException(T("error.timeoutShorterThanInterval"));
@@ -65,16 +65,16 @@ public partial class MainWindow
             Vendor: Selected(_vendor),
             ConnectionMode: Selected(_connectionMode),
             Host: host,
-            Port: ParseRange(_port, fallback: 1025, min: 1, max: 65535),
+            Port: ParseRange(_port, min: 1, max: 65535),
             MonitorIntervalMs: intervalMs,
             TimeoutMs: timeoutMs,
             MachineLabel: Selected(_model),
             KeyenceDeviceMode: Selected(_keyenceMode),
             TransportMode: Selected(_transport),
-            Network: ParseRange(_network, fallback: 0, min: 0, max: 255),
-            Station: ParseRange(_station, fallback: 255, min: 0, max: 255),
-            ModuleIo: ParseHexRange(_moduleIo, fallback: 0x03FF, min: 0, max: 0xFFFF, width: 4),
-            Multidrop: ParseHexRange(_multidrop, fallback: 0, min: 0, max: 0xFF, width: 2),
+            Network: ParseRange(_network, min: 0, max: 255),
+            Station: ParseRange(_station, min: 0, max: 255),
+            ModuleIo: ParseHexRange(_moduleIo, min: 0, max: 0xFFFF, width: 4),
+            Multidrop: ParseHexRange(_multidrop, min: 0, max: 0xFF, width: 2),
             DevicesText: DevicesText(),
             WatchText: WatchText(),
             TrapsText: TrapsText(),
@@ -271,10 +271,10 @@ public partial class MainWindow
         switch (parts[0])
         {
             case "chunk":
-                _chunkSize = Clamp(ParseInt(parts[1], _chunkSize), 200, 2400);
+                _chunkSize = Clamp(ParseInt(parts[1]), 200, 2400);
                 break;
             case "size":
-                _displaySize = Clamp(ParseInt(parts[1], _displaySize), 240, 1200);
+                _displaySize = Clamp(ParseInt(parts[1]), 240, 1200);
                 break;
             case "ec":
                 _errorCorrection = parts[1] is "M" or "Q" or "H" ? parts[1] : "L";
@@ -324,7 +324,14 @@ public partial class MainWindow
             return;
         }
 
-        StartAutoQr();
+        try
+        {
+            StartAutoQr();
+        }
+        catch (FormatException ex)
+        {
+            SetStatus(ex.Message, isError: true);
+        }
     }
 
     private void AutoQrTimer_Tick(object? sender, EventArgs e)
@@ -349,7 +356,6 @@ public partial class MainWindow
 
         var seconds = ParseDoubleRange(
             _autoQrSeconds,
-            fallback: DefaultAutoQrIntervalSeconds,
             min: MinAutoQrIntervalSeconds,
             max: MaxAutoQrIntervalSeconds);
         var timerSeconds = Math.Max(seconds, MinDispatcherTimerSeconds);
