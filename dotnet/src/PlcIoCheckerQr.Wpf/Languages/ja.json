@@ -107,6 +107,8 @@
   "section.watch.meta": "モバイルアプリのタイムチャートに表示するアドレスを指定します（最大{0}件）",
   "section.watch.title": "タイムチャート",
   "status.clipboardSkipped": "（{0} 行スキップ）",
+  "status.clipboardUnavailable": "クリップボードを使用できません: {0}",
+  "status.clipboardUnavailableDetail": "他のアプリが使用中の可能性があります",
   "status.copiedCommentRows": "コメント {0} 行をコピーしました",
   "status.copiedDeviceRows": "リスト {0} 行をコピーしました",
   "status.copiedTrapRows": "トラップ {0} 行をコピーしました",

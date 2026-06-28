@@ -1,4 +1,6 @@
 using System.Collections.ObjectModel;
+using System.Runtime.InteropServices;
+using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -11,6 +13,9 @@ namespace PlcIoCheckerQr.Wpf;
 
 public partial class MainWindow
 {
+    private const int ClipboardMaxAttempts = 6;
+    private const int ClipboardRetryDelayMs = 35;
+
     private void MainWindow_PreviewKeyDown(object sender, KeyEventArgs e)
     {
         if (_qrView.Visibility != Visibility.Visible || Keyboard.Modifiers != ModifierKeys.None)
@@ -136,21 +141,22 @@ public partial class MainWindow
             return;
         }
 
-        Clipboard.SetText(string.Join(Environment.NewLine, rows.Select(row =>
-            $"{row.Address}\t{row.DataType}\t{NormalizeDeviceComment(row.Comment)}")));
-        SetStatus(Tf("status.copiedDeviceRows", rows.Count));
+        CopyRowsToClipboard(
+            rows,
+            "status.copiedDeviceRows",
+            row => [row.Address, row.DataType, NormalizeDeviceComment(row.Comment)]);
     }
 
     private void PasteDevicesFromClipboard()
     {
-        if (!Clipboard.ContainsText())
+        if (!TryGetClipboardText(out var clipboardText))
         {
             return;
         }
 
         try
         {
-            var (rows, skipped) = ParseDeviceClipboardRows(Clipboard.GetText());
+            var (rows, skipped) = ParseDeviceClipboardRows(clipboardText);
             if (rows.Count == 0)
             {
                 SetStatus(T("status.noDeviceRowsPasted"), isError: true);
@@ -306,21 +312,22 @@ public partial class MainWindow
             return;
         }
 
-        Clipboard.SetText(string.Join(Environment.NewLine, rows.Select(row =>
-            $"{row.Address}\t{row.DataType}\t{NormalizeDeviceComment(row.Comment)}")));
-        SetStatus(Tf("status.copiedCommentRows", rows.Count));
+        CopyRowsToClipboard(
+            rows,
+            "status.copiedCommentRows",
+            row => [row.Address, row.DataType, NormalizeDeviceComment(row.Comment)]);
     }
 
     private void PasteCommentsFromClipboard()
     {
-        if (!Clipboard.ContainsText())
+        if (!TryGetClipboardText(out var clipboardText))
         {
             return;
         }
 
         try
         {
-            var rows = ParseCommentClipboardRows(Clipboard.GetText()).ToList();
+            var rows = ParseCommentClipboardRows(clipboardText).ToList();
             if (rows.Count == 0)
             {
                 SetStatus(T("status.noCommentRowsPasted"), isError: true);
@@ -428,21 +435,22 @@ public partial class MainWindow
             return;
         }
 
-        Clipboard.SetText(string.Join(Environment.NewLine, rows.Select(row =>
-            $"{row.Address}\t{row.DataType}\t{NormalizeDeviceComment(row.Comment)}")));
-        SetStatus(Tf("status.copiedWatchRows", rows.Count));
+        CopyRowsToClipboard(
+            rows,
+            "status.copiedWatchRows",
+            row => [row.Address, row.DataType, NormalizeDeviceComment(row.Comment)]);
     }
 
     private void PasteTimeChartRowsFromClipboard()
     {
-        if (!Clipboard.ContainsText())
+        if (!TryGetClipboardText(out var clipboardText))
         {
             return;
         }
 
         try
         {
-            var rows = ParseWatchClipboardRows(Clipboard.GetText()).ToList();
+            var rows = ParseWatchClipboardRows(clipboardText).ToList();
             if (rows.Count == 0)
             {
                 SetStatus(T("status.noWatchRowsPasted"), isError: true);
@@ -564,21 +572,22 @@ public partial class MainWindow
             return;
         }
 
-        Clipboard.SetText(string.Join(Environment.NewLine, rows.Select(row =>
-            $"{row.Address}\t{row.DataType}\t{NormalizeDeviceComment(row.Comment)}\t{row.Condition}\t{row.Threshold}\t{(row.Enabled ? "TRUE" : "FALSE")}")));
-        SetStatus(Tf("status.copiedTrapRows", rows.Count));
+        CopyRowsToClipboard(
+            rows,
+            "status.copiedTrapRows",
+            row => [row.Address, row.DataType, NormalizeDeviceComment(row.Comment), row.Condition, row.Threshold, row.Enabled ? "TRUE" : "FALSE"]);
     }
 
     private void PasteTrapsFromClipboard()
     {
-        if (!Clipboard.ContainsText())
+        if (!TryGetClipboardText(out var clipboardText))
         {
             return;
         }
 
         try
         {
-            var rows = ParseTrapClipboardRows(Clipboard.GetText()).ToList();
+            var rows = ParseTrapClipboardRows(clipboardText).ToList();
             if (rows.Count == 0)
             {
                 SetStatus(T("status.noTrapRowsPasted"), isError: true);
@@ -668,6 +677,87 @@ public partial class MainWindow
 
     private string NormalizeTrapCondition(string text, string address) =>
         ClipboardImport.NormalizeTrapCondition(text, address, Selected(_vendor), SelectedKeyenceDeviceMode());
+
+    private void CopyRowsToClipboard<T>(
+        IReadOnlyCollection<T> rows,
+        string copiedStatusKey,
+        Func<T, IReadOnlyList<string>> toFields)
+    {
+        try
+        {
+            if (TrySetClipboardText(FormatClipboardRows(rows.Select(toFields))))
+            {
+                SetStatus(Tf(copiedStatusKey, rows.Count));
+            }
+        }
+        catch (ArgumentException ex)
+        {
+            SetStatus(ex.Message, isError: true);
+        }
+    }
+
+    private bool TryGetClipboardText(out string text)
+    {
+        text = "";
+        var clipboardText = "";
+        if (!TryUseClipboard(() =>
+            {
+                if (Clipboard.ContainsText())
+                {
+                    clipboardText = Clipboard.GetText(TextDataFormat.UnicodeText);
+                }
+            },
+            out var exception))
+        {
+            SetClipboardUnavailableStatus(exception);
+            return false;
+        }
+
+        text = clipboardText;
+        return text.Length > 0;
+    }
+
+    private bool TrySetClipboardText(string text)
+    {
+        if (TryUseClipboard(() => Clipboard.SetText(text, TextDataFormat.UnicodeText), out var exception))
+        {
+            return true;
+        }
+
+        SetClipboardUnavailableStatus(exception);
+        return false;
+    }
+
+    private static bool TryUseClipboard(Action operation, out Exception? exception)
+    {
+        exception = null;
+        for (var attempt = 1; attempt <= ClipboardMaxAttempts; attempt++)
+        {
+            try
+            {
+                operation();
+                return true;
+            }
+            catch (ExternalException ex) when (attempt < ClipboardMaxAttempts)
+            {
+                exception = ex;
+                Thread.Sleep(ClipboardRetryDelayMs * attempt);
+            }
+            catch (ExternalException ex)
+            {
+                exception = ex;
+                return false;
+            }
+        }
+
+        return false;
+    }
+
+    private void SetClipboardUnavailableStatus(Exception? exception)
+    {
+        var detail = exception?.Message ?? T("status.clipboardUnavailableDetail");
+        SetStatus(Tf("status.clipboardUnavailable", detail), isError: true);
+    }
 
     private static List<T> SelectedRows<T>(DataGrid grid, ObservableCollection<T> source)
     {

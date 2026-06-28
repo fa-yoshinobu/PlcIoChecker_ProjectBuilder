@@ -25,6 +25,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - App: 数値入力が不正な場合に既定値へ戻さず、入力エラーとして扱うようにしました。
 - Docs: Clipboard import の列構成と、別名・推測・暗黙既定値を受け付けない方針を README / GUI 要件へ追記しました。
 
+### Fixed
+
+- App: Excel とのコピー/貼り付け時にクリップボードが一時的に使用中でもアプリが落ちないよう、再試行とエラー表示を追加しました。
+- App: Excel へコピーする TSV でタブ、改行、引用符を含むセルを正しくエスケープするようにしました。
+
 ### Added
 
 - Tests: Clipboard import が別名、未指定データ型、不正 Trap 条件を受け付けないことを確認する WPF テストを追加・更新しました。

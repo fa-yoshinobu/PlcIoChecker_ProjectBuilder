@@ -107,6 +107,8 @@
   "section.watch.meta": "Choose addresses shown in the mobile app time chart, up to {0}.",
   "section.watch.title": "Time Chart",
   "status.clipboardSkipped": "({0} row(s) skipped)",
+  "status.clipboardUnavailable": "Clipboard is unavailable: {0}",
+  "status.clipboardUnavailableDetail": "Another app may be using it",
   "status.copiedCommentRows": "Copied {0} Comment row(s)",
   "status.copiedDeviceRows": "Copied {0} List row(s)",
   "status.copiedTrapRows": "Copied {0} Trap row(s)",

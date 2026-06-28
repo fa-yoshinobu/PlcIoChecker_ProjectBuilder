@@ -57,6 +57,24 @@ public sealed class ClipboardImportTests
         Assert.Equal(["D00", "BIT", "A \"quoted\" comment"], row);
     }
 
+    [Fact]
+    public void FormatClipboardRowsEscapesExcelFields()
+    {
+        var text = ClipboardImport.FormatClipboardRows(
+        [
+            ["D00", "BIT", "A\tquoted \"comment\""],
+            ["D01", "Int16", "line1\r\nline2"],
+        ]);
+
+        Assert.Equal(
+            $"D00\tBIT\t\"A\tquoted \"\"comment\"\"\"{Environment.NewLine}D01\tInt16\t\"line1\r\nline2\"",
+            text);
+        Assert.Collection(
+            ClipboardImport.SplitClipboardRows(text),
+            row => Assert.Equal(["D00", "BIT", "A\tquoted \"comment\""], row),
+            row => Assert.Equal(["D01", "Int16", "line1\r\nline2"], row));
+    }
+
     [Theory]
     [InlineData("normal", "normal")]
     [InlineData("line1\r\nline2", "line1  line2")]
