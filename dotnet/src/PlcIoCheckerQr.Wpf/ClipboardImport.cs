@@ -102,6 +102,22 @@ internal static class ClipboardImport
     internal static string[] SplitClipboardLine(string line) =>
         line.Length == 0 ? [""] : SplitClipboardRows(line).FirstOrDefault() ?? [""];
 
+    internal static string FormatClipboardRows(IEnumerable<IReadOnlyList<string>> rows) =>
+        string.Join(Environment.NewLine, rows.Select(FormatClipboardRow));
+
+    internal static string FormatClipboardRow(IReadOnlyList<string> fields) =>
+        string.Join('\t', fields.Select(FormatClipboardField));
+
+    private static string FormatClipboardField(string text)
+    {
+        if (text.IndexOfAny(['\t', '\r', '\n', '"']) < 0)
+        {
+            return text;
+        }
+
+        return $"\"{text.Replace("\"", "\"\"", StringComparison.Ordinal)}\"";
+    }
+
     internal static bool IsDeviceClipboardHeader(IReadOnlyList<string> fields)
     {
         if (fields.Count == 0)
