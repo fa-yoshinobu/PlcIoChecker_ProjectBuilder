@@ -70,7 +70,9 @@ The supported desktop implementation is the .NET WPF app.
 
 Clipboard import uses canonical values only. Data type and trap condition must be
 explicit; localized aliases, guessed data types, and implicit trap conditions are
-not accepted.
+not accepted. During JSON / QR generation, a blank data type is filled only when
+the same address already has one explicit data type in another row. Trap
+conditions that do not match the address kind must be corrected explicitly.
 
 For multi-page QR output, import completes after the mobile app has scanned every page.
 

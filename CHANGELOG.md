@@ -18,12 +18,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Changed
 
 - App: Clipboard import は明示されたデータ型と Trap 条件を必須にし、別名変換、データ型推測、Trap 条件の既定値補完で成功扱いにしないようにしました。
+- Project JSON: JSON / QR 生成時はデータ型未指定をエラーにし、同一アドレスで既に明示済みのデータ型がある場合だけその型で補完するようにしました。
+- Project JSON: 同一アドレスに異なるデータ型が明示されている場合、先勝ちで寄せず生成エラーにするようにしました。
+- App: List の新規行と範囲追加でデータ型を `Bit` / `Int16` へ自動入力せず、未指定のまま扱うようにしました。
+- App: Trap 条件がアドレス種別に合わない場合に Rise / GreaterOrEqual などへ自動置換せず、条件未指定として生成時にエラーにするようにしました。
 - App: 数値入力が不正な場合に既定値へ戻さず、入力エラーとして扱うようにしました。
 - Docs: Clipboard import の列構成と、別名・推測・暗黙既定値を受け付けない方針を README / GUI 要件へ追記しました。
 
 ### Added
 
 - Tests: Clipboard import が別名、未指定データ型、不正 Trap 条件を受け付けないことを確認する WPF テストを追加・更新しました。
+- Tests: JSON / QR 生成で、同一アドレスの明示済み型だけが未指定行へ補完され、明示型の衝突はエラーになることを確認する Core テストを追加しました。
 
 ## [Unreleased] - 2026-06-27
 

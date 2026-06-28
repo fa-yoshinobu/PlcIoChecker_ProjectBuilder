@@ -9,7 +9,7 @@ public partial class MainWindow
 {
     private void AddDevice_Click(object sender, RoutedEventArgs e)
     {
-        var row = new DeviceRow { Address = "", DataType = "Bit" };
+        var row = new DeviceRow();
         row.SetDeviceContext(Selected(_vendor), SelectedKeyenceDeviceMode());
         _devices.Add(row);
         SelectNewRow(_devicesGrid, row);

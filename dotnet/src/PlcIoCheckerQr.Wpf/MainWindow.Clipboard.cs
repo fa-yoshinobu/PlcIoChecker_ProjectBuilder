@@ -694,7 +694,6 @@ public partial class MainWindow
             var row = new DeviceRow();
             row.SetDeviceContext(vendor, keyenceDeviceMode);
             row.Address = address;
-            row.DataType = ProjectFactory.GuessDataType(address, vendor, keyenceDeviceMode, machineLabel);
             yield return row;
         }
     }

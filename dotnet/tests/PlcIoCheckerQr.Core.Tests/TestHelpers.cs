@@ -19,7 +19,7 @@ internal static class ProjectInputBuilder
         int Station = 255,
         int ModuleIo = 1023,
         int Multidrop = 0,
-        string DevicesText = "D100",
+        string DevicesText = "D100,Int16",
         string WatchText = "",
         string TrapsText = "",
         string CommentsText = "") => new(

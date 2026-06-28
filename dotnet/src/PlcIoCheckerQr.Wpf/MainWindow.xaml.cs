@@ -180,7 +180,7 @@ public partial class MainWindow : Window
             if (IsSupportedDeviceAddress(trap.Address, vendor, keyenceDeviceMode, machineLabel))
             {
                 trap.EnsureDataTypeAllowed();
-                trap.Condition = ProjectFactory.CoerceTrapConditionForAddress(trap.Address, trap.Condition, vendor, keyenceDeviceMode);
+                trap.EnsureConditionAllowed();
             }
         }
 
@@ -205,31 +205,35 @@ public partial class MainWindow : Window
         foreach (var row in _devices.Where(row => !string.IsNullOrWhiteSpace(row.Address)))
         {
             NormalizeAddressRow(row);
-            row.DataType = string.IsNullOrWhiteSpace(row.DataType)
-                ? ProjectFactory.GuessDataType(row.Address, Selected(_vendor), SelectedKeyenceDeviceMode())
-                : NormalizeDeviceDataType(row.DataType, row.Address);
+            if (!string.IsNullOrWhiteSpace(row.DataType))
+            {
+                row.DataType = NormalizeDeviceDataType(row.DataType, row.Address);
+            }
             row.Comment = NormalizeDeviceComment(row.Comment);
         }
-        CommonizeDeviceComments();
 
         foreach (var row in _watches.Where(row => !string.IsNullOrWhiteSpace(row.Address)))
         {
             NormalizeAddressRow(row);
-            row.DataType = string.IsNullOrWhiteSpace(row.DataType)
-                ? ProjectFactory.GuessDataType(row.Address, Selected(_vendor), SelectedKeyenceDeviceMode())
-                : NormalizeDeviceDataType(row.DataType, row.Address);
+            if (!string.IsNullOrWhiteSpace(row.DataType))
+            {
+                row.DataType = NormalizeDeviceDataType(row.DataType, row.Address);
+            }
         }
 
         foreach (var row in _traps.Where(row => !string.IsNullOrWhiteSpace(row.Address)))
         {
             NormalizeAddressRow(row);
-            row.DataType = string.IsNullOrWhiteSpace(row.DataType)
-                ? ProjectFactory.GuessDataType(row.Address, Selected(_vendor), SelectedKeyenceDeviceMode())
-                : NormalizeDeviceDataType(row.DataType, row.Address);
-            row.Condition = ProjectFactory.CoerceTrapConditionForAddress(row.Address, row.Condition, Selected(_vendor), SelectedKeyenceDeviceMode());
+            if (!string.IsNullOrWhiteSpace(row.DataType))
+            {
+                row.DataType = NormalizeDeviceDataType(row.DataType, row.Address);
+            }
+            row.EnsureConditionAllowed();
         }
         CommonizeDeviceDataTypes();
+        CommonizeDeviceComments();
         NormalizeCommentRows();
+        CommonizeDeviceDataTypes();
 
         _devicesGrid.Items.Refresh();
         _commentsGrid.Items.Refresh();
@@ -472,9 +476,14 @@ public partial class MainWindow : Window
             NormalizeAddressRow(row);
             var address = row.Address;
             row.Address = address;
-            row.DataType = string.IsNullOrWhiteSpace(row.DataType)
-                ? ProjectFactory.GuessDataType(address, Selected(_vendor), SelectedKeyenceDeviceMode())
-                : NormalizeDeviceDataType(row.DataType, address);
+            if (string.IsNullOrWhiteSpace(row.DataType))
+            {
+                row.DataType = KnownDataTypeForAddress(address);
+            }
+            else
+            {
+                row.DataType = NormalizeDeviceDataType(row.DataType, address);
+            }
             if (commentsByAddress.TryGetValue(address, out var comment))
             {
                 row.Comment = comment;
@@ -492,9 +501,14 @@ public partial class MainWindow : Window
         foreach (var row in _comments.Where(row => !string.IsNullOrWhiteSpace(row.Address)))
         {
             NormalizeAddressRow(row);
-            row.DataType = string.IsNullOrWhiteSpace(row.DataType)
-                ? ProjectFactory.GuessDataType(row.Address, Selected(_vendor), SelectedKeyenceDeviceMode())
-                : NormalizeDeviceDataType(row.DataType, row.Address);
+            if (string.IsNullOrWhiteSpace(row.DataType))
+            {
+                row.DataType = KnownDataTypeForAddress(row.Address);
+            }
+            else
+            {
+                row.DataType = NormalizeDeviceDataType(row.DataType, row.Address);
+            }
             row.Comment = NormalizeDeviceComment(row.Comment);
         }
     }
@@ -532,7 +546,7 @@ public partial class MainWindow : Window
             var row = new CommentRow { Address = normalizedAddress, Comment = comment };
             row.SetDeviceContext(Selected(_vendor), SelectedKeyenceDeviceMode());
             row.DataType = string.IsNullOrWhiteSpace(dataType)
-                ? ProjectFactory.GuessDataType(normalizedAddress, Selected(_vendor), SelectedKeyenceDeviceMode())
+                ? KnownDataTypeForAddress(normalizedAddress)
                 : NormalizeDeviceDataType(dataType, normalizedAddress);
             _comments.Add(row);
             return;
@@ -579,11 +593,7 @@ public partial class MainWindow : Window
                     NormalizeAddressRow(row);
                     if (row is TrapRow trap && !string.IsNullOrWhiteSpace(trap.Address))
                     {
-                        trap.Condition = ProjectFactory.CoerceTrapConditionForAddress(
-                            trap.Address,
-                            trap.Condition,
-                            Selected(_vendor),
-                            SelectedKeyenceDeviceMode());
+                        trap.EnsureConditionAllowed();
                     }
 
                     CommonizeDeviceComments();
@@ -677,6 +687,20 @@ public partial class MainWindow : Window
         {
             row.DataType = dataType;
         }
+    }
+
+    private string KnownDataTypeForAddress(string address)
+    {
+        var normalizedAddress = NormalizeAddressText(address);
+        if (string.IsNullOrWhiteSpace(normalizedAddress))
+        {
+            return "";
+        }
+
+        return DeviceAddressRows()
+            .Where(row => row.Address.Trim().Equals(normalizedAddress, StringComparison.OrdinalIgnoreCase))
+            .Select(row => row.DataType)
+            .FirstOrDefault(dataType => !string.IsNullOrWhiteSpace(dataType)) ?? "";
     }
 
     private void NormalizeAddressRow(DataTypedAddressRow row)

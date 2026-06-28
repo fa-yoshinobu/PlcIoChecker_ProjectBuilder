@@ -147,9 +147,7 @@ public partial class MainWindow
             .Select(row =>
             {
                 var address = row.Address.Trim();
-                var dataType = string.IsNullOrWhiteSpace(row.DataType)
-                    ? ProjectFactory.GuessDataType(address, Selected(_vendor), SelectedKeyenceDeviceMode())
-                    : NormalizeDeviceDataType(row.DataType.Trim(), address);
+                var dataType = RequiredOutputDataType(row.DataType, address, "device data type");
                 return $"{address},{dataType}";
             }));
 
@@ -159,9 +157,7 @@ public partial class MainWindow
             .Select(row =>
             {
                 var address = row.Address.Trim();
-                var dataType = string.IsNullOrWhiteSpace(row.DataType)
-                    ? ProjectFactory.GuessDataType(address, Selected(_vendor), SelectedKeyenceDeviceMode())
-                    : NormalizeDeviceDataType(row.DataType.Trim(), address);
+                var dataType = RequiredOutputDataType(row.DataType, address, "comment data type");
                 var comment = NormalizeDeviceComment(row.Comment);
                 return $"{address},{dataType},{comment}";
             }));
@@ -178,9 +174,7 @@ public partial class MainWindow
             .Select(row =>
             {
                 var address = row.Address.Trim();
-                var dataType = string.IsNullOrWhiteSpace(row.DataType)
-                    ? ProjectFactory.GuessDataType(address, Selected(_vendor), SelectedKeyenceDeviceMode())
-                    : row.DataType.Trim();
+                var dataType = RequiredOutputDataType(row.DataType, address, "time chart data type");
                 return $"{address},{dataType}";
             }));
 
@@ -209,7 +203,7 @@ public partial class MainWindow
     private string TrapsText()
     {
         var rows = _traps
-            .Where(row => !string.IsNullOrWhiteSpace(row.Address) && !string.IsNullOrWhiteSpace(row.Condition))
+            .Where(row => !string.IsNullOrWhiteSpace(row.Address))
             .ToList();
         if (rows.Count > ProjectFactory.MaxTrapDefinitions)
         {
@@ -220,11 +214,30 @@ public partial class MainWindow
             rows.Select(row =>
             {
                 var address = row.Address.Trim();
-                var dataType = string.IsNullOrWhiteSpace(row.DataType)
-                    ? ProjectFactory.GuessDataType(address, Selected(_vendor), SelectedKeyenceDeviceMode())
-                    : NormalizeDeviceDataType(row.DataType.Trim(), address);
+                var dataType = RequiredOutputDataType(row.DataType, address, "trap data type");
+                if (string.IsNullOrWhiteSpace(row.Condition))
+                {
+                    throw new ArgumentException($"Trap condition is required for {address}.");
+                }
+
                 return $"{address},{dataType},{row.Condition.Trim()},{row.Threshold.Trim()},{(row.Enabled ? "true" : "false")}";
             }));
+    }
+
+    private string RequiredOutputDataType(string dataType, string address, string name)
+    {
+        if (string.IsNullOrWhiteSpace(dataType))
+        {
+            var knownDataType = KnownDataTypeForAddress(address);
+            if (!string.IsNullOrWhiteSpace(knownDataType))
+            {
+                return NormalizeDeviceDataType(knownDataType, address);
+            }
+
+            throw new ArgumentException($"{name} is required for {address}.");
+        }
+
+        return NormalizeDeviceDataType(dataType.Trim(), address);
     }
 
     private void ShowQrScreen()

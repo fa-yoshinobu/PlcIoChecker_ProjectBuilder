@@ -244,17 +244,22 @@ public static partial class ProjectFactory
         var now = nowEpochMs ?? DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         var name = string.IsNullOrWhiteSpace(input.Name) ? "PLC QR Project" : input.Name.Trim();
 
-        var devices = ParseDevices(input.DevicesText, input.Vendor, input.KeyenceDeviceMode, input.MachineLabel);
+        var explicitDataTypesByAddress = BuildExplicitDataTypeIndex(
+            input,
+            input.Vendor,
+            input.KeyenceDeviceMode,
+            input.MachineLabel);
+        var devices = ParseDevices(input.DevicesText, input.Vendor, input.KeyenceDeviceMode, input.MachineLabel, explicitDataTypesByAddress);
         var comments = MergeDeviceComments(
             devices,
-            ParseComments(input.CommentsText, input.Vendor, input.KeyenceDeviceMode, input.MachineLabel));
+            ParseComments(input.CommentsText, input.Vendor, input.KeyenceDeviceMode, input.MachineLabel, explicitDataTypesByAddress));
         devices = ApplyDeviceComments(devices, comments);
         var deviceTypesByAddress = devices
             .GroupBy(device => device.Address, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(group => group.Key, group => group.First().DataType, StringComparer.OrdinalIgnoreCase);
 
-        var timeChart = ParseTimeChart(input.WatchText, input.Vendor, input.KeyenceDeviceMode, input.MachineLabel, deviceTypesByAddress);
-        var traps = ParseTraps(input.TrapsText, input.Vendor, input.KeyenceDeviceMode, input.MachineLabel, deviceTypesByAddress);
+        var timeChart = ParseTimeChart(input.WatchText, input.Vendor, input.KeyenceDeviceMode, input.MachineLabel, explicitDataTypesByAddress);
+        var traps = ParseTraps(input.TrapsText, input.Vendor, input.KeyenceDeviceMode, input.MachineLabel, explicitDataTypesByAddress);
         var (projectDevices, projectTimeChart, projectTraps) = CommonizeDeviceDataTypes(devices, timeChart, traps);
 
         return new PlcProject(
@@ -335,7 +340,72 @@ public static partial class ProjectFactory
             traps.Select(trap => trap with { DataType = dataTypesByAddress[trap.Address] }).ToList());
     }
 
-    private static List<DeviceDefinition> ParseDevices(string devicesText, string vendor, string keyenceDeviceMode, string machineLabel)
+    private static Dictionary<string, string> BuildExplicitDataTypeIndex(
+        ProjectInput input,
+        string vendor,
+        string keyenceDeviceMode,
+        string machineLabel)
+    {
+        var dataTypesByAddress = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        void Remember(string line, bool allowConditionInSecondColumn, string name)
+        {
+            var parts = line.Split(',').Select(part => part.Trim()).ToArray();
+            if (parts.Length <= 1 || string.IsNullOrWhiteSpace(parts[0]) || string.IsNullOrWhiteSpace(parts[1]))
+            {
+                return;
+            }
+
+            if (!TryNormalizeDeviceDataType(parts[1], out var dataType))
+            {
+                if (allowConditionInSecondColumn && ValidTrapConditions.Contains(parts[1]))
+                {
+                    return;
+                }
+
+                return;
+            }
+
+            var address = NormalizeDeviceAddress(parts[0], vendor, keyenceDeviceMode, machineLabel);
+            dataType = ValidateDataTypeForAddress(address, dataType, vendor, keyenceDeviceMode, machineLabel, name);
+            if (dataTypesByAddress.TryGetValue(address, out var existing) &&
+                !string.Equals(existing, dataType, StringComparison.Ordinal))
+            {
+                throw new ArgumentException($"Conflicting data type for {address}: {existing} vs {dataType}.");
+            }
+
+            dataTypesByAddress[address] = dataType;
+        }
+
+        foreach (var line in ParseLines(input.DevicesText))
+        {
+            Remember(line, allowConditionInSecondColumn: false, "device data type");
+        }
+
+        foreach (var line in ParseLines(input.CommentsText))
+        {
+            Remember(line, allowConditionInSecondColumn: false, "comment data type");
+        }
+
+        foreach (var line in ParseLines(input.WatchText))
+        {
+            Remember(line, allowConditionInSecondColumn: false, "time chart data type");
+        }
+
+        foreach (var line in ParseLines(input.TrapsText))
+        {
+            Remember(line, allowConditionInSecondColumn: true, "trap data type");
+        }
+
+        return dataTypesByAddress;
+    }
+
+    private static List<DeviceDefinition> ParseDevices(
+        string devicesText,
+        string vendor,
+        string keyenceDeviceMode,
+        string machineLabel,
+        IReadOnlyDictionary<string, string> explicitDataTypesByAddress)
     {
         var parsedDevices = new List<DeviceDefinition>();
         foreach (var line in ParseLines(devicesText))
@@ -347,17 +417,16 @@ public static partial class ProjectFactory
             }
 
             var address = NormalizeDeviceAddress(parts[0], vendor, keyenceDeviceMode, machineLabel);
-            var hasDataType = false;
-            var dataType = GuessDataType(address, vendor, keyenceDeviceMode, machineLabel);
-            if (parts.Length > 1 && TryNormalizeDeviceDataType(parts[1], out var parsedDataType))
-            {
-                hasDataType = true;
-                dataType = parsedDataType;
-            }
-            ValidateChoice(dataType, DeviceDataTypes, "device data type");
-            dataType = ValidateDataTypeForAddress(address, dataType, vendor, keyenceDeviceMode, machineLabel, "device data type");
-            var commentIndex = hasDataType ? 2 : parts.Length > 2 && string.IsNullOrWhiteSpace(parts[1]) ? 2 : 1;
-            parsedDevices.Add(new DeviceDefinition(address, dataType, DeviceCommentFromParts(parts, commentIndex)));
+            var (dataType, hasExplicitDataType) = ResolveDeviceDataType(
+                parts,
+                1,
+                address,
+                vendor,
+                keyenceDeviceMode,
+                machineLabel,
+                explicitDataTypesByAddress,
+                "device data type");
+            parsedDevices.Add(new DeviceDefinition(address, dataType, DeviceCommentFromParts(parts, hasExplicitDataType ? 2 : 1)));
         }
 
         var commentsByAddress = parsedDevices
@@ -373,7 +442,8 @@ public static partial class ProjectFactory
         string commentsText,
         string vendor,
         string keyenceDeviceMode,
-        string machineLabel)
+        string machineLabel,
+        IReadOnlyDictionary<string, string> explicitDataTypesByAddress)
     {
         var comments = new List<DeviceCommentDefinition>();
         foreach (var line in ParseLines(commentsText))
@@ -385,15 +455,16 @@ public static partial class ProjectFactory
             }
 
             var address = NormalizeDeviceAddress(parts[0], vendor, keyenceDeviceMode, machineLabel);
-            var parsedDataType = "";
-            var hasDataType = parts.Length > 1 && TryNormalizeDeviceDataType(parts[1], out parsedDataType);
-            var dataType = GuessDataType(address, vendor, keyenceDeviceMode, machineLabel);
-            if (hasDataType)
-            {
-                dataType = ValidateDataTypeForAddress(address, parsedDataType, vendor, keyenceDeviceMode, machineLabel, "comment data type");
-            }
-
-            var commentIndex = hasDataType ? 2 : 1;
+            var (dataType, hasExplicitDataType) = ResolveDeviceDataType(
+                parts,
+                1,
+                address,
+                vendor,
+                keyenceDeviceMode,
+                machineLabel,
+                explicitDataTypesByAddress,
+                "comment data type");
+            var commentIndex = hasExplicitDataType ? 2 : 1;
             comments.Add(new DeviceCommentDefinition(address, dataType, DeviceCommentFromParts(parts, commentIndex)));
         }
 
@@ -405,10 +476,10 @@ public static partial class ProjectFactory
         string vendor,
         string keyenceDeviceMode,
         string machineLabel,
-        IReadOnlyDictionary<string, string> deviceTypesByAddress)
+        IReadOnlyDictionary<string, string> explicitDataTypesByAddress)
     {
         var timeChart = ParseLines(watchText)
-            .Select(line => ParseDeviceLine(line, vendor, keyenceDeviceMode, machineLabel, deviceTypesByAddress))
+            .Select(line => ParseDeviceLine(line, vendor, keyenceDeviceMode, machineLabel, explicitDataTypesByAddress))
             .DistinctBy(target => target.Address, StringComparer.OrdinalIgnoreCase)
             .ToList();
         if (timeChart.Count > MaxTimeChartTargets)
@@ -424,28 +495,37 @@ public static partial class ProjectFactory
         string vendor,
         string keyenceDeviceMode,
         string machineLabel,
-        IReadOnlyDictionary<string, string> deviceTypesByAddress)
+        IReadOnlyDictionary<string, string> explicitDataTypesByAddress)
     {
         var traps = new List<TrapDefinition>();
         var offset = 1;
         foreach (var line in ParseLines(trapsText))
         {
             var parts = line.Split(',').Select(part => part.Trim()).ToArray();
-            if (parts.Length < 2 || string.IsNullOrWhiteSpace(parts[0]) || string.IsNullOrWhiteSpace(parts[1]))
+            if (parts.Length == 0 || string.IsNullOrWhiteSpace(parts[0]))
             {
                 continue;
             }
 
             var address = NormalizeDeviceAddress(parts[0], vendor, keyenceDeviceMode, machineLabel);
-            var hasDataType = parts.Length >= 3 && DeviceDataTypes.Contains(parts[1], StringComparer.Ordinal);
-            var dataType = hasDataType
-                ? parts[1]
-                : deviceTypesByAddress.GetValueOrDefault(address, GuessDataType(address, vendor, keyenceDeviceMode, machineLabel));
-            ValidateChoice(dataType, DeviceDataTypes, "trap data type");
-            dataType = ValidateDataTypeForAddress(address, dataType, vendor, keyenceDeviceMode, machineLabel, "trap data type");
-            var condition = ValidateTrapConditionForAddress(address, hasDataType ? parts[2] : parts[1], vendor, keyenceDeviceMode);
-            var thresholdIndex = hasDataType ? 3 : 2;
-            var enabledIndex = hasDataType ? 4 : 3;
+            var (dataType, hasExplicitDataType) = ResolveDeviceDataType(
+                parts,
+                1,
+                address,
+                vendor,
+                keyenceDeviceMode,
+                machineLabel,
+                explicitDataTypesByAddress,
+                "trap data type");
+            var conditionIndex = hasExplicitDataType ? 2 : 1;
+            if (parts.Length <= conditionIndex || string.IsNullOrWhiteSpace(parts[conditionIndex]))
+            {
+                throw new ArgumentException($"Trap condition is required for {address}.");
+            }
+
+            var condition = ValidateTrapConditionForAddress(address, parts[conditionIndex], vendor, keyenceDeviceMode);
+            var thresholdIndex = conditionIndex + 1;
+            var enabledIndex = conditionIndex + 2;
             double? threshold = null;
             if (TrapConditionRequiresThreshold(condition))
             {
@@ -505,16 +585,53 @@ public static partial class ProjectFactory
         string vendor,
         string keyenceDeviceMode,
         string machineLabel,
-        IReadOnlyDictionary<string, string> registeredDeviceTypes)
+        IReadOnlyDictionary<string, string> explicitDataTypesByAddress)
     {
         var parts = line.Split(',').Select(part => part.Trim()).ToArray();
         var address = NormalizeDeviceAddress(parts[0], vendor, keyenceDeviceMode, machineLabel);
-        var dataType = parts.Length > 1 && !string.IsNullOrWhiteSpace(parts[1])
-            ? parts[1]
-            : registeredDeviceTypes.GetValueOrDefault(address, GuessDataType(address, vendor, keyenceDeviceMode, machineLabel));
-        ValidateChoice(dataType, DeviceDataTypes, "time chart data type");
-        dataType = ValidateDataTypeForAddress(address, dataType, vendor, keyenceDeviceMode, machineLabel, "time chart data type");
+        var (dataType, _) = ResolveDeviceDataType(
+            parts,
+            1,
+            address,
+            vendor,
+            keyenceDeviceMode,
+            machineLabel,
+            explicitDataTypesByAddress,
+            "time chart data type");
         return new MonitorTargetDefinition(address, dataType);
+    }
+
+    private static (string DataType, bool HasExplicitDataType) ResolveDeviceDataType(
+        IReadOnlyList<string> parts,
+        int index,
+        string address,
+        string vendor,
+        string keyenceDeviceMode,
+        string? machineLabel,
+        IReadOnlyDictionary<string, string> explicitDataTypesByAddress,
+        string name)
+    {
+        if (parts.Count > index && TryNormalizeDeviceDataType(parts[index], out var parsedDataType))
+        {
+            return (
+                ValidateDataTypeForAddress(address, parsedDataType, vendor, keyenceDeviceMode, machineLabel, name),
+                true);
+        }
+
+        if (explicitDataTypesByAddress.TryGetValue(address, out var dataType))
+        {
+            return (
+                ValidateDataTypeForAddress(address, dataType, vendor, keyenceDeviceMode, machineLabel, name),
+                false);
+        }
+
+        var value = parts.Count > index ? parts[index].Trim() : "";
+        if (!string.IsNullOrWhiteSpace(value))
+        {
+            throw new ArgumentException($"Invalid {name} for {address}: {value}. Use one of: {string.Join(", ", DeviceDataTypes)}");
+        }
+
+        throw new ArgumentException($"{name} is required for {address}.");
     }
 
     private static string ValidateDataTypeForAddress(
@@ -555,16 +672,6 @@ public static partial class ProjectFactory
         return string.IsNullOrWhiteSpace(slug) ? fallback : slug;
     }
 
-    public static string GuessDataType(string address) => GuessDataType(address, "Melsec", "Normal");
-
-    public static string GuessDataType(string address, string vendor) => GuessDataType(address, vendor, "Normal");
-
-    public static string GuessDataType(string address, string vendor, string keyenceDeviceMode) =>
-        GuessDataType(address, vendor, keyenceDeviceMode, machineLabel: null);
-
-    public static string GuessDataType(string address, string vendor, string keyenceDeviceMode, string? machineLabel) =>
-        IsBitAddress(address, vendor, keyenceDeviceMode, machineLabel) ? "Bit" : "Int16";
-
     public static IReadOnlyList<string> DeviceDataTypesForAddress(string address, string vendor, string keyenceDeviceMode = "Normal", string? machineLabel = null)
     {
         if (string.IsNullOrWhiteSpace(address))
@@ -601,30 +708,6 @@ public static partial class ProjectFactory
         }
 
         return IsBitAddress(address, vendor, keyenceDeviceMode) ? BitTrapConditions : WordTrapConditions;
-    }
-
-    public static string DefaultTrapConditionForAddress(string address, string vendor) =>
-        DefaultTrapConditionForAddress(address, vendor, "Normal");
-
-    public static string DefaultTrapConditionForAddress(string address, string vendor, string keyenceDeviceMode)
-    {
-        if (string.IsNullOrWhiteSpace(address))
-        {
-            return "Change";
-        }
-
-        return IsBitAddress(address, vendor, keyenceDeviceMode) ? "Rise" : "GreaterOrEqual";
-    }
-
-    public static string CoerceTrapConditionForAddress(string address, string condition, string vendor) =>
-        CoerceTrapConditionForAddress(address, condition, vendor, "Normal");
-
-    public static string CoerceTrapConditionForAddress(string address, string condition, string vendor, string keyenceDeviceMode)
-    {
-        var value = string.IsNullOrWhiteSpace(condition) ? DefaultTrapConditionForAddress(address, vendor, keyenceDeviceMode) : ValidateTrapCondition(condition);
-        return TrapConditionsForAddress(address, vendor, keyenceDeviceMode).Contains(value, StringComparer.Ordinal)
-            ? value
-            : DefaultTrapConditionForAddress(address, vendor, keyenceDeviceMode);
     }
 
     public static string ValidateTrapConditionForAddress(string address, string condition, string vendor) =>

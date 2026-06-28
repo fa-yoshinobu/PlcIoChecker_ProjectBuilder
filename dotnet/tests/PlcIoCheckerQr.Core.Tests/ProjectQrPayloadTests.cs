@@ -65,9 +65,9 @@ public sealed class ProjectQrPayloadTests
             Station: 255,
             ModuleIo: 1023,
             Multidrop: 0,
-            DevicesText: "R000\r\nDM100,UInt16",
-            WatchText: "R000",
-            TrapsText: "DM100,Change,,true"),
+            DevicesText: "R000,Bit\r\nDM100,UInt16",
+            WatchText: "R000,Bit",
+            TrapsText: "DM100,UInt16,Change,,true"),
             nowEpochMs: 123);
 
         var json = Encoding.UTF8.GetString(ProjectQrPayload.ProjectQrJsonBytes(project));
@@ -91,6 +91,19 @@ public sealed class ProjectQrPayloadTests
             Name: "Comment Limit",
             Vendor: "Melsec",
             DevicesText: $"D100,Int16,{comment}")));
+    }
+
+    [Fact]
+    public void ProjectFactoryRequiresExplicitDataTypesForProjectJsonGeneration()
+    {
+        Assert.Contains("device data type is required", Assert.Throws<ArgumentException>(() =>
+            ProjectFactory.MakeProject(ProjectInputBuilder.MakeInput(DevicesText: "D100"))).Message);
+        Assert.Contains("time chart data type is required", Assert.Throws<ArgumentException>(() =>
+            ProjectFactory.MakeProject(ProjectInputBuilder.MakeInput(DevicesText: "", WatchText: "D100"))).Message);
+        Assert.Contains("trap data type", Assert.Throws<ArgumentException>(() =>
+            ProjectFactory.MakeProject(ProjectInputBuilder.MakeInput(DevicesText: "", TrapsText: "D100,GreaterOrEqual,1,true"))).Message);
+        Assert.Contains("comment data type", Assert.Throws<ArgumentException>(() =>
+            ProjectFactory.MakeProject(ProjectInputBuilder.MakeInput(DevicesText: "", CommentsText: "D100,Comment"))).Message);
     }
 
     [Fact]
@@ -142,7 +155,7 @@ public sealed class ProjectQrPayloadTests
     public void ProjectFactoryCommonizesDeviceCommentsByAddress()
     {
         var project = ProjectFactory.MakeProject(ProjectInputBuilder.MakeInput(
-            DevicesText: "D100,Int16,Speed word\r\nD100,UInt16,Ignored duplicate\r\nD101,Alarm word",
+            DevicesText: "D100,Int16,Speed word\r\nD100,Int16,Ignored duplicate\r\nD101,Int16,Alarm word",
             WatchText: "",
             TrapsText: ""));
 
@@ -166,9 +179,9 @@ public sealed class ProjectQrPayloadTests
     {
         var project = ProjectFactory.MakeProject(ProjectInputBuilder.MakeInput(
             DevicesText: "",
-            WatchText: "D100",
-            TrapsText: "D101,Change,,true",
-            CommentsText: "D100,Watch comment\r\nD101,Trap comment"));
+            WatchText: "D100,Int16",
+            TrapsText: "D101,Int16,Change,,true",
+            CommentsText: "D100,Int16,Watch comment\r\nD101,Int16,Trap comment"));
 
         var json = Encoding.UTF8.GetString(ProjectQrPayload.ProjectJsonBytes(project));
         using var document = JsonDocument.Parse(json);
@@ -186,7 +199,7 @@ public sealed class ProjectQrPayloadTests
             DevicesText: "D100,Int16,Legacy comment",
             WatchText: "",
             TrapsText: "",
-            CommentsText: "D100,Comment tab value"));
+            CommentsText: "D100,Int16,Comment tab value"));
 
         Assert.Equal("Comment tab value", project.Devices.Single().Comment);
 
@@ -205,7 +218,7 @@ public sealed class ProjectQrPayloadTests
             DevicesText: "",
             WatchText: "",
             TrapsText: "",
-            CommentsText: "D100,Comment only"));
+            CommentsText: "D100,Int16,Comment only"));
 
         var json = Encoding.UTF8.GetString(ProjectQrPayload.ProjectJsonBytes(project));
         using var document = JsonDocument.Parse(json);
@@ -217,16 +230,18 @@ public sealed class ProjectQrPayloadTests
     }
 
     [Fact]
-    public void ProjectFactoryCommonizesDeviceDataTypesByAddress()
+    public void ProjectFactoryFillsMissingDataTypesFromSameAddressOnly()
     {
         var project = ProjectFactory.MakeProject(ProjectInputBuilder.MakeInput(
             DevicesText: "D100,UInt16,Speed word",
-            WatchText: "D100,Float32",
-            TrapsText: "D100,Int32,GreaterOrEqual,1,true"));
+            WatchText: "D100",
+            TrapsText: "D100,GreaterOrEqual,1,true",
+            CommentsText: "D100,Comment from known type"));
 
         Assert.Equal("UInt16", project.Devices.Single().DataType);
         Assert.Equal("UInt16", project.TimeChart.Single().DataType);
         Assert.Equal("UInt16", project.Traps.Single().DataType);
+        Assert.Equal("UInt16", project.Comments.Single().DataType);
 
         var json = Encoding.UTF8.GetString(ProjectQrPayload.ProjectJsonBytes(project));
         using var document = JsonDocument.Parse(json);
@@ -237,11 +252,22 @@ public sealed class ProjectQrPayloadTests
     }
 
     [Fact]
+    public void ProjectFactoryRejectsConflictingExplicitDataTypesForSameAddress()
+    {
+        var exception = Assert.Throws<ArgumentException>(() => ProjectFactory.MakeProject(ProjectInputBuilder.MakeInput(
+            DevicesText: "D100,UInt16,Speed word",
+            WatchText: "D100,Float32",
+            TrapsText: "")));
+
+        Assert.Contains("Conflicting data type for D100", exception.Message);
+    }
+
+    [Fact]
     public void ProjectFactoryLimitsTimeChartTargetsToAndroidMaximum()
     {
         var input = ProjectInputBuilder.MakeInput(
             DevicesText: "",
-            WatchText: string.Join("\n", Enumerable.Range(0, ProjectFactory.MaxTimeChartTargets + 1).Select(index => $"D{index}")),
+            WatchText: string.Join("\n", Enumerable.Range(0, ProjectFactory.MaxTimeChartTargets + 1).Select(index => $"D{index},Int16")),
             TrapsText: "");
 
         var exception = Assert.Throws<ArgumentException>(() => ProjectFactory.MakeProject(input));
@@ -254,7 +280,7 @@ public sealed class ProjectQrPayloadTests
         var input = ProjectInputBuilder.MakeInput(
             DevicesText: "",
             WatchText: "",
-            TrapsText: string.Join("\n", Enumerable.Range(0, ProjectFactory.MaxTrapDefinitions + 1).Select(index => $"D{index},Change,,true")));
+            TrapsText: string.Join("\n", Enumerable.Range(0, ProjectFactory.MaxTrapDefinitions + 1).Select(index => $"D{index},Int16,Change,,true")));
 
         var exception = Assert.Throws<ArgumentException>(() => ProjectFactory.MakeProject(input));
         Assert.Contains($"up to {ProjectFactory.MaxTrapDefinitions}", exception.Message);
@@ -265,9 +291,9 @@ public sealed class ProjectQrPayloadTests
     {
         var melsecProject = ProjectFactory.MakeProject(ProjectInputBuilder.MakeInput(
             Vendor: "Melsec",
-            DevicesText: "R100",
+            DevicesText: "R100,Int16",
             WatchText: "",
-            TrapsText: "R100,GreaterOrEqual,1,true"));
+            TrapsText: "R100,Int16,GreaterOrEqual,1,true"));
 
         Assert.Equal("Int16", melsecProject.Devices.Single().DataType);
         Assert.Equal("GreaterOrEqual", melsecProject.Traps.Single().Condition);
@@ -275,9 +301,9 @@ public sealed class ProjectQrPayloadTests
 
         var keyenceProject = ProjectFactory.MakeProject(ProjectInputBuilder.MakeInput(
             Vendor: "Keyence",
-            DevicesText: "R100",
+            DevicesText: "R100,Bit",
             WatchText: "",
-            TrapsText: "R100,Rise,,true"));
+            TrapsText: "R100,Bit,Rise,,true"));
 
         Assert.Equal("Bit", keyenceProject.Devices.Single().DataType);
         Assert.Equal("Rise", keyenceProject.Traps.Single().Condition);
@@ -285,23 +311,23 @@ public sealed class ProjectQrPayloadTests
 
         Assert.Throws<ArgumentException>(() => ProjectFactory.MakeProject(ProjectInputBuilder.MakeInput(
             Vendor: "Keyence",
-            DevicesText: "R100",
+            DevicesText: "R100,Bit",
             WatchText: "",
-            TrapsText: "R100,GreaterOrEqual,1,true")));
+            TrapsText: "R100,Bit,GreaterOrEqual,1,true")));
     }
 
     [Fact]
     public void ProjectFactoryRequiresThresholdOnlyForNumericTrapConditions()
     {
         Assert.Throws<ArgumentException>(() => ProjectFactory.MakeProject(ProjectInputBuilder.MakeInput(
-            DevicesText: "D100",
+            DevicesText: "D100,Int16",
             WatchText: "",
-            TrapsText: "D100,GreaterOrEqual,,true")));
+            TrapsText: "D100,Int16,GreaterOrEqual,,true")));
 
         var project = ProjectFactory.MakeProject(ProjectInputBuilder.MakeInput(
-            DevicesText: "D100",
+            DevicesText: "D100,Int16",
             WatchText: "",
-            TrapsText: "D100,Change,123,true"));
+            TrapsText: "D100,Int16,Change,123,true"));
 
         Assert.Equal("Change", project.Traps.Single().Condition);
         Assert.Null(project.Traps.Single().Threshold);
@@ -329,8 +355,8 @@ public sealed class ProjectQrPayloadTests
             Vendor: vendor,
             KeyenceDeviceMode: keyenceDeviceMode,
             MachineLabel: machineLabel,
-            DevicesText: address,
-            WatchText: address,
+            DevicesText: $"{address},{expectedDataType}",
+            WatchText: $"{address},{expectedDataType}",
             TrapsText: $"{address},{expectedDataType},{condition},{threshold},true"));
 
         Assert.Equal(address, project.Devices.Single().Address);
@@ -365,7 +391,7 @@ public sealed class ProjectQrPayloadTests
         var exception = Assert.Throws<ArgumentException>(() => ProjectFactory.MakeProject(ProjectInputBuilder.MakeInput(
             Vendor: vendor,
             KeyenceDeviceMode: keyenceDeviceMode,
-            DevicesText: address,
+            DevicesText: $"{address},Int16",
             WatchText: "",
             TrapsText: "")));
 
@@ -392,7 +418,7 @@ public sealed class ProjectQrPayloadTests
             Vendor: vendor,
             KeyenceDeviceMode: keyenceDeviceMode,
             MachineLabel: machineLabel,
-            DevicesText: address,
+            DevicesText: $"{address},Int16",
             WatchText: "",
             TrapsText: "")));
 
@@ -403,17 +429,17 @@ public sealed class ProjectQrPayloadTests
     public void ProjectFactoryValidatesDeviceAddressStringsInAllInputSections()
     {
         Assert.Throws<ArgumentException>(() => ProjectFactory.MakeProject(ProjectInputBuilder.MakeInput(
-            DevicesText: "DFFFF",
+            DevicesText: "DFFFF,Int16",
             WatchText: "",
             TrapsText: "")));
         Assert.Throws<ArgumentException>(() => ProjectFactory.MakeProject(ProjectInputBuilder.MakeInput(
             DevicesText: "",
-            WatchText: "DFFFF",
+            WatchText: "DFFFF,Int16",
             TrapsText: "")));
         Assert.Throws<ArgumentException>(() => ProjectFactory.MakeProject(ProjectInputBuilder.MakeInput(
             DevicesText: "",
             WatchText: "",
-            TrapsText: "DFFFF,Change,,true")));
+            TrapsText: "DFFFF,Int16,Change,,true")));
     }
 
     [Fact]
@@ -447,8 +473,8 @@ public sealed class ProjectQrPayloadTests
         var project = ProjectFactory.MakeProject(ProjectInputBuilder.MakeInput(
             Vendor: vendor,
             KeyenceDeviceMode: keyenceDeviceMode,
-            DevicesText: address,
-            WatchText: address,
+            DevicesText: $"{address},{expectedDataType}",
+            WatchText: $"{address},{expectedDataType}",
             TrapsText: ""));
 
         Assert.Equal(expectedDataType, project.Devices.Single().DataType);
@@ -518,8 +544,8 @@ public sealed class ProjectQrPayloadTests
         ModuleIo: 1023,
         Multidrop: 0,
         DevicesText: "X000,Bit,Start input\r\nD100,Int16,Speed word",
-        WatchText: "X000\r\nD100",
-        TrapsText: "D100,GreaterOrEqual,100,true"),
+        WatchText: "X000,Bit\r\nD100,Int16",
+        TrapsText: "D100,Int16,GreaterOrEqual,100,true"),
         nowEpochMs: 123);
 
 }

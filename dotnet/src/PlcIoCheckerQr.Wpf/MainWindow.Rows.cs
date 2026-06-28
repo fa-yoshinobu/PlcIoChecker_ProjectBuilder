@@ -10,7 +10,7 @@ public partial class MainWindow
     {
         private string _address = "";
         private string _comment = "";
-        private string _dataType = "Bit";
+        private string _dataType = "";
         private bool _isUnsupportedDevice;
         private string _keyenceDeviceMode = "Normal";
         private string _vendor = "Melsec";
@@ -134,9 +134,7 @@ public partial class MainWindow
                 return match;
             }
 
-            return string.IsNullOrWhiteSpace(Address)
-                ? "Bit"
-                : ProjectFactory.GuessDataType(Address, Vendor, KeyenceDeviceMode);
+            return "";
         }
     }
 
@@ -160,13 +158,13 @@ public partial class MainWindow
 
     public sealed class TrapRow : DataTypedAddressRow
     {
-        private string _condition = "Change";
+        private string _condition = "";
         private string _threshold = "";
 
         public string Condition
         {
             get => _condition;
-            set => SetCondition(ProjectFactory.CoerceTrapConditionForAddress(Address, value, Vendor, KeyenceDeviceMode));
+            set => SetCondition(NormalizeCondition(value));
         }
 
         public string ConditionDisplayText => TrapConditionDisplayText(Condition);
@@ -192,23 +190,40 @@ public partial class MainWindow
             }
         }
 
-        public bool ThresholdEnabled => ProjectFactory.TrapConditionRequiresThreshold(Condition);
+        public bool ThresholdEnabled => !string.IsNullOrWhiteSpace(Condition) && ProjectFactory.TrapConditionRequiresThreshold(Condition);
 
         public bool Enabled { get; set; } = true;
 
         protected override void OnAddressChanged()
         {
             OnPropertyChanged(nameof(AvailableConditionOptions));
-            CoerceCondition();
+            EnsureConditionAllowed();
         }
 
         protected override void OnDeviceContextChanged()
         {
             OnPropertyChanged(nameof(AvailableConditionOptions));
-            CoerceCondition();
+            EnsureConditionAllowed();
         }
 
-        private void CoerceCondition() => SetCondition(ProjectFactory.CoerceTrapConditionForAddress(Address, Condition, Vendor, KeyenceDeviceMode));
+        public void EnsureConditionAllowed() => SetCondition(NormalizeCondition(Condition));
+
+        private string NormalizeCondition(string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return "";
+            }
+
+            try
+            {
+                return ProjectFactory.ValidateTrapConditionForAddress(Address, value, Vendor, KeyenceDeviceMode);
+            }
+            catch (ArgumentException)
+            {
+                return "";
+            }
+        }
 
         private void SetCondition(string condition)
         {
@@ -227,7 +242,7 @@ public partial class MainWindow
 
         private void EnsureThresholdState()
         {
-            if (ProjectFactory.TrapConditionRequiresThreshold(Condition))
+            if (ThresholdEnabled)
             {
                 if (string.IsNullOrWhiteSpace(Threshold))
                 {
