@@ -58,7 +58,7 @@ public sealed class ProjectQrPayloadTests
             Port: 8501,
             MonitorIntervalMs: 500,
             TimeoutMs: 2000,
-            MachineLabel: "KV-8000",
+            MachineLabel: "KEYENCE KV-8000",
             KeyenceDeviceMode: "Normal",
             TransportMode: "Tcp",
             Network: 0,
@@ -109,39 +109,77 @@ public sealed class ProjectQrPayloadTests
     [Fact]
     public void ProjectFactoryMapsDisplayModelLabelsToCanonicalJsonLabels()
     {
-        Assert.Equal("melsec:iq-r", ProjectFactory.ToCanonicalMachineLabel("Melsec", "iQ-R"));
-        Assert.Equal("melsec:iq-f", ProjectFactory.ToCanonicalMachineLabel("Melsec", "iQ-F"));
-        Assert.Equal("melsec:iq-l", ProjectFactory.ToCanonicalMachineLabel("Melsec", "iQ-L"));
-        Assert.Equal("melsec:mx-r", ProjectFactory.ToCanonicalMachineLabel("Melsec", "MX-R"));
-        Assert.Equal("melsec:mx-f", ProjectFactory.ToCanonicalMachineLabel("Melsec", "MX-F"));
-        Assert.Equal("melsec:qnudv", ProjectFactory.ToCanonicalMachineLabel("Melsec", "QnUDV"));
-        Assert.Equal("melsec:qnu", ProjectFactory.ToCanonicalMachineLabel("Melsec", "QnU"));
-        Assert.Equal("melsec:qcpu", ProjectFactory.ToCanonicalMachineLabel("Melsec", "QCPU"));
-        Assert.Equal("melsec:lcpu", ProjectFactory.ToCanonicalMachineLabel("Melsec", "LCPU"));
-        Assert.Equal("keyence:kv-x500", ProjectFactory.ToCanonicalMachineLabel("Keyence", "KV-X500"));
-        Assert.Equal("keyence:kv-8000", ProjectFactory.ToCanonicalMachineLabel("Keyence", "KV-8000"));
-        Assert.Equal("keyence:kv-7000", ProjectFactory.ToCanonicalMachineLabel("Keyence", "KV-7000"));
-        Assert.Equal("keyence:kv-3000", ProjectFactory.ToCanonicalMachineLabel("Keyence", "KV-3000"));
-        Assert.Equal("keyence:kv-5000", ProjectFactory.ToCanonicalMachineLabel("Keyence", "KV-5000"));
+        Assert.Equal(
+            [
+                "melsec:iq-r",
+                "melsec:iq-r:rj71en71",
+                "melsec:iq-f",
+                "melsec:iq-l",
+                "melsec:mx-r",
+                "melsec:mx-f",
+                "melsec:qnudv",
+                "melsec:qnudv:qj71e71-100",
+                "melsec:qnu",
+                "melsec:qnu:qj71e71-100",
+                "melsec:qcpu:qj71e71-100",
+                "melsec:lcpu",
+                "melsec:lcpu:lj71e71-100",
+            ],
+            ProjectFactory.MelsecCpuModels
+                .Select(label => ProjectFactory.ToCanonicalMachineLabel("Melsec", label))
+                .ToArray());
+
+        Assert.Equal(
+            [
+                "keyence:kv-nano",
+                "keyence:kv-3000",
+                "keyence:kv-5000",
+                "keyence:kv-7000",
+                "keyence:kv-8000",
+                "keyence:kv-x500",
+            ],
+            ProjectFactory.KeyenceCpuModels
+                .Select(label => ProjectFactory.ToCanonicalMachineLabel("Keyence", label))
+                .ToArray());
+
+        Assert.Throws<ArgumentException>(() => ProjectFactory.ToCanonicalMachineLabel("Melsec", "QCPU"));
     }
 
     [Fact]
     public void ProjectFactoryMapsCanonicalJsonLabelsToDisplayModelLabels()
     {
-        Assert.Equal("iQ-R", ProjectFactory.ToDisplayMachineLabel("Melsec", "melsec:iq-r"));
-        Assert.Equal("iQ-F", ProjectFactory.ToDisplayMachineLabel("Melsec", "melsec:iq-f"));
-        Assert.Equal("iQ-L", ProjectFactory.ToDisplayMachineLabel("Melsec", "melsec:iq-l"));
-        Assert.Equal("MX-R", ProjectFactory.ToDisplayMachineLabel("Melsec", "melsec:mx-r"));
-        Assert.Equal("MX-F", ProjectFactory.ToDisplayMachineLabel("Melsec", "melsec:mx-f"));
-        Assert.Equal("QnUDV", ProjectFactory.ToDisplayMachineLabel("Melsec", "melsec:qnudv"));
-        Assert.Equal("QnU", ProjectFactory.ToDisplayMachineLabel("Melsec", "melsec:qnu"));
-        Assert.Equal("QCPU", ProjectFactory.ToDisplayMachineLabel("Melsec", "melsec:qcpu"));
-        Assert.Equal("LCPU", ProjectFactory.ToDisplayMachineLabel("Melsec", "melsec:lcpu"));
-        Assert.Equal("KV-X500", ProjectFactory.ToDisplayMachineLabel("Keyence", "keyence:kv-x500"));
-        Assert.Equal("KV-8000", ProjectFactory.ToDisplayMachineLabel("Keyence", "keyence:kv-8000"));
-        Assert.Equal("KV-7000", ProjectFactory.ToDisplayMachineLabel("Keyence", "keyence:kv-7000"));
-        Assert.Equal("KV-3000", ProjectFactory.ToDisplayMachineLabel("Keyence", "keyence:kv-3000"));
-        Assert.Equal("KV-5000", ProjectFactory.ToDisplayMachineLabel("Keyence", "keyence:kv-5000"));
+        Assert.Equal(
+            ProjectFactory.MelsecCpuModels,
+            new[]
+            {
+                "melsec:iq-r",
+                "melsec:iq-r:rj71en71",
+                "melsec:iq-f",
+                "melsec:iq-l",
+                "melsec:mx-r",
+                "melsec:mx-f",
+                "melsec:qnudv",
+                "melsec:qnudv:qj71e71-100",
+                "melsec:qnu",
+                "melsec:qnu:qj71e71-100",
+                "melsec:qcpu:qj71e71-100",
+                "melsec:lcpu",
+                "melsec:lcpu:lj71e71-100",
+            }.Select(label => ProjectFactory.ToDisplayMachineLabel("Melsec", label)).ToArray());
+
+        Assert.Equal(
+            ProjectFactory.KeyenceCpuModels,
+            new[]
+            {
+                "keyence:kv-nano",
+                "keyence:kv-3000",
+                "keyence:kv-5000",
+                "keyence:kv-7000",
+                "keyence:kv-8000",
+                "keyence:kv-x500",
+            }.Select(label => ProjectFactory.ToDisplayMachineLabel("Keyence", label)).ToArray());
+
+        Assert.Throws<ArgumentException>(() => ProjectFactory.ToDisplayMachineLabel("Melsec", "melsec:qcpu"));
     }
 
     [Fact]
@@ -334,14 +372,14 @@ public sealed class ProjectQrPayloadTests
     }
 
     [Theory]
-    [InlineData("Melsec", "Normal", "iQ-R", "XFF", "Bit")]
-    [InlineData("Melsec", "Normal", "iQ-R", "SWFF", "Int16")]
-    [InlineData("Melsec", "Normal", "iQ-F", "X77", "Bit")]
-    [InlineData("Keyence", "Normal", "KV-8000", "R015", "Bit")]
-    [InlineData("Keyence", "Normal", "KV-8000", "DM100", "Int16")]
-    [InlineData("Keyence", "Xym", "KV-8000", "X39F", "Bit")]
-    [InlineData("Keyence", "Xym", "KV-8000", "Y1999F", "Bit")]
-    [InlineData("Keyence", "Xym", "KV-8000", "D100", "Int16")]
+    [InlineData("Melsec", "Normal", "MELSEC iQ-R (built-in)", "XFF", "Bit")]
+    [InlineData("Melsec", "Normal", "MELSEC iQ-R (built-in)", "SWFF", "Int16")]
+    [InlineData("Melsec", "Normal", "MELSEC iQ-F (built-in)", "X77", "Bit")]
+    [InlineData("Keyence", "Normal", "KEYENCE KV-8000", "R015", "Bit")]
+    [InlineData("Keyence", "Normal", "KEYENCE KV-8000", "DM100", "Int16")]
+    [InlineData("Keyence", "Xym", "KEYENCE KV-8000", "X39F", "Bit")]
+    [InlineData("Keyence", "Xym", "KEYENCE KV-8000", "Y1999F", "Bit")]
+    [InlineData("Keyence", "Xym", "KEYENCE KV-8000", "D100", "Int16")]
     public void ProjectFactoryAcceptsDeviceAddressStringsSupportedByMobileApps(
         string vendor,
         string keyenceDeviceMode,
@@ -399,15 +437,15 @@ public sealed class ProjectQrPayloadTests
     }
 
     [Theory]
-    [InlineData("Melsec", "Normal", "iQ-R", "DFFFF")]
-    [InlineData("Melsec", "Normal", "iQ-F", "X78")]
-    [InlineData("Keyence", "Normal", "KV-8000", "R016")]
-    [InlineData("Keyence", "Normal", "KV-8000", "CR7916")]
-    [InlineData("Keyence", "Normal", "KV-8000", "DM65535")]
-    [InlineData("Keyence", "Normal", "KV-8000", "B8000")]
-    [InlineData("Keyence", "Xym", "KV-8000", "X3A0")]
-    [InlineData("Keyence", "Xym", "KV-8000", "Y19A0")]
-    [InlineData("Keyence", "Xym", "KV-8000", "X20000")]
+    [InlineData("Melsec", "Normal", "MELSEC iQ-R (built-in)", "DFFFF")]
+    [InlineData("Melsec", "Normal", "MELSEC iQ-F (built-in)", "X78")]
+    [InlineData("Keyence", "Normal", "KEYENCE KV-8000", "R016")]
+    [InlineData("Keyence", "Normal", "KEYENCE KV-8000", "CR7916")]
+    [InlineData("Keyence", "Normal", "KEYENCE KV-8000", "DM65535")]
+    [InlineData("Keyence", "Normal", "KEYENCE KV-8000", "B8000")]
+    [InlineData("Keyence", "Xym", "KEYENCE KV-8000", "X3A0")]
+    [InlineData("Keyence", "Xym", "KEYENCE KV-8000", "Y19A0")]
+    [InlineData("Keyence", "Xym", "KEYENCE KV-8000", "X20000")]
     public void ProjectFactoryRejectsInvalidDeviceAddressNumberFormats(
         string vendor,
         string keyenceDeviceMode,
@@ -450,7 +488,7 @@ public sealed class ProjectQrPayloadTests
             ProjectFactory.SupportedDeviceNames("Melsec"));
         Assert.Equal(
             ["X", "Y", "M", "D", "L", "F", "B", "SB", "SM", "STC", "TC", "CC", "W", "SW", "R", "ZR", "SD"],
-            ProjectFactory.SupportedDeviceNames("Melsec", "Normal", "iQ-F"));
+            ProjectFactory.SupportedDeviceNames("Melsec", "Normal", "MELSEC iQ-F (built-in)"));
         Assert.Equal(
             ["R", "B", "MR", "LR", "CR", "DM", "EM", "FM", "ZF", "W", "TM", "CM"],
             ProjectFactory.SupportedDeviceNames("Keyence", "Normal"));
@@ -492,7 +530,7 @@ public sealed class ProjectQrPayloadTests
             ProjectFactory.BuildDeviceBlock("X0", 16, "Melsec"));
         Assert.Equal(
             ["X0", "X1", "X2", "X3", "X4", "X5", "X6", "X7", "X10"],
-            ProjectFactory.BuildDeviceBlock("X0", 9, "Melsec", "Normal", "iQ-F"));
+            ProjectFactory.BuildDeviceBlock("X0", 9, "Melsec", "Normal", "MELSEC iQ-F (built-in)"));
         Assert.Equal(
             ["R015", "R100"],
             ProjectFactory.BuildDeviceBlock("R015", 2, "Keyence", "Normal"));
@@ -536,7 +574,7 @@ public sealed class ProjectQrPayloadTests
         Port: 1025,
         MonitorIntervalMs: 500,
         TimeoutMs: 2000,
-        MachineLabel: "iQ-R",
+        MachineLabel: "MELSEC iQ-R (built-in)",
         KeyenceDeviceMode: "Normal",
         TransportMode: "Tcp",
         Network: 0,

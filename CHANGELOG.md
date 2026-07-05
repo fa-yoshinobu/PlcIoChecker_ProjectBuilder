@@ -13,6 +13,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - `Tests`: テスト、fixture、検証データ。
 - `Tooling`: ビルド、CLI、開発補助。
 
+## [Unreleased] - 2026-07-05
+
+### Changed
+
+- Project JSON: PLC 機種候補を Android/iOS の新しい通信プロファイルに合わせ、`melsec:qcpu` を廃止してユニット付き MELSEC / KEYENCE KV-NANO 候補を出力できるようにしました。
+
+### Added
+
+- Tests: ProjectBuilder の機種表示ラベルと `plc.cpuModel` の相互変換が、新しい候補一覧に一致することを確認する Core テストを更新しました。
+
 ## [Unreleased] - 2026-06-28
 
 ### Changed

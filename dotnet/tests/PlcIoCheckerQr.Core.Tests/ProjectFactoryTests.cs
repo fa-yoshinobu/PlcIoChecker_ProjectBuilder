@@ -5,11 +5,11 @@ namespace PlcIoCheckerQr.Core.Tests;
 public sealed class ProjectFactoryTests
 {
     [Theory]
-    [InlineData("Melsec", "Normal", "iQ-R", " d001 ", "D1")]
-    [InlineData("Melsec", "Normal", "iQ-R", "x00f", "XF")]
-    [InlineData("Melsec", "Normal", "iQ-F", "x010", "X10")]
-    [InlineData("Keyence", "Normal", "KV-8000", "r001", "R001")]
-    [InlineData("Keyence", "Xym", "KV-8000", "x03f", "X3F")]
+    [InlineData("Melsec", "Normal", "MELSEC iQ-R (built-in)", " d001 ", "D1")]
+    [InlineData("Melsec", "Normal", "MELSEC iQ-R (built-in)", "x00f", "XF")]
+    [InlineData("Melsec", "Normal", "MELSEC iQ-F (built-in)", "x010", "X10")]
+    [InlineData("Keyence", "Normal", "KEYENCE KV-8000", "r001", "R001")]
+    [InlineData("Keyence", "Xym", "KEYENCE KV-8000", "x03f", "X3F")]
     public void NormalizeDeviceAddressFormatsAddressLikeMobileApps(
         string vendor,
         string keyenceDeviceMode,
@@ -36,17 +36,17 @@ public sealed class ProjectFactoryTests
     }
 
     [Theory]
-    [InlineData("Melsec", "Normal", "iQ-R", "XFF", true)]
-    [InlineData("Melsec", "Normal", "iQ-R", "STC0", true)]
-    [InlineData("Melsec", "Normal", "iQ-R", "SD0", false)]
-    [InlineData("Melsec", "Normal", "iQ-R", "SWFF", false)]
-    [InlineData("Melsec", "Normal", "iQ-F", "X77", true)]
-    [InlineData("Keyence", "Normal", "KV-8000", "R015", true)]
-    [InlineData("Keyence", "Normal", "KV-8000", "CM100", false)]
-    [InlineData("Keyence", "Normal", "KV-8000", "DM100", false)]
-    [InlineData("Keyence", "Xym", "KV-8000", "X39F", true)]
-    [InlineData("Keyence", "Xym", "KV-8000", "M100", true)]
-    [InlineData("Keyence", "Xym", "KV-8000", "D100", false)]
+    [InlineData("Melsec", "Normal", "MELSEC iQ-R (built-in)", "XFF", true)]
+    [InlineData("Melsec", "Normal", "MELSEC iQ-R (built-in)", "STC0", true)]
+    [InlineData("Melsec", "Normal", "MELSEC iQ-R (built-in)", "SD0", false)]
+    [InlineData("Melsec", "Normal", "MELSEC iQ-R (built-in)", "SWFF", false)]
+    [InlineData("Melsec", "Normal", "MELSEC iQ-F (built-in)", "X77", true)]
+    [InlineData("Keyence", "Normal", "KEYENCE KV-8000", "R015", true)]
+    [InlineData("Keyence", "Normal", "KEYENCE KV-8000", "CM100", false)]
+    [InlineData("Keyence", "Normal", "KEYENCE KV-8000", "DM100", false)]
+    [InlineData("Keyence", "Xym", "KEYENCE KV-8000", "X39F", true)]
+    [InlineData("Keyence", "Xym", "KEYENCE KV-8000", "M100", true)]
+    [InlineData("Keyence", "Xym", "KEYENCE KV-8000", "D100", false)]
     public void BitDetectionIsVendorModeAndModelAware(
         string vendor,
         string keyenceDeviceMode,
@@ -60,7 +60,7 @@ public sealed class ProjectFactoryTests
     [Fact]
     public void UnknownAddressFamilyKeepsDataTypeChoicesOpenUntilValidated()
     {
-        Assert.False(ProjectFactory.IsBitAddress("DFFFF", "Melsec", "Normal", "iQ-R"));
+        Assert.False(ProjectFactory.IsBitAddress("DFFFF", "Melsec", "Normal", "MELSEC iQ-R (built-in)"));
         Assert.Equal(ProjectFactory.DeviceDataTypes, ProjectFactory.DeviceDataTypesForAddress("DFFFF", "Melsec"));
         Assert.Equal(ProjectFactory.DeviceDataTypes, ProjectFactory.DeviceDataTypesForAddress("", "Melsec"));
     }

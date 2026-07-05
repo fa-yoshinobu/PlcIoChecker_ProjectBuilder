@@ -48,9 +48,10 @@ emitted in JSON or QR payloads; the mobile apps store them in device-local
 secure storage after the user enters them.
 
 `plc.cpuModel` is the mobile app canonical connection model key. ProjectBuilder
-keeps friendly labels such as `iQ-R` and `KV-8000` in the UI, but schema v1 JSON
-emits values such as `melsec:iq-r` and `keyence:kv-8000`. ProjectBuilder must
-not emit a separate `plcProfile` field in schema v1.
+keeps friendly labels such as `MELSEC iQ-R (built-in)` and `KEYENCE KV-8000` in
+the UI, but schema v1 JSON emits values such as `melsec:iq-r`,
+`melsec:iq-r:rj71en71`, `melsec:qcpu:qj71e71-100`, and `keyence:kv-8000`.
+ProjectBuilder must not emit a separate `plcProfile` field in schema v1.
 
 ProjectBuilder enforces the mobile app registration limits: up to 20 Time Chart
 targets and up to 20 trap definitions.
@@ -58,7 +59,9 @@ targets and up to 20 trap definitions.
 ## Value Sets
 
 - `plc.vendor`: `MELSEC`, `KEYENCE`
-- `plc.cpuModel`: mobile app canonical model key, for example `melsec:iq-r` or `keyence:kv-x500`
+- `plc.cpuModel`: mobile app canonical model key
+  - MELSEC: `melsec:iq-r`, `melsec:iq-r:rj71en71`, `melsec:iq-f`, `melsec:iq-l`, `melsec:mx-r`, `melsec:mx-f`, `melsec:qnudv`, `melsec:qnudv:qj71e71-100`, `melsec:qnu`, `melsec:qnu:qj71e71-100`, `melsec:qcpu:qj71e71-100`, `melsec:lcpu`, `melsec:lcpu:lj71e71-100`
+  - KEYENCE: `keyence:kv-nano`, `keyence:kv-3000`, `keyence:kv-5000`, `keyence:kv-7000`, `keyence:kv-8000`, `keyence:kv-x500`
 - `plc.connection.mode`: `REAL`, `DEMO_MOCK`
 - `plc.keyence.deviceMode`: `NORMAL`, `XYM`
 - `plc.connection.transport`: `TCP`, `UDP`

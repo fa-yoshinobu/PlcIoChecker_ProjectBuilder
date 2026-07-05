@@ -30,7 +30,7 @@ internal static class ProjectInputBuilder
         Port: Port ?? (Vendor == "Keyence" ? 8501 : 1025),
         MonitorIntervalMs: MonitorIntervalMs,
         TimeoutMs: TimeoutMs,
-        MachineLabel: MachineLabel ?? (Vendor == "Keyence" ? "KV-8000" : "iQ-R"),
+        MachineLabel: MachineLabel ?? (Vendor == "Keyence" ? "KEYENCE KV-8000" : "MELSEC iQ-R (built-in)"),
         KeyenceDeviceMode: KeyenceDeviceMode,
         TransportMode: TransportMode,
         Network: Network,

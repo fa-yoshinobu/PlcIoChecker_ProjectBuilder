@@ -25,7 +25,7 @@ public partial class MainWindow
         Fill(_vendor, ProjectFactory.Vendors, "Melsec");
         Fill(_connectionMode, ProjectFactory.ConnectionModes, "Real");
         Fill(_transport, ProjectFactory.TransportModes, "Tcp");
-        Fill(_model, ProjectFactory.MelsecCpuModels, "iQ-R");
+        Fill(_model, ProjectFactory.MelsecCpuModels, ProjectFactory.MelsecCpuModels[0]);
         Fill(_keyenceMode, ProjectFactory.KeyenceDeviceModes, "Normal");
 
         static void Fill(ComboBox comboBox, string[] values, string selected)
