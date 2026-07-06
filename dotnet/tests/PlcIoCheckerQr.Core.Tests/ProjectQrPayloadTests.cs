@@ -36,7 +36,7 @@ public sealed class ProjectQrPayloadTests
         var melsec = root.GetProperty("plc").GetProperty("melsec");
         Assert.Equal(0, melsec.GetProperty("networkNo").GetInt32());
         Assert.Equal(255, melsec.GetProperty("stationNo").GetInt32());
-        Assert.Equal("0x03FF", melsec.GetProperty("moduleIoNo").GetString());
+        Assert.Equal("OwnStation", melsec.GetProperty("moduleIo").GetString());
         Assert.Equal("0x00", melsec.GetProperty("multidropNo").GetString());
         Assert.False(melsec.TryGetProperty("remotePassword", out _));
         Assert.Equal("GREATER_OR_EQUAL", root.GetProperty("traps")[0].GetProperty("condition").GetString());
@@ -63,7 +63,7 @@ public sealed class ProjectQrPayloadTests
             TransportMode: "Tcp",
             Network: 0,
             Station: 255,
-            ModuleIo: 1023,
+            ModuleIo: "OwnStation",
             Multidrop: 0,
             DevicesText: "R000,Bit\r\nDM100,UInt16",
             WatchText: "R000,Bit",
@@ -579,7 +579,7 @@ public sealed class ProjectQrPayloadTests
         TransportMode: "Tcp",
         Network: 0,
         Station: 255,
-        ModuleIo: 1023,
+        ModuleIo: "OwnStation",
         Multidrop: 0,
         DevicesText: "X000,Bit,Start input\r\nD100,Int16,Speed word",
         WatchText: "X000,Bit\r\nD100,Int16",

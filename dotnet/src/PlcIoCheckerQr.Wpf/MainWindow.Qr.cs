@@ -73,7 +73,7 @@ public partial class MainWindow
             TransportMode: Selected(_transport),
             Network: ParseRange(_network, min: 0, max: 255),
             Station: ParseRange(_station, min: 0, max: 255),
-            ModuleIo: ParseHexRange(_moduleIo, min: 0, max: 0xFFFF, width: 4),
+            ModuleIo: Selected(_moduleIo),
             Multidrop: ParseHexRange(_multidrop, min: 0, max: 0xFF, width: 2),
             DevicesText: DevicesText(),
             WatchText: WatchText(),

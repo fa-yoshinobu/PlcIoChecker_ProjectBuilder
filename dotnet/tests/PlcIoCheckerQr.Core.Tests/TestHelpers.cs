@@ -17,7 +17,7 @@ internal static class ProjectInputBuilder
         string TransportMode = "Tcp",
         int Network = 0,
         int Station = 255,
-        int ModuleIo = 1023,
+        string ModuleIo = "OwnStation",
         int Multidrop = 0,
         string DevicesText = "D100,Int16",
         string WatchText = "",

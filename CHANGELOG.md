@@ -13,6 +13,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - `Tests`: テスト、fixture、検証データ。
 - `Tooling`: ビルド、CLI、開発補助。
 
+## [Unreleased] - 2026-07-06
+
+### BREAKING
+
+- Project JSON: MELSEC 接続の `melsec.moduleIoNo`(16進文字列)を廃止し、正準13名の
+  `melsec.moduleIo`(例 `"OwnStation"`)に変更しました。モバイルアプリ(Android/iOS)の
+  同日変更と対で、旧形式の JSON は読み込みエラーになります。
+
+### Changed
+
+- App: ユニットI/O の入力を自由入力テキストから正準13択のプルダウンに変更しました。
+
 ## [Unreleased] - 2026-07-05
 
 ### Changed

@@ -28,7 +28,7 @@ public sealed record PlcConnection(
     string TransportMode,
     int Network,
     int Station,
-    int ModuleIo,
+    string ModuleIo,
     int Multidrop);
 
 public sealed record DeviceDefinition(string Address, string DataType, string Comment = "");
@@ -61,7 +61,7 @@ public sealed record ProjectInput(
     string TransportMode,
     int Network,
     int Station,
-    int ModuleIo,
+    string ModuleIo,
     int Multidrop,
     string DevicesText,
     string WatchText,
@@ -77,6 +77,23 @@ public static partial class ProjectFactory
     public static readonly string[] ConnectionModes = ["Real", "DemoMock"];
     public static readonly string[] KeyenceDeviceModes = ["Normal", "Xym"];
     public static readonly string[] TransportModes = ["Tcp", "Udp"];
+
+    public static readonly string[] ModuleIoTargets =
+    [
+        "OwnStation",
+        "ControlSystemCpu",
+        "StandbySystemCpu",
+        "SystemACpu",
+        "SystemBCpu",
+        "MultipleCpu1",
+        "MultipleCpu2",
+        "MultipleCpu3",
+        "MultipleCpu4",
+        "RemoteHead1",
+        "RemoteHead2",
+        "ControlSystemRemoteHead",
+        "StandbySystemRemoteHead",
+    ];
     public static readonly string[] DeviceDataTypes = ["Bit", "Int16", "UInt16", "Int32", "UInt32", "Float32"];
 
     public static readonly string[] BitTrapConditions = ["Rise", "Fall", "Change"];
@@ -256,6 +273,7 @@ public static partial class ProjectFactory
             "CPU model");
         ValidateChoice(input.KeyenceDeviceMode, KeyenceDeviceModes, "Keyence device mode");
         ValidateChoice(input.TransportMode, TransportModes, "transport mode");
+        ValidateChoice(input.ModuleIo, ModuleIoTargets, "module IO");
 
         var now = nowEpochMs ?? DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         var name = string.IsNullOrWhiteSpace(input.Name) ? "PLC QR Project" : input.Name.Trim();

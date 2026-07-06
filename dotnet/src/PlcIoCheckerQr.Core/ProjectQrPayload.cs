@@ -168,7 +168,7 @@ public static class ProjectQrPayload
                 {
                     networkNo = project.Connection.Network,
                     stationNo = project.Connection.Station,
-                    moduleIoNo = FormatPrefixedHex(project.Connection.ModuleIo, 4),
+                    moduleIo = project.Connection.ModuleIo,
                     multidropNo = FormatPrefixedHex(project.Connection.Multidrop, 2),
                 }
                 : null,

@@ -36,6 +36,7 @@
   "direction.down": "down",
   "direction.up": "up",
   "error.invalidHost": "Invalid IP address or hostname.",
+  "error.invalidModuleIo": "Unsupported module IO target ({0}). Choose one of the canonical names.",
   "error.jsonSchemaInvalid": "The project file schema is not supported ({0}).",
   "error.jsonVersionInvalid": "The project file schema version is not supported (version {0}). Please update the app.",
   "error.remotePasswordUnsupported": "This project file contains the old remote password field ({0}). Enter the password in the mobile app.",

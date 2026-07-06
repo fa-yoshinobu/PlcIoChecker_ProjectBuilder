@@ -858,7 +858,7 @@ public partial class MainWindow : Window
     {
         _network.Text = "0";
         _station.Text = "255";
-        _moduleIo.Text = FormatPrefixedHex(0x03FF, 4);
+        SelectItem(_moduleIo, "OwnStation");
         _multidrop.Text = FormatPrefixedHex(0, 2);
     }
 

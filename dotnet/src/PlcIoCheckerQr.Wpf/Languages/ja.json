@@ -36,6 +36,7 @@
   "direction.down": "下",
   "direction.up": "上",
   "error.invalidHost": "IP アドレスまたはホスト名の形式が正しくありません。",
+  "error.invalidModuleIo": "ユニットI/O の値が不正です({0})。正準13名から選択してください。",
   "error.jsonSchemaInvalid": "プロジェクトファイルのスキーマが対応していません（{0}）。",
   "error.jsonVersionInvalid": "プロジェクトファイルのバージョンが対応していません（バージョン {0}）。アプリを最新版にアップデートしてください。",
   "error.remotePasswordUnsupported": "このプロジェクトファイルには旧形式のリモートパスワード項目（{0}）が含まれています。パスワードはモバイルアプリ側で入力してください。",

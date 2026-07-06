@@ -207,7 +207,12 @@ public partial class MainWindow
             var melsec = ReadRequiredObject(plc, "melsec");
             _network.Text = ReadRequiredInt(melsec, "networkNo").ToString(CultureInfo.InvariantCulture);
             _station.Text = ReadRequiredInt(melsec, "stationNo").ToString(CultureInfo.InvariantCulture);
-            _moduleIo.Text = FormatPrefixedHex(ReadRequiredHexInt(melsec, "moduleIoNo", 0, 0xFFFF), 4);
+            var moduleIoName = ReadRequiredString(melsec, "moduleIo");
+            if (!ProjectFactory.ModuleIoTargets.Contains(moduleIoName))
+            {
+                throw new ProjectJsonException("error.invalidModuleIo", moduleIoName);
+            }
+            SelectItem(_moduleIo, moduleIoName);
             _multidrop.Text = FormatPrefixedHex(ReadRequiredHexInt(melsec, "multidropNo", 0, 0xFF), 2);
             if (melsec.TryGetProperty("remotePassword", out _))
             {
