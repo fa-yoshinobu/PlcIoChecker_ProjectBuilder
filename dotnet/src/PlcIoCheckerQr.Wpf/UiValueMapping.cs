@@ -18,6 +18,25 @@ internal static class UiValueMapping
         _ => condition,
     };
 
+    internal static string ModuleIoDisplayText(string moduleIo, LanguageCatalog language) =>
+        language.Text(moduleIo switch
+        {
+            "OwnStation" => "moduleIo.ownStation",
+            "ControlSystemCpu" => "moduleIo.controlSystemCpu",
+            "StandbySystemCpu" => "moduleIo.standbySystemCpu",
+            "SystemACpu" => "moduleIo.systemACpu",
+            "SystemBCpu" => "moduleIo.systemBCpu",
+            "MultipleCpu1" => "moduleIo.multipleCpu1",
+            "MultipleCpu2" => "moduleIo.multipleCpu2",
+            "MultipleCpu3" => "moduleIo.multipleCpu3",
+            "MultipleCpu4" => "moduleIo.multipleCpu4",
+            "RemoteHead1" => "moduleIo.remoteHead1",
+            "RemoteHead2" => "moduleIo.remoteHead2",
+            "ControlSystemRemoteHead" => "moduleIo.controlSystemRemoteHead",
+            "StandbySystemRemoteHead" => "moduleIo.standbySystemRemoteHead",
+            _ => moduleIo,
+        });
+
     internal static string ToUiVendor(string value) => value.Trim().ToUpperInvariant() switch
     {
         "MELSEC" => "Melsec",
@@ -30,13 +49,6 @@ internal static class UiValueMapping
         "REAL" => "Real",
         "DEMO_MOCK" => "DemoMock",
         _ => throw new InvalidOperationException($"Unsupported connection mode: {value}"),
-    };
-
-    internal static string ToUiKeyenceMode(string value) => value.Trim().ToUpperInvariant() switch
-    {
-        "NORMAL" => "Normal",
-        "XYM" => "Xym",
-        _ => throw new InvalidOperationException($"Unsupported KEYENCE device mode: {value}"),
     };
 
     internal static string ToUiTransport(string value) => value.Trim().ToUpperInvariant() switch

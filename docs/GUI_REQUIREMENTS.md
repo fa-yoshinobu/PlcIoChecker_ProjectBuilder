@@ -69,7 +69,6 @@ Use uppercase schema enum values in JSON:
 
 - `MELSEC`, `KEYENCE`
 - `REAL`, `DEMO_MOCK`
-- `NORMAL`, `XYM`
 - `TCP`, `UDP`
 - `BIT`, `INT16`, `UINT16`, `INT32`, `UINT32`, `FLOAT32`
 - `RISING_EDGE`, `FALLING_EDGE`, `CHANGE`, `GREATER_OR_EQUAL`,

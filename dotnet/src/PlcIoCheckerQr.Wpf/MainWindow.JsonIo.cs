@@ -193,11 +193,6 @@ public partial class MainWindow
         }
         _port.Text = port.ToString(CultureInfo.InvariantCulture);
         SelectItem(_model, ToUiMachineLabel(vendor, ReadRequiredString(plc, "cpuModel")));
-        if (vendor == "Keyence")
-        {
-            var keyence = ReadRequiredObject(plc, "keyence");
-            SelectItem(_keyenceMode, ToUiKeyenceMode(ReadRequiredString(keyence, "deviceMode")));
-        }
 
         SelectItem(_transport, ToUiTransport(ReadRequiredString(connection, "transport")));
         _interval.Text = ReadRequiredInt(connection, "pollingIntervalMs").ToString(CultureInfo.InvariantCulture);
@@ -213,7 +208,6 @@ public partial class MainWindow
                 throw new ProjectJsonException("error.invalidModuleIo", moduleIoName);
             }
             SelectItem(_moduleIo, moduleIoName);
-            _multidrop.Text = FormatPrefixedHex(ReadRequiredHexInt(melsec, "multidropNo", 0, 0xFF), 2);
             if (melsec.TryGetProperty("remotePassword", out _))
             {
                 throw new ProjectJsonException("error.remotePasswordUnsupported", "plc.melsec.remotePassword");

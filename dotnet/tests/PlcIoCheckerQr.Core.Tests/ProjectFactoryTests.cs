@@ -9,7 +9,7 @@ public sealed class ProjectFactoryTests
     [InlineData("Melsec", "Normal", "MELSEC iQ-R (built-in)", "x00f", "XF")]
     [InlineData("Melsec", "Normal", "MELSEC iQ-F (built-in)", "x010", "X10")]
     [InlineData("Keyence", "Normal", "KEYENCE KV-8000", "r001", "R001")]
-    [InlineData("Keyence", "Xym", "KEYENCE KV-8000", "x03f", "X3F")]
+    [InlineData("Keyence", "Xym", "KEYENCE KV-8000 (XYM)", "x03f", "X3F")]
     public void NormalizeDeviceAddressFormatsAddressLikeMobileApps(
         string vendor,
         string keyenceDeviceMode,
@@ -44,9 +44,9 @@ public sealed class ProjectFactoryTests
     [InlineData("Keyence", "Normal", "KEYENCE KV-8000", "R015", true)]
     [InlineData("Keyence", "Normal", "KEYENCE KV-8000", "CM100", false)]
     [InlineData("Keyence", "Normal", "KEYENCE KV-8000", "DM100", false)]
-    [InlineData("Keyence", "Xym", "KEYENCE KV-8000", "X39F", true)]
-    [InlineData("Keyence", "Xym", "KEYENCE KV-8000", "M100", true)]
-    [InlineData("Keyence", "Xym", "KEYENCE KV-8000", "D100", false)]
+    [InlineData("Keyence", "Xym", "KEYENCE KV-8000 (XYM)", "X39F", true)]
+    [InlineData("Keyence", "Xym", "KEYENCE KV-8000 (XYM)", "M100", true)]
+    [InlineData("Keyence", "Xym", "KEYENCE KV-8000 (XYM)", "D100", false)]
     public void BitDetectionIsVendorModeAndModelAware(
         string vendor,
         string keyenceDeviceMode,

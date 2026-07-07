@@ -59,6 +59,11 @@ public partial class MainWindow : Window
     private static LanguageCatalog CurrentLanguage { get; set; } = LanguageCatalog.Load("en");
     private LanguageCatalog _language = LanguageCatalog.Load("en");
 
+    private sealed record ComboBoxOption(string Value, string DisplayText)
+    {
+        public override string ToString() => DisplayText;
+    }
+
     private static string TrapConditionDisplayText(string condition) =>
         UiValueMapping.TrapConditionDisplayText(condition, CurrentLanguage);
 
@@ -77,7 +82,6 @@ public partial class MainWindow : Window
         _qrView.Focusable = true;
         AddHandler(Keyboard.PreviewKeyDownEvent, new KeyEventHandler(MainWindow_PreviewKeyDown), handledEventsToo: true);
         _vendor.SelectionChanged += (_, _) => ApplyVendorDefaults();
-        _keyenceMode.SelectionChanged += (_, _) => ApplyDeviceContextToRows();
         _model.SelectionChanged += (_, _) => UpdateDeviceValidationStatus();
         _projectName.TextChanged += (_, _) => UpdateHeaderProjectName();
 
@@ -95,9 +99,6 @@ public partial class MainWindow : Window
         _model.ItemsSource = models;
         _model.SelectedIndex = 0;
         _port.Text = vendor == "Keyence" ? "8501" : "1025";
-        var keyenceVisibility = vendor == "Keyence" ? Visibility.Visible : Visibility.Collapsed;
-        _keyenceModeLabel.Visibility = keyenceVisibility;
-        _keyenceMode.Visibility = keyenceVisibility;
         var melsecRoutingVisibility = vendor == "Keyence" ? Visibility.Collapsed : Visibility.Visible;
         _networkLabel.Visibility = melsecRoutingVisibility;
         _network.Visibility = melsecRoutingVisibility;
@@ -105,14 +106,7 @@ public partial class MainWindow : Window
         _station.Visibility = melsecRoutingVisibility;
         _moduleIoLabel.Visibility = melsecRoutingVisibility;
         _moduleIo.Visibility = melsecRoutingVisibility;
-        _multidropLabel.Visibility = melsecRoutingVisibility;
-        _multidrop.Visibility = melsecRoutingVisibility;
         _resetRoutingDefaultsButton.Visibility = melsecRoutingVisibility;
-        if (vendor != "Keyence")
-        {
-            SelectItem(_keyenceMode, "Normal");
-        }
-
         ApplyDeviceContextToRows();
         UpdateSupportedDeviceNames();
     }
@@ -859,7 +853,6 @@ public partial class MainWindow : Window
         _network.Text = "0";
         _station.Text = "255";
         SelectItem(_moduleIo, "OwnStation");
-        _multidrop.Text = FormatPrefixedHex(0, 2);
     }
 
     private void ManualMenuItem_Click(object sender, RoutedEventArgs e)
@@ -890,16 +883,35 @@ public partial class MainWindow : Window
 
     private void BackToEditor_Click(object sender, RoutedEventArgs e) => ShowInputScreen();
 
-    private static string Selected(ComboBox comboBox) => comboBox.SelectedItem?.ToString() ?? "";
+    private void RefreshModuleIoOptions()
+    {
+        var selected = Selected(_moduleIo);
+        _moduleIo.ItemsSource = ProjectFactory.ModuleIoTargets
+            .Select(target => new ComboBoxOption(target, ModuleIoDisplayText(target, _language)))
+            .ToArray();
+        SelectItem(_moduleIo, string.IsNullOrWhiteSpace(selected) ? "OwnStation" : selected);
+    }
+
+    private static string Selected(ComboBox comboBox) => comboBox.SelectedItem switch
+    {
+        ComboBoxOption option => option.Value,
+        not null => comboBox.SelectedItem.ToString() ?? "",
+        _ => "",
+    };
 
     private string SelectedKeyenceDeviceMode() =>
-        Selected(_vendor) == "Keyence" ? Selected(_keyenceMode) : "Normal";
+        ProjectFactory.KeyenceDeviceModeForMachineLabel(Selected(_vendor), Selected(_model));
 
     private static void SelectItem(ComboBox comboBox, string value)
     {
-        if (comboBox.Items.Contains(value))
+        foreach (var item in comboBox.Items)
         {
-            comboBox.SelectedItem = value;
+            if (item is ComboBoxOption option && option.Value == value ||
+                item is not ComboBoxOption && string.Equals(item?.ToString(), value, StringComparison.Ordinal))
+            {
+                comboBox.SelectedItem = item;
+                return;
+            }
         }
     }
 

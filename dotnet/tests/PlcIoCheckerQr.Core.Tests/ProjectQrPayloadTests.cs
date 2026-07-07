@@ -37,7 +37,7 @@ public sealed class ProjectQrPayloadTests
         Assert.Equal(0, melsec.GetProperty("networkNo").GetInt32());
         Assert.Equal(255, melsec.GetProperty("stationNo").GetInt32());
         Assert.Equal("OwnStation", melsec.GetProperty("moduleIo").GetString());
-        Assert.Equal("0x00", melsec.GetProperty("multidropNo").GetString());
+        Assert.False(melsec.TryGetProperty("multidropNo", out _));
         Assert.False(melsec.TryGetProperty("remotePassword", out _));
         Assert.Equal("GREATER_OR_EQUAL", root.GetProperty("traps")[0].GetProperty("condition").GetString());
         Assert.False(root.GetProperty("deviceList")[0].TryGetProperty("dataType", out _));
@@ -64,7 +64,6 @@ public sealed class ProjectQrPayloadTests
             Network: 0,
             Station: 255,
             ModuleIo: "OwnStation",
-            Multidrop: 0,
             DevicesText: "R000,Bit\r\nDM100,UInt16",
             WatchText: "R000,Bit",
             TrapsText: "DM100,UInt16,Change,,true"),
@@ -75,7 +74,7 @@ public sealed class ProjectQrPayloadTests
         Assert.Contains("\"cpuModel\":\"keyence:kv-8000\"", json);
         Assert.DoesNotContain("\"plcProfile\"", json);
         Assert.Contains("\"mode\":\"DEMO_MOCK\"", json);
-        Assert.Contains("\"deviceMode\":\"NORMAL\"", json);
+        Assert.DoesNotContain("\"deviceMode\"", json);
         Assert.Contains("\"timeChart\":[{\"address\":\"R000\"}]", json);
         Assert.Contains("\"deviceMeta\":[{\"address\":\"R000\",\"dataType\":\"BIT\"}", json);
         Assert.DoesNotContain("\"melsec\"", json);
@@ -132,11 +131,17 @@ public sealed class ProjectQrPayloadTests
         Assert.Equal(
             [
                 "keyence:kv-nano",
+                "keyence:kv-nano-xym",
                 "keyence:kv-3000",
+                "keyence:kv-3000-xym",
                 "keyence:kv-5000",
+                "keyence:kv-5000-xym",
                 "keyence:kv-7000",
+                "keyence:kv-7000-xym",
                 "keyence:kv-8000",
+                "keyence:kv-8000-xym",
                 "keyence:kv-x500",
+                "keyence:kv-x500-xym",
             ],
             ProjectFactory.KeyenceCpuModels
                 .Select(label => ProjectFactory.ToCanonicalMachineLabel("Keyence", label))
@@ -172,11 +177,17 @@ public sealed class ProjectQrPayloadTests
             new[]
             {
                 "keyence:kv-nano",
+                "keyence:kv-nano-xym",
                 "keyence:kv-3000",
+                "keyence:kv-3000-xym",
                 "keyence:kv-5000",
+                "keyence:kv-5000-xym",
                 "keyence:kv-7000",
+                "keyence:kv-7000-xym",
                 "keyence:kv-8000",
+                "keyence:kv-8000-xym",
                 "keyence:kv-x500",
+                "keyence:kv-x500-xym",
             }.Select(label => ProjectFactory.ToDisplayMachineLabel("Keyence", label)).ToArray());
 
         Assert.Throws<ArgumentException>(() => ProjectFactory.ToDisplayMachineLabel("Melsec", "melsec:qcpu"));
@@ -377,9 +388,9 @@ public sealed class ProjectQrPayloadTests
     [InlineData("Melsec", "Normal", "MELSEC iQ-F (built-in)", "X77", "Bit")]
     [InlineData("Keyence", "Normal", "KEYENCE KV-8000", "R015", "Bit")]
     [InlineData("Keyence", "Normal", "KEYENCE KV-8000", "DM100", "Int16")]
-    [InlineData("Keyence", "Xym", "KEYENCE KV-8000", "X39F", "Bit")]
-    [InlineData("Keyence", "Xym", "KEYENCE KV-8000", "Y1999F", "Bit")]
-    [InlineData("Keyence", "Xym", "KEYENCE KV-8000", "D100", "Int16")]
+    [InlineData("Keyence", "Xym", "KEYENCE KV-8000 (XYM)", "X39F", "Bit")]
+    [InlineData("Keyence", "Xym", "KEYENCE KV-8000 (XYM)", "Y1999F", "Bit")]
+    [InlineData("Keyence", "Xym", "KEYENCE KV-8000 (XYM)", "D100", "Int16")]
     public void ProjectFactoryAcceptsDeviceAddressStringsSupportedByMobileApps(
         string vendor,
         string keyenceDeviceMode,
@@ -429,6 +440,7 @@ public sealed class ProjectQrPayloadTests
         var exception = Assert.Throws<ArgumentException>(() => ProjectFactory.MakeProject(ProjectInputBuilder.MakeInput(
             Vendor: vendor,
             KeyenceDeviceMode: keyenceDeviceMode,
+            MachineLabel: vendor == "Keyence" && keyenceDeviceMode == "Xym" ? "KEYENCE KV-8000 (XYM)" : null,
             DevicesText: $"{address},Int16",
             WatchText: "",
             TrapsText: "")));
@@ -443,9 +455,9 @@ public sealed class ProjectQrPayloadTests
     [InlineData("Keyence", "Normal", "KEYENCE KV-8000", "CR7916")]
     [InlineData("Keyence", "Normal", "KEYENCE KV-8000", "DM65535")]
     [InlineData("Keyence", "Normal", "KEYENCE KV-8000", "B8000")]
-    [InlineData("Keyence", "Xym", "KEYENCE KV-8000", "X3A0")]
-    [InlineData("Keyence", "Xym", "KEYENCE KV-8000", "Y19A0")]
-    [InlineData("Keyence", "Xym", "KEYENCE KV-8000", "X20000")]
+    [InlineData("Keyence", "Xym", "KEYENCE KV-8000 (XYM)", "X3A0")]
+    [InlineData("Keyence", "Xym", "KEYENCE KV-8000 (XYM)", "Y19A0")]
+    [InlineData("Keyence", "Xym", "KEYENCE KV-8000 (XYM)", "X20000")]
     public void ProjectFactoryRejectsInvalidDeviceAddressNumberFormats(
         string vendor,
         string keyenceDeviceMode,
@@ -511,6 +523,7 @@ public sealed class ProjectQrPayloadTests
         var project = ProjectFactory.MakeProject(ProjectInputBuilder.MakeInput(
             Vendor: vendor,
             KeyenceDeviceMode: keyenceDeviceMode,
+            MachineLabel: vendor == "Keyence" && keyenceDeviceMode == "Xym" ? "KEYENCE KV-8000 (XYM)" : null,
             DevicesText: $"{address},{expectedDataType}",
             WatchText: $"{address},{expectedDataType}",
             TrapsText: ""));
@@ -580,7 +593,6 @@ public sealed class ProjectQrPayloadTests
         Network: 0,
         Station: 255,
         ModuleIo: "OwnStation",
-        Multidrop: 0,
         DevicesText: "X000,Bit,Start input\r\nD100,Int16,Speed word",
         WatchText: "X000,Bit\r\nD100,Int16",
         TrapsText: "D100,Int16,GreaterOrEqual,100,true"),

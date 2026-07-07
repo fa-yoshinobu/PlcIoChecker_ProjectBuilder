@@ -28,8 +28,7 @@ public sealed record PlcConnection(
     string TransportMode,
     int Network,
     int Station,
-    string ModuleIo,
-    int Multidrop);
+    string ModuleIo);
 
 public sealed record DeviceDefinition(string Address, string DataType, string Comment = "");
 
@@ -62,7 +61,6 @@ public sealed record ProjectInput(
     int Network,
     int Station,
     string ModuleIo,
-    int Multidrop,
     string DevicesText,
     string WatchText,
     string TrapsText,
@@ -75,7 +73,6 @@ public static partial class ProjectFactory
 
     public static readonly string[] Vendors = ["Melsec", "Keyence"];
     public static readonly string[] ConnectionModes = ["Real", "DemoMock"];
-    public static readonly string[] KeyenceDeviceModes = ["Normal", "Xym"];
     public static readonly string[] TransportModes = ["Tcp", "Udp"];
 
     public static readonly string[] ModuleIoTargets =
@@ -104,6 +101,8 @@ public static partial class ProjectFactory
 
     private sealed record CpuModelOption(string DisplayLabel, string CanonicalLabel);
 
+    // Keep these labels in sync with the communication libraries' PLC profile display names.
+    // KEYENCE XYM is represented by the "-xym" PLC profile, not a separate UI setting.
     private static readonly CpuModelOption[] MelsecCpuModelOptions =
     [
         new("MELSEC iQ-R (built-in)", "melsec:iq-r"),
@@ -124,11 +123,17 @@ public static partial class ProjectFactory
     private static readonly CpuModelOption[] KeyenceCpuModelOptions =
     [
         new("KEYENCE KV-NANO", "keyence:kv-nano"),
+        new("KEYENCE KV-NANO (XYM)", "keyence:kv-nano-xym"),
         new("KEYENCE KV-3000", "keyence:kv-3000"),
+        new("KEYENCE KV-3000 (XYM)", "keyence:kv-3000-xym"),
         new("KEYENCE KV-5000", "keyence:kv-5000"),
+        new("KEYENCE KV-5000 (XYM)", "keyence:kv-5000-xym"),
         new("KEYENCE KV-7000", "keyence:kv-7000"),
+        new("KEYENCE KV-7000 (XYM)", "keyence:kv-7000-xym"),
         new("KEYENCE KV-8000", "keyence:kv-8000"),
+        new("KEYENCE KV-8000 (XYM)", "keyence:kv-8000-xym"),
         new("KEYENCE KV-X500", "keyence:kv-x500"),
+        new("KEYENCE KV-X500 (XYM)", "keyence:kv-x500-xym"),
     ];
 
     public static readonly string[] MelsecCpuModels = MelsecCpuModelOptions.Select(option => option.DisplayLabel).ToArray();
@@ -186,6 +191,18 @@ public static partial class ProjectFactory
         var option = options.FirstOrDefault(candidate => candidate.CanonicalLabel == normalized);
         return option?.DisplayLabel
             ?? throw new ArgumentException($"Unsupported {vendorName} CPU model: {original}");
+    }
+
+    public static string KeyenceDeviceModeForMachineLabel(string vendor, string machineLabel)
+    {
+        if (!string.Equals(vendor, "Keyence", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Normal";
+        }
+
+        return ToCanonicalMachineLabel(vendor, machineLabel).EndsWith("-xym", StringComparison.Ordinal)
+            ? "Xym"
+            : "Normal";
     }
 
     private static readonly DeviceFamilyRule[] MelsecDeviceFamilies =
@@ -271,35 +288,35 @@ public static partial class ProjectFactory
             input.MachineLabel,
             input.Vendor == "Keyence" ? KeyenceCpuModels : MelsecCpuModels,
             "CPU model");
-        ValidateChoice(input.KeyenceDeviceMode, KeyenceDeviceModes, "Keyence device mode");
         ValidateChoice(input.TransportMode, TransportModes, "transport mode");
         ValidateChoice(input.ModuleIo, ModuleIoTargets, "module IO");
 
         var now = nowEpochMs ?? DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         var name = string.IsNullOrWhiteSpace(input.Name) ? "PLC QR Project" : input.Name.Trim();
+        var keyenceDeviceMode = KeyenceDeviceModeForMachineLabel(input.Vendor, input.MachineLabel);
 
         var explicitDataTypesByAddress = BuildExplicitDataTypeIndex(
             input,
             input.Vendor,
-            input.KeyenceDeviceMode,
+            keyenceDeviceMode,
             input.MachineLabel);
-        var devices = ParseDevices(input.DevicesText, input.Vendor, input.KeyenceDeviceMode, input.MachineLabel, explicitDataTypesByAddress);
+        var devices = ParseDevices(input.DevicesText, input.Vendor, keyenceDeviceMode, input.MachineLabel, explicitDataTypesByAddress);
         var comments = MergeDeviceComments(
             devices,
-            ParseComments(input.CommentsText, input.Vendor, input.KeyenceDeviceMode, input.MachineLabel, explicitDataTypesByAddress));
+            ParseComments(input.CommentsText, input.Vendor, keyenceDeviceMode, input.MachineLabel, explicitDataTypesByAddress));
         devices = ApplyDeviceComments(devices, comments);
         var deviceTypesByAddress = devices
             .GroupBy(device => device.Address, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(group => group.Key, group => group.First().DataType, StringComparer.OrdinalIgnoreCase);
 
-        var timeChart = ParseTimeChart(input.WatchText, input.Vendor, input.KeyenceDeviceMode, input.MachineLabel, explicitDataTypesByAddress);
-        var traps = ParseTraps(input.TrapsText, input.Vendor, input.KeyenceDeviceMode, input.MachineLabel, explicitDataTypesByAddress);
+        var timeChart = ParseTimeChart(input.WatchText, input.Vendor, keyenceDeviceMode, input.MachineLabel, explicitDataTypesByAddress);
+        var traps = ParseTraps(input.TrapsText, input.Vendor, keyenceDeviceMode, input.MachineLabel, explicitDataTypesByAddress);
         var (projectDevices, projectTimeChart, projectTraps) = CommonizeDeviceDataTypes(devices, timeChart, traps);
 
         return new PlcProject(
             Id: $"{Slugify(name)}-{now}",
             Name: name,
-            Connection: BuildConnection(input),
+            Connection: BuildConnection(input, keyenceDeviceMode),
             Devices: projectDevices,
             TimeChart: projectTimeChart,
             Traps: projectTraps,
@@ -598,7 +615,7 @@ public static partial class ProjectFactory
         return traps;
     }
 
-    private static PlcConnection BuildConnection(ProjectInput input) =>
+    private static PlcConnection BuildConnection(ProjectInput input, string keyenceDeviceMode) =>
         new(
             input.Vendor,
             input.ConnectionMode,
@@ -607,12 +624,11 @@ public static partial class ProjectFactory
             input.MonitorIntervalMs,
             input.TimeoutMs,
             input.MachineLabel,
-            input.KeyenceDeviceMode,
+            keyenceDeviceMode,
             input.TransportMode,
             input.Network,
             input.Station,
-            input.ModuleIo,
-            input.Multidrop);
+            input.ModuleIo);
 
     private static MonitorTargetDefinition ParseDeviceLine(
         string line,

@@ -85,7 +85,6 @@ public partial class MainWindow
         _projectNameLabel.Text = T("field.projectName");
         _vendorLabel.Text = T("field.vendor");
         _modelLabel.Text = T("field.model");
-        _keyenceModeLabel.Text = T("field.keyenceMode");
         _supportedDevicesLabel.Text = T("field.supportedDevices");
 
         _connectionSectionTitle.Text = T("section.connection.title");
@@ -99,7 +98,7 @@ public partial class MainWindow
         _networkLabel.Text = T("field.network");
         _stationLabel.Text = T("field.station");
         _moduleIoLabel.Text = T("field.moduleIo");
-        _multidropLabel.Text = T("field.multidrop");
+        RefreshModuleIoOptions();
         _resetRoutingDefaultsButton.Content = T("button.resetRoutingDefaults");
 
         _devicesGrid.ToolTip = T("tooltip.devicesGrid");

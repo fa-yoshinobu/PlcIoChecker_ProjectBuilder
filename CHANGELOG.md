@@ -19,11 +19,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Project JSON: MELSEC 接続の `melsec.moduleIoNo`(16進文字列)を廃止し、正準13名の
   `melsec.moduleIo`(例 `"OwnStation"`)に変更しました。モバイルアプリ(Android/iOS)の
-  同日変更と対で、旧形式の JSON は読み込みエラーになります。
+  同日変更と対で、旧形式の JSON は読み込みエラーになります。`melsec.multidropNo` は出力せず、
+  SLMP MultiDrop はモバイルアプリ側で常時 `0x00` として扱います。
+- Project JSON: KEYENCE XYM は `plc.cpuModel` の `keyence:...-xym` プロファイルで表し、
+  KEYENCE 専用モード項目は出力しない形に変更しました。
 
 ### Changed
 
-- App: ユニットI/O の入力を自由入力テキストから正準13択のプルダウンに変更しました。
+- App: ユニットI/O の入力を自由入力テキストから正準13択のプルダウンに変更し、表示は Android/iOS と同じ和英ラベルに統一しました。
 
 ## [Unreleased] - 2026-07-05
 
@@ -74,7 +77,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Project JSON: JSON / QR 出力に出力元とバージョンを示す `exportInfo` を追加しました。
 - Project JSON: `deviceList` / `timeChart` は `address` のみを持つ形にし、Trap 側も表示型を持たず `deviceMeta` から解決する形にしました。
 - App: ProjectBuilder の JSON import は schema v1 を必須にし、`deviceMeta` から各行の表示型とコメントを復元するようにしました。
-- App: UI 表記を Android/iOS 側に合わせ、`PLC settings`、`PLC IP / host`、`KEYENCE device mode`、`List`、`Trap`、`Comment`、`Time Chart` に整理しました。
+- App: UI 表記を Android/iOS 側に合わせ、`PLC settings`、`PLC IP / host`、`List`、`Trap`、`Comment`、`Time Chart` に整理しました。
 - App: Comment タブで `deviceMeta` に保存するアドレスコメントとデータ型を編集できるようにしました。
 - App: Excel 貼り付けの引用符付きセル、セル内改行、末尾空列、Trap の空データ型列を正しく処理するようにしました。
 - App: 行削除はグリッド行を明確に選択しているときだけ Delete キーで実行されるようにし、コメント編集中の文字削除と衝突しないようにしました。

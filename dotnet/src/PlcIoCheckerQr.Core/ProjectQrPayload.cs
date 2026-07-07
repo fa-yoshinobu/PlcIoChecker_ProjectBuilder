@@ -169,15 +169,9 @@ public static class ProjectQrPayload
                     networkNo = project.Connection.Network,
                     stationNo = project.Connection.Station,
                     moduleIo = project.Connection.ModuleIo,
-                    multidropNo = FormatPrefixedHex(project.Connection.Multidrop, 2),
                 }
                 : null,
-            keyence = IsVendor(project.Connection.Vendor, "Keyence")
-                ? new
-                {
-                    deviceMode = FormatKeyenceDeviceMode(project.Connection.KeyenceDeviceMode),
-                }
-                : null,
+            keyence = (object?)null,
         },
         deviceList = project.Devices.Select(device => new
         {
@@ -261,9 +255,6 @@ public static class ProjectQrPayload
     private static bool IsVendor(string value, string expected) =>
         string.Equals(value, expected, StringComparison.OrdinalIgnoreCase);
 
-    private static string FormatPrefixedHex(int value, int width) =>
-        $"0x{value.ToString($"X{width}", System.Globalization.CultureInfo.InvariantCulture)}";
-
     private static string FormatVendor(string value) => value switch
     {
         "Melsec" => "MELSEC",
@@ -276,13 +267,6 @@ public static class ProjectQrPayload
         "Real" => "REAL",
         "DemoMock" => "DEMO_MOCK",
         _ => throw new ArgumentException($"Unsupported connection mode: {value}"),
-    };
-
-    private static string FormatKeyenceDeviceMode(string value) => value switch
-    {
-        "Normal" => "NORMAL",
-        "Xym" => "XYM",
-        _ => throw new ArgumentException($"Unsupported KEYENCE device mode: {value}"),
     };
 
     private static string FormatTransport(string value) => value switch
