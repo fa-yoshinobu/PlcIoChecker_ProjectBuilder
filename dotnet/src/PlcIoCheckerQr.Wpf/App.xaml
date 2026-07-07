@@ -5,21 +5,21 @@
   <Application.Resources>
     <SolidColorBrush x:Key="NavBg"      Color="#E8F2F0"/>
     <SolidColorBrush x:Key="NavFg"      Color="#14211F"/>
-    <SolidColorBrush x:Key="NavFgMuted" Color="#51615D"/>
+    <SolidColorBrush x:Key="NavFgMuted" Color="#3F4D49"/>
     <SolidColorBrush x:Key="NavHover"   Color="#D7E6E2"/>
     <SolidColorBrush x:Key="WindowBg" Color="#F1F5F9"/>
     <SolidColorBrush x:Key="HeaderBg" Color="#FFFFFF"/>
     <SolidColorBrush x:Key="PanelBg" Color="#FFFFFF"/>
     <SolidColorBrush x:Key="PanelSoft" Color="#F8FBFA"/>
-    <SolidColorBrush x:Key="BorderSoft" Color="#DDE7E3"/>
-    <SolidColorBrush x:Key="BorderStrong" Color="#B8C8C2"/>
+    <SolidColorBrush x:Key="BorderSoft" Color="#C9D6D1"/>
+    <SolidColorBrush x:Key="BorderStrong" Color="#9BB0A9"/>
     <SolidColorBrush x:Key="TextMain" Color="#14211F"/>
-    <SolidColorBrush x:Key="TextMuted" Color="#65736F"/>
-    <SolidColorBrush x:Key="Accent" Color="#0F8B8D"/>
-    <SolidColorBrush x:Key="AccentDark" Color="#0A686A"/>
-    <SolidColorBrush x:Key="AccentSoft" Color="#E4F4F2"/>
-    <SolidColorBrush x:Key="AccentSofter" Color="#F0FAF8"/>
-    <SolidColorBrush x:Key="RowAlt" Color="#F7FAF9"/>
+    <SolidColorBrush x:Key="TextMuted" Color="#4A5A55"/>
+    <SolidColorBrush x:Key="Accent" Color="#0D7E80"/>
+    <SolidColorBrush x:Key="AccentDark" Color="#085E60"/>
+    <SolidColorBrush x:Key="AccentSoft" Color="#C9E7E2"/>
+    <SolidColorBrush x:Key="AccentSofter" Color="#E3F2EE"/>
+    <SolidColorBrush x:Key="RowAlt" Color="#EEF4F1"/>
     <SolidColorBrush x:Key="QrStageBg" Color="#ECF2F0"/>
     <SolidColorBrush x:Key="QrPageFg" Color="#A15C07"/>
     <SolidColorBrush x:Key="ErrorFg" Color="#B42318"/>
@@ -305,7 +305,8 @@
                       Padding="4">
                 <TabPanel IsItemsHost="True"/>
               </Border>
-              <ContentPresenter Grid.Row="1"
+              <ContentPresenter x:Name="PART_SelectedContentHost"
+                                Grid.Row="1"
                                 Margin="20,16,20,20"
                                 ContentSource="SelectedContent"/>
             </Grid>
@@ -399,7 +400,7 @@
       <Style.Triggers>
         <Trigger Property="IsSelected" Value="True">
           <Setter Property="Foreground" Value="{StaticResource TextMain}"/>
-          <Setter Property="Background" Value="Transparent"/>
+          <Setter Property="Background" Value="{StaticResource AccentSoft}"/>
         </Trigger>
       </Style.Triggers>
     </Style>

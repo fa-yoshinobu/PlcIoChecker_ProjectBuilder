@@ -6,6 +6,7 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using PlcIoCheckerQr.Core;
+using PlcIoCheckerQr.Wpf.Windows;
 using static PlcIoCheckerQr.Wpf.ClipboardImport;
 using static PlcIoCheckerQr.Wpf.NumericParsing;
 
@@ -154,100 +155,57 @@ public partial class MainWindow
             return;
         }
 
-        try
+        var preview = ParseClipboardPreview(
+            clipboardText,
+            IsDeviceClipboardHeader,
+            ParseDeviceClipboardRow,
+            row => [row.Address, row.DataType, row.Comment],
+            valueColumnCount: 3);
+        if (preview.Count == 0)
         {
-            var (rows, skipped) = ParseDeviceClipboardRows(clipboardText);
-            if (rows.Count == 0)
-            {
-                SetStatus(T("status.noDeviceRowsPasted"), isError: true);
-                return;
-            }
-
-            _devicesGrid.CommitEdit(DataGridEditingUnit.Cell, exitEditingMode: true);
-            _devicesGrid.CommitEdit(DataGridEditingUnit.Row, exitEditingMode: true);
-
-            var startIndex = _devicesGrid.SelectedItem is DeviceRow selected
-                ? _devices.IndexOf(selected)
-                : _devices.Count;
-            if (startIndex < 0)
-            {
-                startIndex = _devices.Count;
-            }
-
-            for (var index = 0; index < rows.Count; index++)
-            {
-                var targetIndex = startIndex + index;
-                if (targetIndex < _devices.Count)
-                {
-                    _devices[targetIndex] = rows[index];
-                }
-                else
-                {
-                    _devices.Add(rows[index]);
-                }
-            }
-
-            MergeRowComments(rows);
-
-            _devicesGrid.SelectedItems.Clear();
-            foreach (var row in rows)
-            {
-                _devicesGrid.SelectedItems.Add(row);
-            }
-
-            var count = TimeChartAddresses().Count;
-            var pasteMsg = Tf("status.pastedDeviceRows", rows.Count, count, ProjectFactory.MaxTimeChartTargets);
-            SetStatus(skipped > 0 ? $"{pasteMsg}  {Tf("status.clipboardSkipped", skipped)}" : pasteMsg);
+            SetStatus(T("status.noDeviceRowsPasted"), isError: true);
+            return;
         }
-        catch (ArgumentException ex)
+
+        var rows = ConfirmPastePreview<DeviceRow>(T("section.devices.title"), DeviceValueHeaders(), preview);
+        if (rows is null || rows.Count == 0)
         {
-            SetStatus(ex.Message, isError: true);
+            return;
         }
+
+        _devicesGrid.CommitEdit(DataGridEditingUnit.Cell, exitEditingMode: true);
+        _devicesGrid.CommitEdit(DataGridEditingUnit.Row, exitEditingMode: true);
+
+        var startIndex = SelectedIndexOrAppend(_devicesGrid, _devices);
+        ApplyRowsWithUndo(_devicesGrid, _devices, startIndex, rows);
+        MergeRowComments(rows);
+        SelectRows(_devicesGrid, rows);
+
+        var count = TimeChartAddresses().Count;
+        var skipped = preview.Count - rows.Count;
+        var pasteMsg = Tf("status.pastedDeviceRows", rows.Count, count, ProjectFactory.MaxTimeChartTargets);
+        SetStatus(skipped > 0 ? $"{pasteMsg}  {Tf("status.clipboardSkipped", skipped)}" : pasteMsg);
     }
 
-    private (IReadOnlyList<DeviceRow> Rows, int Skipped) ParseDeviceClipboardRows(string text)
+    private DeviceRow? ParseDeviceClipboardRow(string[] fields)
     {
-        var rows = new List<DeviceRow>();
-        var skipped = 0;
-        var isFirstRow = true;
-
-        foreach (var fields in SplitClipboardRows(text))
+        var address = NormalizeAddressText(fields[0]);
+        if (string.IsNullOrWhiteSpace(address))
         {
-            if (fields.Length == 0 || fields.All(string.IsNullOrWhiteSpace))
-            {
-                continue;
-            }
-
-            if (isFirstRow && IsDeviceClipboardHeader(fields))
-            {
-                isFirstRow = false;
-                continue;
-            }
-
-            isFirstRow = false;
-            var address = NormalizeAddressText(fields[0]);
-            if (string.IsNullOrWhiteSpace(address))
-            {
-                skipped++;
-                continue;
-            }
-
-            if (fields.Length <= 1 || !IsDeviceDataTypeField(fields[1]))
-            {
-                throw new ArgumentException($"Clipboard row for {address} requires an explicit data type.");
-            }
-
-            var dataType = NormalizeDeviceDataType(fields[1], address);
-            var commentIndex = FirstValueIndexAfterOptionalDataType(fields, hasDataType: true);
-            var row = new DeviceRow();
-            row.SetDeviceContext(Selected(_vendor), SelectedKeyenceDeviceMode());
-            row.Address = address;
-            row.DataType = dataType;
-            row.Comment = DeviceCommentFromFields(fields, commentIndex);
-            rows.Add(row);
+            return null;
         }
 
-        return (rows, skipped);
+        if (fields.Length <= 1 || !IsDeviceDataTypeField(fields[1]))
+        {
+            throw new ArgumentException($"Clipboard row for {address} requires an explicit data type.");
+        }
+
+        var row = new DeviceRow();
+        row.SetDeviceContext(Selected(_vendor), SelectedKeyenceDeviceMode());
+        row.Address = address;
+        row.DataType = NormalizeDeviceDataType(fields[1], address);
+        row.Comment = DeviceCommentFromFields(fields, FirstValueIndexAfterOptionalDataType(fields, hasDataType: true));
+        return row;
     }
 
     private string NormalizeDeviceDataType(string text, string address) =>
@@ -325,65 +283,55 @@ public partial class MainWindow
             return;
         }
 
-        try
+        var preview = ParseClipboardPreview(
+            clipboardText,
+            IsCommentClipboardHeader,
+            ParseCommentClipboardRow,
+            row => [row.Address, row.DataType, row.Comment],
+            valueColumnCount: 3);
+        if (preview.Count == 0)
         {
-            var rows = ParseCommentClipboardRows(clipboardText).ToList();
-            if (rows.Count == 0)
-            {
-                SetStatus(T("status.noCommentRowsPasted"), isError: true);
-                return;
-            }
-
-            _commentsGrid.CommitEdit(DataGridEditingUnit.Cell, exitEditingMode: true);
-            _commentsGrid.CommitEdit(DataGridEditingUnit.Row, exitEditingMode: true);
-
-            var startIndex = SelectedIndexOrAppend(_commentsGrid, _comments);
-            ApplyRows(_comments, startIndex, rows);
-            SelectRows(_commentsGrid, rows);
-            SetStatus(Tf("status.pastedCommentRows", rows.Count));
+            SetStatus(T("status.noCommentRowsPasted"), isError: true);
+            return;
         }
-        catch (ArgumentException ex)
+
+        var rows = ConfirmPastePreview<CommentRow>(T("section.comments.title"), DeviceValueHeaders(), preview);
+        if (rows is null || rows.Count == 0)
         {
-            SetStatus(ex.Message, isError: true);
+            return;
         }
+
+        _commentsGrid.CommitEdit(DataGridEditingUnit.Cell, exitEditingMode: true);
+        _commentsGrid.CommitEdit(DataGridEditingUnit.Row, exitEditingMode: true);
+
+        var startIndex = SelectedIndexOrAppend(_commentsGrid, _comments);
+        ApplyRowsWithUndo(_commentsGrid, _comments, startIndex, rows);
+        SelectRows(_commentsGrid, rows);
+
+        var skipped = preview.Count - rows.Count;
+        var pasteMsg = Tf("status.pastedCommentRows", rows.Count);
+        SetStatus(skipped > 0 ? $"{pasteMsg}  {Tf("status.clipboardSkipped", skipped)}" : pasteMsg);
     }
 
-    private IEnumerable<CommentRow> ParseCommentClipboardRows(string text)
+    private CommentRow? ParseCommentClipboardRow(string[] fields)
     {
-        var isFirstRow = true;
-        foreach (var fields in SplitClipboardRows(text))
+        var address = NormalizeAddressText(fields[0]);
+        if (string.IsNullOrWhiteSpace(address))
         {
-            if (fields.Length == 0 || fields.All(string.IsNullOrWhiteSpace))
-            {
-                continue;
-            }
-
-            if (isFirstRow && IsCommentClipboardHeader(fields))
-            {
-                isFirstRow = false;
-                continue;
-            }
-
-            isFirstRow = false;
-            var address = NormalizeAddressText(fields[0]);
-            if (string.IsNullOrWhiteSpace(address))
-            {
-                continue;
-            }
-
-            if (fields.Length <= 1 || !IsDeviceDataTypeField(fields[1]))
-            {
-                throw new ArgumentException($"Clipboard row for {address} requires an explicit data type.");
-            }
-
-            var row = new CommentRow();
-            row.SetDeviceContext(Selected(_vendor), SelectedKeyenceDeviceMode());
-            row.Address = address;
-            row.DataType = NormalizeDeviceDataType(fields[1], address);
-            var commentIndex = FirstValueIndexAfterOptionalDataType(fields, hasDataType: true);
-            row.Comment = DeviceCommentFromFields(fields, commentIndex);
-            yield return row;
+            return null;
         }
+
+        if (fields.Length <= 1 || !IsDeviceDataTypeField(fields[1]))
+        {
+            throw new ArgumentException($"Clipboard row for {address} requires an explicit data type.");
+        }
+
+        var row = new CommentRow();
+        row.SetDeviceContext(Selected(_vendor), SelectedKeyenceDeviceMode());
+        row.Address = address;
+        row.DataType = NormalizeDeviceDataType(fields[1], address);
+        row.Comment = DeviceCommentFromFields(fields, FirstValueIndexAfterOptionalDataType(fields, hasDataType: true));
+        return row;
     }
 
     private void WatchGrid_PreviewKeyDown(object sender, KeyEventArgs e)
@@ -448,73 +396,65 @@ public partial class MainWindow
             return;
         }
 
-        try
+        var preview = ParseClipboardPreview(
+            clipboardText,
+            IsAddressClipboardHeader,
+            ParseWatchClipboardRow,
+            row => [row.Address, row.DataType, row.Comment],
+            valueColumnCount: 3);
+        if (preview.Count == 0)
         {
-            var rows = ParseWatchClipboardRows(clipboardText).ToList();
-            if (rows.Count == 0)
-            {
-                SetStatus(T("status.noWatchRowsPasted"), isError: true);
-                return;
-            }
-
-            _watchGrid.CommitEdit(DataGridEditingUnit.Cell, exitEditingMode: true);
-            _watchGrid.CommitEdit(DataGridEditingUnit.Row, exitEditingMode: true);
-
-            var startIndex = SelectedIndexOrAppend(_watchGrid, _watches);
-            var candidate = _watches.ToList();
-            ApplyRows(candidate, startIndex, rows);
-            var uniqueCount = UniqueWatchAddressCount(candidate);
-            if (uniqueCount > ProjectFactory.MaxTimeChartTargets)
-            {
-                SetStatus(Tf("status.timeChartMax", ProjectFactory.MaxTimeChartTargets), isError: true);
-                return;
-            }
-
-            ApplyRows(_watches, startIndex, rows);
-            MergeRowComments(rows);
-            SelectRows(_watchGrid, rows);
-            SetStatus(Tf("status.pastedWatchRows", rows.Count, uniqueCount, ProjectFactory.MaxTimeChartTargets));
+            SetStatus(T("status.noWatchRowsPasted"), isError: true);
+            return;
         }
-        catch (ArgumentException ex)
+
+        var rows = ConfirmPastePreview<WatchRow>(T("section.watch.title"), DeviceValueHeaders(), preview);
+        if (rows is null || rows.Count == 0)
         {
-            SetStatus(ex.Message, isError: true);
+            return;
         }
+
+        _watchGrid.CommitEdit(DataGridEditingUnit.Cell, exitEditingMode: true);
+        _watchGrid.CommitEdit(DataGridEditingUnit.Row, exitEditingMode: true);
+
+        var startIndex = SelectedIndexOrAppend(_watchGrid, _watches);
+        var candidate = _watches.ToList();
+        ApplyRows(candidate, startIndex, rows);
+        var uniqueCount = UniqueWatchAddressCount(candidate);
+        if (uniqueCount > ProjectFactory.MaxTimeChartTargets)
+        {
+            SetStatus(Tf("status.timeChartMax", ProjectFactory.MaxTimeChartTargets), isError: true);
+            return;
+        }
+
+        ApplyRowsWithUndo(_watchGrid, _watches, startIndex, rows);
+        MergeRowComments(rows);
+        SelectRows(_watchGrid, rows);
+
+        var skipped = preview.Count - rows.Count;
+        var pasteMsg = Tf("status.pastedWatchRows", rows.Count, uniqueCount, ProjectFactory.MaxTimeChartTargets);
+        SetStatus(skipped > 0 ? $"{pasteMsg}  {Tf("status.clipboardSkipped", skipped)}" : pasteMsg);
     }
 
-    private IEnumerable<WatchRow> ParseWatchClipboardRows(string text)
+    private WatchRow? ParseWatchClipboardRow(string[] fields)
     {
-        var isFirstRow = true;
-        foreach (var fields in SplitClipboardRows(text))
+        var address = NormalizeAddressText(fields[0]);
+        if (string.IsNullOrWhiteSpace(address))
         {
-            if (fields.Length == 0 || fields.All(string.IsNullOrWhiteSpace))
-            {
-                continue;
-            }
-
-            if (isFirstRow && IsAddressClipboardHeader(fields))
-            {
-                isFirstRow = false;
-                continue;
-            }
-
-            isFirstRow = false;
-            var address = NormalizeAddressText(fields[0]);
-            if (!string.IsNullOrWhiteSpace(address))
-            {
-                var row = new WatchRow();
-                row.SetDeviceContext(Selected(_vendor), SelectedKeyenceDeviceMode());
-                row.Address = address;
-                if (fields.Length <= 1 || !IsDeviceDataTypeField(fields[1]))
-                {
-                    throw new ArgumentException($"Clipboard row for {address} requires an explicit data type.");
-                }
-
-                row.DataType = NormalizeDeviceDataType(fields[1], address);
-                var commentIndex = FirstValueIndexAfterOptionalDataType(fields, hasDataType: true);
-                row.Comment = DeviceCommentFromFields(fields, commentIndex);
-                yield return row;
-            }
+            return null;
         }
+
+        if (fields.Length <= 1 || !IsDeviceDataTypeField(fields[1]))
+        {
+            throw new ArgumentException($"Clipboard row for {address} requires an explicit data type.");
+        }
+
+        var row = new WatchRow();
+        row.SetDeviceContext(Selected(_vendor), SelectedKeyenceDeviceMode());
+        row.Address = address;
+        row.DataType = NormalizeDeviceDataType(fields[1], address);
+        row.Comment = DeviceCommentFromFields(fields, FirstValueIndexAfterOptionalDataType(fields, hasDataType: true));
+        return row;
     }
 
     private static int UniqueWatchAddressCount(IEnumerable<WatchRow> rows) =>
@@ -585,98 +525,227 @@ public partial class MainWindow
             return;
         }
 
-        try
+        var preview = ParseClipboardPreview(
+            clipboardText,
+            IsTrapClipboardHeader,
+            ParseTrapClipboardRow,
+            row => [row.Address, row.DataType, row.Comment, row.Condition, row.Threshold, row.Enabled ? "TRUE" : "FALSE"],
+            valueColumnCount: 6);
+        if (preview.Count == 0)
         {
-            var rows = ParseTrapClipboardRows(clipboardText).ToList();
-            if (rows.Count == 0)
-            {
-                SetStatus(T("status.noTrapRowsPasted"), isError: true);
-                return;
-            }
-
-            _trapsGrid.CommitEdit(DataGridEditingUnit.Cell, exitEditingMode: true);
-            _trapsGrid.CommitEdit(DataGridEditingUnit.Row, exitEditingMode: true);
-
-            var startIndex = SelectedIndexOrAppend(_trapsGrid, _traps);
-            var finalCount = Math.Max(_traps.Count, startIndex + rows.Count);
-            if (finalCount > ProjectFactory.MaxTrapDefinitions)
-            {
-                SetStatus(Tf("status.trapMax", ProjectFactory.MaxTrapDefinitions), isError: true);
-                return;
-            }
-
-            ApplyRows(_traps, startIndex, rows);
-            MergeRowComments(rows);
-            SelectRows(_trapsGrid, rows);
-            SetStatus(Tf("status.pastedTrapRows", rows.Count));
+            SetStatus(T("status.noTrapRowsPasted"), isError: true);
+            return;
         }
-        catch (ArgumentException ex)
+
+        var rows = ConfirmPastePreview<TrapRow>(T("section.traps.title"), TrapValueHeaders(), preview);
+        if (rows is null || rows.Count == 0)
         {
-            SetStatus(ex.Message, isError: true);
+            return;
+        }
+
+        _trapsGrid.CommitEdit(DataGridEditingUnit.Cell, exitEditingMode: true);
+        _trapsGrid.CommitEdit(DataGridEditingUnit.Row, exitEditingMode: true);
+
+        var startIndex = SelectedIndexOrAppend(_trapsGrid, _traps);
+        var finalCount = Math.Max(_traps.Count, startIndex + rows.Count);
+        if (finalCount > ProjectFactory.MaxTrapDefinitions)
+        {
+            SetStatus(Tf("status.trapMax", ProjectFactory.MaxTrapDefinitions), isError: true);
+            return;
+        }
+
+        ApplyRowsWithUndo(_trapsGrid, _traps, startIndex, rows);
+        MergeRowComments(rows);
+        SelectRows(_trapsGrid, rows);
+
+        var skipped = preview.Count - rows.Count;
+        var pasteMsg = Tf("status.pastedTrapRows", rows.Count);
+        SetStatus(skipped > 0 ? $"{pasteMsg}  {Tf("status.clipboardSkipped", skipped)}" : pasteMsg);
+    }
+
+    private TrapRow? ParseTrapClipboardRow(string[] fields)
+    {
+        var address = NormalizeAddressText(fields[0]);
+        if (string.IsNullOrWhiteSpace(address))
+        {
+            return null;
+        }
+
+        var row = new TrapRow();
+        row.SetDeviceContext(Selected(_vendor), SelectedKeyenceDeviceMode());
+        row.Address = address;
+        if (fields.Length <= 1 || !IsDeviceDataTypeField(fields[1]))
+        {
+            throw new ArgumentException($"Clipboard row for {address} requires an explicit data type.");
+        }
+
+        row.DataType = NormalizeDeviceDataType(fields[1], address);
+        var conditionIndex = FirstValueIndexAfterOptionalDataType(fields, hasDataType: true);
+        if (fields.Length > conditionIndex &&
+            !IsTrapConditionField(fields[conditionIndex]) &&
+            fields.Length > conditionIndex + 1)
+        {
+            row.Comment = NormalizeDeviceComment(fields[conditionIndex]);
+            conditionIndex++;
+        }
+
+        var thresholdIndex = conditionIndex + 1;
+        var enabledIndex = conditionIndex + 2;
+        if (fields.Length <= conditionIndex || string.IsNullOrWhiteSpace(fields[conditionIndex]))
+        {
+            throw new ArgumentException($"Clipboard row for {address} requires an explicit trap condition.");
+        }
+
+        row.Condition = NormalizeTrapCondition(fields[conditionIndex], address);
+        if (fields.Length > thresholdIndex && !string.IsNullOrWhiteSpace(fields[thresholdIndex]))
+        {
+            row.Threshold = fields[thresholdIndex].Trim();
+        }
+
+        row.Enabled = fields.Length <= enabledIndex || string.IsNullOrWhiteSpace(fields[enabledIndex]) || ParseClipboardBoolean(fields[enabledIndex]);
+        return row;
+    }
+
+    private string NormalizeTrapCondition(string text, string address) =>
+        ClipboardImport.NormalizeTrapCondition(text, address, Selected(_vendor), SelectedKeyenceDeviceMode());
+
+    private void DeviceExcelMenu_Click(object sender, RoutedEventArgs e) =>
+        ShowExcelMenu((Button)sender, PasteDevicesFromClipboard, CopySelectedDevicesToClipboard, DeviceTemplateTsv);
+
+    private void WatchExcelMenu_Click(object sender, RoutedEventArgs e) =>
+        ShowExcelMenu((Button)sender, PasteTimeChartRowsFromClipboard, CopySelectedTimeChartRowsToClipboard, DeviceTemplateTsv);
+
+    private void TrapExcelMenu_Click(object sender, RoutedEventArgs e) =>
+        ShowExcelMenu((Button)sender, PasteTrapsFromClipboard, CopySelectedTrapsToClipboard, TrapTemplateTsv);
+
+    private void CommentExcelMenu_Click(object sender, RoutedEventArgs e) =>
+        ShowExcelMenu((Button)sender, PasteCommentsFromClipboard, CopySelectedCommentsToClipboard, DeviceTemplateTsv);
+
+    private const string DeviceTemplateTsv = "Address\tData type\tComment";
+    private const string TrapTemplateTsv = "Address\tData type\tComment\tCondition\tThreshold\tEnabled";
+
+    private void ShowExcelMenu(Button owner, Action paste, Action copy, string templateTsv)
+    {
+        var menu = new ContextMenu
+        {
+            PlacementTarget = owner,
+            Placement = PlacementMode.Bottom,
+        };
+        menu.Items.Add(ExcelMenuItem(T("excel.paste"), "Ctrl+V", paste));
+        menu.Items.Add(ExcelMenuItem(T("excel.copy"), "Ctrl+C", copy));
+        menu.Items.Add(new Separator());
+        menu.Items.Add(ExcelMenuItem(T("excel.copyTemplate"), gesture: null, () => CopyTemplateToClipboard(templateTsv)));
+        menu.IsOpen = true;
+    }
+
+    private static MenuItem ExcelMenuItem(string header, string? gesture, Action action)
+    {
+        var item = new MenuItem { Header = header, InputGestureText = gesture ?? "" };
+        item.Click += (_, _) => action();
+        return item;
+    }
+
+    private void CopyTemplateToClipboard(string templateTsv)
+    {
+        if (TrySetClipboardText(templateTsv))
+        {
+            SetStatus(T("status.templateCopied"));
         }
     }
 
-    private IEnumerable<TrapRow> ParseTrapClipboardRows(string text)
+    private IReadOnlyList<string> DeviceValueHeaders() =>
+        [T("column.address"), T("column.dataType"), T("column.comment")];
+
+    private IReadOnlyList<string> TrapValueHeaders() =>
+        [T("column.address"), T("column.dataType"), T("column.comment"), T("column.condition"), T("column.threshold"), T("column.enabled")];
+
+    private static List<PastePreviewRow> ParseClipboardPreview<T>(
+        string text,
+        Func<IReadOnlyList<string>, bool> isHeader,
+        Func<string[], T?> parseRow,
+        Func<T, string[]> displayValues,
+        int valueColumnCount) where T : class
     {
+        var preview = new List<PastePreviewRow>();
         var isFirstRow = true;
+        var lineNumber = 0;
         foreach (var fields in SplitClipboardRows(text))
         {
+            lineNumber++;
             if (fields.Length == 0 || fields.All(string.IsNullOrWhiteSpace))
             {
                 continue;
             }
 
-            if (isFirstRow && IsTrapClipboardHeader(fields))
+            if (isFirstRow && isHeader(fields))
             {
                 isFirstRow = false;
                 continue;
             }
 
             isFirstRow = false;
-            var address = NormalizeAddressText(fields[0]);
-            if (string.IsNullOrWhiteSpace(address))
+            try
             {
-                continue;
+                var row = parseRow(fields);
+                preview.Add(row is null
+                    ? new PastePreviewRow
+                    {
+                        LineNumber = lineNumber,
+                        Values = FitPreviewValues(fields, valueColumnCount),
+                    }
+                    : new PastePreviewRow
+                    {
+                        LineNumber = lineNumber,
+                        Values = displayValues(row),
+                        ParsedRow = row,
+                    });
             }
-
-            var row = new TrapRow();
-            row.SetDeviceContext(Selected(_vendor), SelectedKeyenceDeviceMode());
-            row.Address = address;
-            if (fields.Length <= 1 || !IsDeviceDataTypeField(fields[1]))
+            catch (ArgumentException ex)
             {
-                throw new ArgumentException($"Clipboard row for {address} requires an explicit data type.");
+                preview.Add(new PastePreviewRow
+                {
+                    LineNumber = lineNumber,
+                    Values = FitPreviewValues(fields, valueColumnCount),
+                    Error = ex.Message,
+                });
             }
-
-            row.DataType = NormalizeDeviceDataType(fields[1], address);
-            var conditionIndex = FirstValueIndexAfterOptionalDataType(fields, hasDataType: true);
-            if (fields.Length > conditionIndex &&
-                !IsTrapConditionField(fields[conditionIndex]) &&
-                fields.Length > conditionIndex + 1)
-            {
-                row.Comment = NormalizeDeviceComment(fields[conditionIndex]);
-                conditionIndex++;
-            }
-
-            var thresholdIndex = conditionIndex + 1;
-            var enabledIndex = conditionIndex + 2;
-            if (fields.Length <= conditionIndex || string.IsNullOrWhiteSpace(fields[conditionIndex]))
-            {
-                throw new ArgumentException($"Clipboard row for {address} requires an explicit trap condition.");
-            }
-
-            row.Condition = NormalizeTrapCondition(fields[conditionIndex], address);
-            if (fields.Length > thresholdIndex && !string.IsNullOrWhiteSpace(fields[thresholdIndex]))
-            {
-                row.Threshold = fields[thresholdIndex].Trim();
-            }
-
-            row.Enabled = fields.Length <= enabledIndex || string.IsNullOrWhiteSpace(fields[enabledIndex]) || ParseClipboardBoolean(fields[enabledIndex]);
-            yield return row;
         }
+
+        return preview;
     }
 
-    private string NormalizeTrapCondition(string text, string address) =>
-        ClipboardImport.NormalizeTrapCondition(text, address, Selected(_vendor), SelectedKeyenceDeviceMode());
+    private static string[] FitPreviewValues(IReadOnlyList<string> fields, int count)
+    {
+        var values = new string[count];
+        for (var index = 0; index < count; index++)
+        {
+            values[index] = index < fields.Count ? fields[index] : "";
+        }
+
+        if (fields.Count > count && count > 0)
+        {
+            values[count - 1] = string.Join(",", fields.Skip(count - 1));
+        }
+
+        return values;
+    }
+
+    private IReadOnlyList<T>? ConfirmPastePreview<T>(
+        string sectionTitle,
+        IReadOnlyList<string> valueHeaders,
+        IReadOnlyList<PastePreviewRow> preview) where T : class
+    {
+        var window = new PastePreviewWindow(_language, sectionTitle, valueHeaders, preview) { Owner = this };
+        if (window.ShowDialog() != true)
+        {
+            return null;
+        }
+
+        return preview
+            .Where(row => row.IsValid)
+            .Select(row => (T)row.ParsedRow!)
+            .ToList();
+    }
 
     private void CopyRowsToClipboard<T>(
         IReadOnlyCollection<T> rows,
@@ -808,6 +877,45 @@ public partial class MainWindow
                 target.Add(rows[index]);
             }
         }
+    }
+
+    private void ApplyRowsWithUndo<T>(
+        DataGrid grid,
+        ObservableCollection<T> target,
+        int startIndex,
+        IReadOnlyList<T> rows)
+    {
+        var replaced = new List<T>();
+        for (var index = 0; index < rows.Count && startIndex + index < target.Count; index++)
+        {
+            replaced.Add(target[startIndex + index]);
+        }
+
+        ApplyRows(target, startIndex, rows);
+
+        _undoStack.Push(() =>
+        {
+            for (var index = rows.Count - 1; index >= replaced.Count; index--)
+            {
+                var targetIndex = startIndex + index;
+                if (targetIndex < target.Count && ReferenceEquals(target[targetIndex], rows[index]))
+                {
+                    target.RemoveAt(targetIndex);
+                }
+            }
+
+            for (var index = 0; index < replaced.Count; index++)
+            {
+                var targetIndex = startIndex + index;
+                if (targetIndex < target.Count && ReferenceEquals(target[targetIndex], rows[index]))
+                {
+                    target[targetIndex] = replaced[index];
+                }
+            }
+
+            SelectRows(grid, replaced);
+            SetStatus(Tf("status.undone", rows.Count));
+        });
     }
 
     private void MoveSelectedRows<T>(
