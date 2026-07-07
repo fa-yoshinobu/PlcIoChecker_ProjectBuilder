@@ -68,6 +68,11 @@ The supported desktop implementation is the .NET WPF app.
 6. Save JSON or generate QR pages.
 7. In the Android/iOS app, open `QR Import` and scan the displayed QR pages in order.
 
+Pasting from Excel opens a paste preview dialog that validates every row before
+import. Valid rows are marked OK, invalid rows show the error reason, and rows
+with a blank address are marked skipped. Importing applies only the OK rows, so
+one bad row no longer fails the whole paste.
+
 Clipboard import uses canonical values only. Data type and trap condition must be
 explicit; localized aliases, guessed data types, and implicit trap conditions are
 not accepted. During JSON / QR generation, a blank data type is filled only when

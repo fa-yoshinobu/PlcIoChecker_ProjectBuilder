@@ -24,6 +24,11 @@ Clipboard paste should use explicit canonical values. Do not silently accept
 localized aliases, guess missing data types, or apply default trap conditions for
 clipboard data.
 
+Clipboard paste shows a preview dialog before import. Each row is validated
+independently and marked OK, error (with the reason), or skipped (blank
+address). Import applies only the OK rows; error rows are never silently
+converted and must be fixed in the source data.
+
 ## Supporting Workflows
 
 These settings are necessary, but they are not the product focus:

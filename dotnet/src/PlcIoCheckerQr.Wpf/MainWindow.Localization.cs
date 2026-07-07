@@ -62,6 +62,8 @@ public partial class MainWindow
         _trapsTitle.Text = T("section.traps.title");
         _trapsMeta.Text = Tf("section.traps.meta", ProjectFactory.MaxTrapDefinitions);
 
+        _deviceExcelButton.Content = _commentExcelButton.Content = _watchExcelButton.Content = _trapExcelButton.Content = T("button.excel");
+        _deviceExcelButton.ToolTip = _commentExcelButton.ToolTip = _watchExcelButton.ToolTip = _trapExcelButton.ToolTip = T("tooltip.excelMenu");
         _moveDeviceUpButton.Content = _moveCommentUpButton.Content = _moveWatchUpButton.Content = _moveTrapUpButton.Content = T("button.up");
         _moveDeviceDownButton.Content = _moveCommentDownButton.Content = _moveWatchDownButton.Content = _moveTrapDownButton.Content = T("button.down");
         _addDeviceButton.Content = _addCommentButton.Content = _addWatchButton.Content = _addTrapButton.Content = T("button.addRow");
