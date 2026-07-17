@@ -5,7 +5,7 @@
 [![.NET 8](https://img.shields.io/badge/.NET-8.0-512BD4?logo=dotnet)](https://dotnet.microsoft.com/)
 [![.NET CI](https://github.com/fa-yoshinobu/PlcIoChecker_ProjectBuilder/actions/workflows/dotnet-ci.yml/badge.svg)](https://github.com/fa-yoshinobu/PlcIoChecker_ProjectBuilder/actions/workflows/dotnet-ci.yml)
 ![Windows WPF](https://img.shields.io/badge/platform-Windows%20WPF-0078D4?logo=windows)
-![Project JSON v1](https://img.shields.io/badge/project%20JSON-v1-2ea44f)
+![Project JSON v2](https://img.shields.io/badge/project%20JSON-v2-2ea44f)
 ![QR Zstd](https://img.shields.io/badge/QR-Zstd-f97316)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
@@ -80,6 +80,12 @@ the same address already has one explicit data type in another row. Trap
 conditions that do not match the address kind must be corrected explicitly.
 
 For multi-page QR output, import completes after the mobile app has scanned every page.
+
+Project limits are shared with the mobile apps: 1,000 List devices, 20 Time
+Chart channels, 20 Trap definitions, 5 MiB project JSON, 4,096 QR pages, 1 MiB
+compressed QR data, and 5 MiB decompressed QR data. Polling accepts 100–10,000
+ms and timeout accepts 250–10,000 ms independently. ProjectBuilder accepts and
+emits schema version 2 only; old or invalid JSON is rejected without conversion.
 
 ## Scanning Tips
 

@@ -161,6 +161,8 @@ public partial class MainWindow
         private string _condition = "";
         private string _threshold = "";
 
+        public string Id { get; set; } = $"trap-{Guid.NewGuid():N}";
+
         public string Condition
         {
             get => _condition;

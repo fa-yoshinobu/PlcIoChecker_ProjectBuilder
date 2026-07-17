@@ -129,4 +129,63 @@ public sealed class ProjectFactoryTests
         Assert.False(project.Traps.Single().Enabled);
     }
 
+    [Fact]
+    public void MakeProjectPreservesExplicitProjectAndTrapIds()
+    {
+        var project = ProjectFactory.MakeProject(ProjectInputBuilder.MakeInput(
+            ProjectId: "project-imported",
+            TrapsText: "D100,Int16,GreaterOrEqual,12,true",
+            TrapIds: ["trap-imported"]),
+            nowEpochMs: 456);
+
+        Assert.Equal("project-imported", project.Id);
+        Assert.Equal("trap-imported", project.Traps.Single().Id);
+    }
+
+    [Fact]
+    public void TimingRangesDoNotRequireTimeoutToExceedPollingInterval()
+    {
+        var project = ProjectFactory.MakeProject(ProjectInputBuilder.MakeInput(
+            MonitorIntervalMs: ProjectFactory.MaxPollingIntervalMs,
+            TimeoutMs: ProjectFactory.MinTimeoutMs));
+
+        Assert.Equal(ProjectFactory.MaxPollingIntervalMs, project.Connection.MonitorIntervalMs);
+        Assert.Equal(ProjectFactory.MinTimeoutMs, project.Connection.TimeoutMs);
+    }
+
+    [Theory]
+    [InlineData(99, 250)]
+    [InlineData(10001, 250)]
+    [InlineData(100, 249)]
+    [InlineData(100, 10001)]
+    public void MakeProjectRejectsTimingOutsideCommonRanges(int pollingIntervalMs, int timeoutMs)
+    {
+        Assert.Throws<ArgumentException>(() => ProjectFactory.MakeProject(ProjectInputBuilder.MakeInput(
+            MonitorIntervalMs: pollingIntervalMs,
+            TimeoutMs: timeoutMs)));
+    }
+
+    [Theory]
+    [InlineData("NaN")]
+    [InlineData("Infinity")]
+    [InlineData("32768")]
+    public void MakeProjectRejectsInvalidInt16TrapThreshold(string threshold)
+    {
+        Assert.ThrowsAny<Exception>(() => ProjectFactory.MakeProject(ProjectInputBuilder.MakeInput(
+            TrapsText: $"D100,Int16,GreaterOrEqual,{threshold},true")));
+    }
+
+    [Fact]
+    public void MakeProjectRejectsDeviceAndMetadataCountsAboveCommonLimits()
+    {
+        var devices = string.Join("\n", Enumerable.Range(0, ProjectFactory.MaxDevices + 1).Select(index => $"D{index},Int16"));
+        Assert.Throws<ArgumentException>(() => ProjectFactory.MakeProject(ProjectInputBuilder.MakeInput(
+            DevicesText: devices)));
+
+        var comments = string.Join("\n", Enumerable.Range(0, ProjectFactory.MaxDeviceMeta + 1).Select(index => $"D{index},Int16,Comment {index}"));
+        Assert.Throws<ArgumentException>(() => ProjectFactory.MakeProject(ProjectInputBuilder.MakeInput(
+            DevicesText: "",
+            CommentsText: comments)));
+    }
+
 }

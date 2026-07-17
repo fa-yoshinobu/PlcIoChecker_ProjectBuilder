@@ -5,7 +5,7 @@ namespace PlcIoCheckerQr.Wpf;
 
 internal static class ProjectJsonReader
 {
-    internal static void RequireProjectJsonV1(JsonElement root)
+    internal static void RequireProjectJsonV2(JsonElement root)
     {
         var schema = ReadRequiredString(root, "schema");
         if (schema != "plc-io-checker-project")
@@ -14,9 +14,36 @@ internal static class ProjectJsonReader
         }
 
         var version = ReadRequiredInt(root, "schemaVersion");
-        if (version != 1)
+        if (version != 2)
         {
             throw new ProjectJsonException("error.jsonVersionInvalid", version.ToString(CultureInfo.InvariantCulture));
+        }
+    }
+
+    internal static void RequireOnlyProperties(JsonElement element, string path, params string[] allowedNames)
+    {
+        if (element.ValueKind != JsonValueKind.Object)
+        {
+            throw new InvalidOperationException($"Project JSON value '{path}' must be an object.");
+        }
+
+        var allowed = new HashSet<string>(allowedNames, StringComparer.Ordinal);
+        foreach (var property in element.EnumerateObject())
+        {
+            if (!allowed.Contains(property.Name))
+            {
+                throw new InvalidOperationException($"Unknown project JSON value '{path}.{property.Name}'.");
+            }
+        }
+    }
+
+    internal static void RequireObjectArrayProperties(JsonElement array, string path, params string[] allowedNames)
+    {
+        var index = 0;
+        foreach (var item in array.EnumerateArray())
+        {
+            RequireOnlyProperties(item, $"{path}[{index}]", allowedNames);
+            index++;
         }
     }
 

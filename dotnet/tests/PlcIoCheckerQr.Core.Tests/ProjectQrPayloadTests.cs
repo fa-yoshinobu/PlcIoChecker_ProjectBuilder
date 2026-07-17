@@ -25,7 +25,7 @@ public sealed class ProjectQrPayloadTests
         using var document = JsonDocument.Parse(decoded);
         var root = document.RootElement;
         Assert.Equal("plc-io-checker-project", root.GetProperty("schema").GetString());
-        Assert.Equal(1, root.GetProperty("schemaVersion").GetInt32());
+        Assert.Equal(2, root.GetProperty("schemaVersion").GetInt32());
         var exportInfo = root.GetProperty("exportInfo");
         Assert.Equal("PROJECT_BUILDER", exportInfo.GetProperty("source").GetString());
         Assert.Equal("1.0.0", exportInfo.GetProperty("version").GetString());
@@ -200,6 +200,31 @@ public sealed class ProjectQrPayloadTests
     {
         Assert.Throws<ArgumentException>(() =>
             ProjectQrPayload.ParseChunkText("PLCIOC2D|session|1|1|0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef|payload"));
+    }
+
+    [Fact]
+    public void DecodeChunksRejectsDuplicateIndexEvenWhenChunkCountMatchesTotal()
+    {
+        var chunks = ProjectQrPayload.EncodeProjectChunks(SampleProject(), chunkSize: 220);
+        if (chunks.Count < 2)
+        {
+            return;
+        }
+
+        var duplicate = chunks.ToArray();
+        duplicate[1] = duplicate[0];
+
+        Assert.Throws<ArgumentException>(() => ProjectQrPayload.DecodeChunks(duplicate));
+    }
+
+    [Fact]
+    public void ParseChunkRejectsChunkCountAboveLimit()
+    {
+        var checksum = new string('a', 64);
+        Assert.Throws<ArgumentException>(() => ProjectQrPayload.ParseChunkText(
+            $"PLCIOC1|ZSTD|session|1|{ProjectFactory.MaxQrChunks + 1}|{checksum}|payload"));
+        Assert.Throws<ArgumentException>(() => ProjectQrPayload.ParseChunkText(
+            $"PLCIOC1|ZSTD|session|1|1|{checksum}|"));
     }
 
     [Fact]

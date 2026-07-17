@@ -5,10 +5,10 @@ The README is intentionally kept as a user guide.
 
 ## Project JSON
 
-The generated JSON uses the shared `plc-io-checker-project` schema v1 consumed
+The generated JSON uses the shared `plc-io-checker-project` schema v2 consumed
 by Android and iOS.
 
-Generated project JSON includes only shared schema v1 fields. UI-only
+Generated project JSON includes only shared schema v2 fields. UI-only
 preferences and runtime observation values are not emitted.
 
 ProjectBuilder emits shared address metadata in `deviceMeta`. Comments and data
@@ -50,13 +50,16 @@ user enters them.
 
 `plc.cpuModel` is the mobile app canonical connection model key. ProjectBuilder
 keeps friendly labels such as `MELSEC iQ-R (built-in)`, `KEYENCE KV-8000`, and
-`KEYENCE KV-8000 (XYM)` in the UI, but schema v1 JSON emits values such as
+`KEYENCE KV-8000 (XYM)` in the UI, but schema v2 JSON emits values such as
 `melsec:iq-r`, `melsec:iq-r:rj71en71`, `melsec:qcpu:qj71e71-100`,
 `keyence:kv-8000`, and `keyence:kv-8000-xym`.
-ProjectBuilder must not emit a separate `plcProfile` field in schema v1.
+ProjectBuilder must not emit a separate `plcProfile` field in schema v2.
 
-ProjectBuilder enforces the mobile app registration limits: up to 20 Time Chart
-targets and up to 20 trap definitions.
+ProjectBuilder enforces the mobile app registration limits: up to 1,000 List
+devices, 1,040 `deviceMeta` entries, 20 Time Chart targets, and 20 trap
+definitions. Project JSON is limited to 5 MiB (5,242,880 bytes). Polling is
+limited to 100–10,000 ms and timeout to 250–10,000 ms; timeout may be shorter
+than the polling interval.
 
 ## Value Sets
 
@@ -80,7 +83,7 @@ PLCIOC1|ZSTD|<session>|<index>|<total>|<sha256>|<payload-chunk>
 - `index` is 1-based.
 - `sha256` is calculated from the minified JSON bytes after decompression.
 - `payload-chunk` is a slice of base64url-encoded Zstd-compressed JSON without padding.
-- QR count is not fixed.
+- QR count is not fixed, but is limited to 4,096 pages.
 - Readers must join all chunks first, then decompress the combined compressed bytes.
 
 ## Compression Requirements
@@ -88,7 +91,13 @@ PLCIOC1|ZSTD|<session>|<index>|<total>|<sha256>|<payload-chunk>
 `PLCIOC1|ZSTD` uses a Zstandard frame and requires Zstd support in the importing
 app.
 
+Readers and writers limit the compressed QR payload to 1 MiB and the
+decompressed project JSON to 5 MiB. A complete import must contain every index
+from 1 through `total` exactly once. Session identifiers are limited to 128
+characters.
+
 ## Compatibility Policy
 
-Do not add silent fallback, alias conversion, or compatibility normalization for
-invalid values. Invalid data should fail visibly so QR/JSON bugs are caught early.
+Only schema version 2 is accepted. Do not add silent fallback, alias conversion,
+or compatibility normalization for older or invalid values. Invalid data should
+fail visibly so QR/JSON bugs are caught early.
