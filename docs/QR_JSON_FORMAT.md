@@ -62,7 +62,7 @@ targets and up to 20 trap definitions.
 
 - `plc.vendor`: `MELSEC`, `KEYENCE`
 - `plc.cpuModel`: mobile app canonical model key
-  - MELSEC: `melsec:iq-r`, `melsec:iq-r:rj71en71`, `melsec:iq-f`, `melsec:iq-l`, `melsec:mx-r`, `melsec:mx-f`, `melsec:qnudv`, `melsec:qnudv:qj71e71-100`, `melsec:qnu`, `melsec:qnu:qj71e71-100`, `melsec:qcpu:qj71e71-100`, `melsec:lcpu`, `melsec:lcpu:lj71e71-100`
+  - MELSEC: `melsec:iq-r`, `melsec:iq-r:rj71en71`, `melsec:iq-f`, `melsec:iq-l`, `melsec:mx-r`, `melsec:mx-r:rj71en71`, `melsec:mx-f`, `melsec:qnudv`, `melsec:qnudv:qj71e71-100`, `melsec:qnu`, `melsec:qnu:qj71e71-100`, `melsec:qcpu:qj71e71-100`, `melsec:lcpu`, `melsec:lcpu:lj71e71-100`
   - KEYENCE: `keyence:kv-nano`, `keyence:kv-nano-xym`, `keyence:kv-3000`, `keyence:kv-3000-xym`, `keyence:kv-5000`, `keyence:kv-5000-xym`, `keyence:kv-7000`, `keyence:kv-7000-xym`, `keyence:kv-8000`, `keyence:kv-8000-xym`, `keyence:kv-x500`, `keyence:kv-x500-xym`
 - `plc.connection.mode`: `REAL`, `DEMO_MOCK`
 - `plc.connection.transport`: `TCP`, `UDP`

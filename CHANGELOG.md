@@ -13,6 +13,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - `Tests`: テスト、fixture、検証データ。
 - `Tooling`: ビルド、CLI、開発補助。
 
+## [Unreleased] - 2026-07-17
+
+### Changed
+
+- App: MELSEC CPUモデル候補に `melsec:mx-r:rj71en71`（MELSEC MX-R (RJ71EN71)）を追加しました。
+- Project JSON: `plc.cpuModel` の選択可能値に `melsec:mx-r:rj71en71` を追加しました。
+
 ## [Unreleased] - 2026-07-06
 
 ### BREAKING
