@@ -110,6 +110,7 @@ public static partial class ProjectFactory
         new("MELSEC iQ-F (built-in)", "melsec:iq-f"),
         new("MELSEC iQ-L (built-in)", "melsec:iq-l"),
         new("MELSEC MX-R (built-in)", "melsec:mx-r"),
+        new("MELSEC MX-R (RJ71EN71)", "melsec:mx-r:rj71en71"),
         new("MELSEC MX-F (built-in)", "melsec:mx-f"),
         new("MELSEC QnUDV (built-in)", "melsec:qnudv"),
         new("MELSEC QnUDV (QJ71E71-100)", "melsec:qnudv:qj71e71-100"),
