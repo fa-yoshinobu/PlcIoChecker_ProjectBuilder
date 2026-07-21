@@ -17,7 +17,7 @@ namespace PlcIoCheckerQr.Wpf;
 
 public partial class MainWindow
 {
-    private void Generate(bool showQrScreen)
+    private bool Generate(bool showQrScreen)
     {
         try
         {
@@ -35,11 +35,13 @@ public partial class MainWindow
             {
                 ShowQrScreen();
             }
+            return true;
         }
         catch (Exception ex)
         {
             SetStatus(Tf("status.generationError", ex.Message), isError: true);
             MessageBox.Show(this, ex.Message, Title, MessageBoxButton.OK, MessageBoxImage.Error);
+            return false;
         }
     }
 
@@ -53,14 +55,17 @@ public partial class MainWindow
             throw new ArgumentException(T("error.invalidHost"));
         }
 
-        var intervalMs = ParseRange(_interval, min: 50, max: 60000);
-        var timeoutMs = ParseRange(_timeout, min: 100, max: 60000);
-        if (timeoutMs < intervalMs)
-        {
-            throw new ArgumentException(T("error.timeoutShorterThanInterval"));
-        }
+        var intervalMs = ParseRange(
+            _interval,
+            min: ProjectFactory.MinPollingIntervalMs,
+            max: ProjectFactory.MaxPollingIntervalMs);
+        var timeoutMs = ParseRange(
+            _timeout,
+            min: ProjectFactory.MinTimeoutMs,
+            max: ProjectFactory.MaxTimeoutMs);
 
-        return ProjectFactory.MakeProject(new ProjectInput(
+        var configuredTrapRows = _traps.Where(row => !string.IsNullOrWhiteSpace(row.Address)).ToArray();
+        var project = ProjectFactory.MakeProject(new ProjectInput(
             Name: _projectName.Text,
             Vendor: Selected(_vendor),
             ConnectionMode: Selected(_connectionMode),
@@ -77,7 +82,15 @@ public partial class MainWindow
             DevicesText: DevicesText(),
             WatchText: WatchText(),
             TrapsText: TrapsText(),
-            CommentsText: CommentsText()));
+            CommentsText: CommentsText(),
+            ProjectId: _projectId ?? "",
+            TrapIds: configuredTrapRows.Select(row => row.Id).ToArray()));
+        _projectId = project.Id;
+        for (var index = 0; index < configuredTrapRows.Length && index < project.Traps.Count; index++)
+        {
+            configuredTrapRows[index].Id = project.Traps[index].Id;
+        }
+        return project;
     }
 
     private void ShowCurrentQr()

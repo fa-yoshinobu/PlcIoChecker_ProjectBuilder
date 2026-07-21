@@ -17,8 +17,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Changed
 
+- Project JSON: schemaをversion 2へ更新し、旧version、未知項目、重複、不正値、上限超過を変換・切捨てせず拒否するようにしました。
+- Project JSON: 読込元のProject IDとTrap IDを編集・再保存後も維持し、ID生成は新規project/Trapだけに限定しました。
+- App: JSON読込をtransaction化し、後半の検証失敗時は読込前の画面内容へ戻すようにしました。JSON保存も一時ファイル経由で置換します。
+- App: pollingを100～10,000 ms、timeoutを250～10,000 msの独立範囲に統一し、timeoutがpollingより短い設定も許可しました。
+- Project JSON: JSON 5 MiB、List 1,000件、deviceMeta 1,040件、Time Chart/Trap各20件、QR圧縮1 MiB・展開5 MiB・4,096分割の上限とchunk完全性検証を追加しました。
 - App: MELSEC CPUモデル候補に `melsec:mx-r:rj71en71`（MELSEC MX-R (RJ71EN71)）を追加しました。
 - Project JSON: `plc.cpuModel` の選択可能値に `melsec:mx-r:rj71en71` を追加しました。
+- Docs: READMEとQR/JSON仕様をschema v2と共通上限へ更新しました。
+- Tests: ID維持、timing範囲、数値範囲、QR chunk完全性と上限のCoreテストを追加しました。
 
 ## [Unreleased] - 2026-07-06
 

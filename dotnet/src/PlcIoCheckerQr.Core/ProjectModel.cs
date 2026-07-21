@@ -64,12 +64,23 @@ public sealed record ProjectInput(
     string DevicesText,
     string WatchText,
     string TrapsText,
-    string CommentsText = "");
+    string CommentsText = "",
+    string ProjectId = "",
+    IReadOnlyList<string>? TrapIds = null);
 
 public static partial class ProjectFactory
 {
+    public const int MaxDevices = 1_000;
+    public const int MaxDeviceMeta = 1_040;
     public const int MaxTimeChartTargets = 20;
     public const int MaxTrapDefinitions = 20;
+    public const int MinPollingIntervalMs = 100;
+    public const int MaxPollingIntervalMs = 10_000;
+    public const int MinTimeoutMs = 250;
+    public const int MaxTimeoutMs = 10_000;
+    public const int MaxProjectJsonBytes = 5 * 1024 * 1024;
+    public const int MaxQrCompressedBytes = 1 * 1024 * 1024;
+    public const int MaxQrChunks = 4_096;
 
     public static readonly string[] Vendors = ["Melsec", "Keyence"];
     public static readonly string[] ConnectionModes = ["Real", "DemoMock"];
@@ -291,6 +302,26 @@ public static partial class ProjectFactory
             "CPU model");
         ValidateChoice(input.TransportMode, TransportModes, "transport mode");
         ValidateChoice(input.ModuleIo, ModuleIoTargets, "module IO");
+        if (string.IsNullOrWhiteSpace(input.Host))
+        {
+            throw new ArgumentException("Host is required.");
+        }
+        if (input.Port is < 1 or > 65_535)
+        {
+            throw new ArgumentException("Port must be between 1 and 65535.");
+        }
+        if (input.MonitorIntervalMs is < MinPollingIntervalMs or > MaxPollingIntervalMs)
+        {
+            throw new ArgumentException($"Polling interval must be between {MinPollingIntervalMs} and {MaxPollingIntervalMs} ms.");
+        }
+        if (input.TimeoutMs is < MinTimeoutMs or > MaxTimeoutMs)
+        {
+            throw new ArgumentException($"Timeout must be between {MinTimeoutMs} and {MaxTimeoutMs} ms.");
+        }
+        if (input.Network is < 0 or > 255 || input.Station is < 0 or > 255)
+        {
+            throw new ArgumentException("Network and station numbers must be between 0 and 255.");
+        }
 
         var now = nowEpochMs ?? DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         var name = string.IsNullOrWhiteSpace(input.Name) ? "PLC QR Project" : input.Name.Trim();
@@ -311,11 +342,27 @@ public static partial class ProjectFactory
             .ToDictionary(group => group.Key, group => group.First().DataType, StringComparer.OrdinalIgnoreCase);
 
         var timeChart = ParseTimeChart(input.WatchText, input.Vendor, keyenceDeviceMode, input.MachineLabel, explicitDataTypesByAddress);
-        var traps = ParseTraps(input.TrapsText, input.Vendor, keyenceDeviceMode, input.MachineLabel, explicitDataTypesByAddress);
+        var traps = ParseTraps(
+            input.TrapsText,
+            input.Vendor,
+            keyenceDeviceMode,
+            input.MachineLabel,
+            explicitDataTypesByAddress,
+            input.TrapIds);
         var (projectDevices, projectTimeChart, projectTraps) = CommonizeDeviceDataTypes(devices, timeChart, traps);
+        var deviceMetaCount = projectDevices.Select(item => item.Address)
+            .Concat(comments.Select(item => item.Address))
+            .Concat(projectTimeChart.Select(item => item.Address))
+            .Concat(projectTraps.Select(item => item.Address))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Count();
+        if (deviceMetaCount > MaxDeviceMeta)
+        {
+            throw new ArgumentException($"Device metadata can contain up to {MaxDeviceMeta} addresses.");
+        }
 
         return new PlcProject(
-            Id: $"{Slugify(name)}-{now}",
+            Id: string.IsNullOrWhiteSpace(input.ProjectId) ? $"{Slugify(name)}-{now}" : input.ProjectId.Trim(),
             Name: name,
             Connection: BuildConnection(input, keyenceDeviceMode),
             Devices: projectDevices,
@@ -479,6 +526,10 @@ public static partial class ProjectFactory
                 explicitDataTypesByAddress,
                 "device data type");
             parsedDevices.Add(new DeviceDefinition(address, dataType, DeviceCommentFromParts(parts, hasExplicitDataType ? 2 : 1)));
+            if (parsedDevices.Count > MaxDevices)
+            {
+                throw new ArgumentException($"Device list can contain up to {MaxDevices} rows.");
+            }
         }
 
         var commentsByAddress = parsedDevices
@@ -547,9 +598,11 @@ public static partial class ProjectFactory
         string vendor,
         string keyenceDeviceMode,
         string machineLabel,
-        IReadOnlyDictionary<string, string> explicitDataTypesByAddress)
+        IReadOnlyDictionary<string, string> explicitDataTypesByAddress,
+        IReadOnlyList<string>? configuredTrapIds)
     {
         var traps = new List<TrapDefinition>();
+        var trapIds = new HashSet<string>(StringComparer.Ordinal);
         var offset = 1;
         foreach (var line in ParseLines(trapsText))
         {
@@ -587,6 +640,10 @@ public static partial class ProjectFactory
                 }
 
                 threshold = double.Parse(parts[thresholdIndex], System.Globalization.CultureInfo.InvariantCulture);
+                if (!IsTrapThresholdValid(threshold.Value, dataType))
+                {
+                    throw new ArgumentException($"Trap threshold is outside the {dataType} range: {address}");
+                }
             }
 
             var enabled = true;
@@ -600,8 +657,19 @@ public static partial class ProjectFactory
                 throw new ArgumentException($"Traps can contain up to {MaxTrapDefinitions} rows.");
             }
 
+            var configuredTrapId = configuredTrapIds is not null && configuredTrapIds.Count >= offset
+                ? configuredTrapIds[offset - 1].Trim()
+                : "";
+            var trapId = !string.IsNullOrWhiteSpace(configuredTrapId)
+                ? configuredTrapId
+                : $"trap-{offset}";
+            if (!trapIds.Add(trapId))
+            {
+                throw new ArgumentException($"Duplicate trap ID: {trapId}");
+            }
+
             traps.Add(new TrapDefinition(
-                Id: $"trap-{offset}",
+                Id: trapId,
                 Address: address,
                 DataType: dataType,
                 Enabled: enabled,
@@ -614,6 +682,24 @@ public static partial class ProjectFactory
         }
 
         return traps;
+    }
+
+    private static bool IsTrapThresholdValid(double value, string dataType)
+    {
+        if (!double.IsFinite(value))
+        {
+            return false;
+        }
+
+        return dataType switch
+        {
+            "Int16" => value is >= short.MinValue and <= short.MaxValue,
+            "UInt16" => value is >= ushort.MinValue and <= ushort.MaxValue,
+            "Int32" => value is >= int.MinValue and <= int.MaxValue,
+            "UInt32" => value is >= uint.MinValue and <= uint.MaxValue,
+            "Float32" => value is >= -float.MaxValue and <= float.MaxValue,
+            _ => false,
+        };
     }
 
     private static PlcConnection BuildConnection(ProjectInput input, string keyenceDeviceMode) =>

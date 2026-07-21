@@ -23,6 +23,7 @@ public sealed record QrChunk(
 public static class ProjectQrPayload
 {
     private const int ZstdCompressionLevel = 19;
+    private const int MaxQrEncodedCharacters = ((ProjectFactory.MaxQrCompressedBytes + 2) / 3) * 4;
 
     private static readonly JsonSerializerOptions PrettyJsonOptions = new()
     {
@@ -39,23 +40,32 @@ public static class ProjectQrPayload
     };
 
     public static byte[] ProjectJsonBytes(PlcProject project) =>
-        JsonSerializer.SerializeToUtf8Bytes(ToJsonShape(project), PrettyJsonOptions);
+        RequireProjectJsonSize(JsonSerializer.SerializeToUtf8Bytes(ToJsonShape(project), PrettyJsonOptions));
 
     public static byte[] ProjectQrJsonBytes(PlcProject project) =>
-        JsonSerializer.SerializeToUtf8Bytes(ToJsonShape(project), MinifiedJsonOptions);
+        RequireProjectJsonSize(JsonSerializer.SerializeToUtf8Bytes(ToJsonShape(project), MinifiedJsonOptions));
 
-    public static byte[] ProjectQrBytes(PlcProject project) =>
-        ZstdCompress(ProjectQrJsonBytes(project));
+    public static byte[] ProjectQrBytes(PlcProject project)
+    {
+        var data = ZstdCompress(ProjectQrJsonBytes(project));
+        RequireQrCompressedSize(data);
+        return data;
+    }
 
     public static IReadOnlyList<QrChunk> EncodeProjectChunks(PlcProject project, int chunkSize)
     {
         var safeChunkSize = Math.Max(200, chunkSize);
         var data = ProjectQrJsonBytes(project);
         var compressedData = ZstdCompress(data);
+        RequireQrCompressedSize(compressedData);
         var checksum = Sha256Hex(data);
         var encoded = Base64UrlEncode(compressedData);
         var session = Guid.NewGuid().ToString("N")[..12];
         var payloads = ChunkString(encoded, safeChunkSize).DefaultIfEmpty(string.Empty).ToList();
+        if (payloads.Count > ProjectFactory.MaxQrChunks)
+        {
+            throw new ArgumentException($"Project QR can contain up to {ProjectFactory.MaxQrChunks} chunks.");
+        }
 
         return payloads
             .Select((payload, index) => new QrChunk(session, index + 1, payloads.Count, checksum, payload))
@@ -71,9 +81,23 @@ public static class ProjectQrPayload
         }
 
         var first = chunkList[0];
-        if (chunkList.Count != first.Total)
+        if (first.Total is < 1 or > ProjectFactory.MaxQrChunks ||
+            chunkList.Count != first.Total ||
+            chunkList.Select(chunk => chunk.Index).Distinct().Count() != first.Total ||
+            !chunkList.Select(chunk => chunk.Index).SequenceEqual(Enumerable.Range(1, first.Total)))
         {
             throw new ArgumentException("Missing QR chunks");
+        }
+        if (chunkList.Sum(chunk => (long)chunk.Payload.Length) > MaxQrEncodedCharacters ||
+            chunkList.Any(chunk =>
+                string.IsNullOrWhiteSpace(chunk.Session) ||
+                chunk.Session.Length > 128 ||
+                chunk.Checksum.Length != 64 ||
+                chunk.Checksum.Any(character => !Uri.IsHexDigit(character)) ||
+                string.IsNullOrEmpty(chunk.Payload) ||
+                chunk.Payload.Any(character => !(char.IsAsciiLetterOrDigit(character) || character is '-' or '_'))))
+        {
+            throw new ArgumentException("Invalid project QR chunk");
         }
 
         if (chunkList.Any(chunk =>
@@ -85,7 +109,9 @@ public static class ProjectQrPayload
         }
 
         var encoded = string.Concat(chunkList.Select(chunk => chunk.Payload));
-        var data = ZstdDecompress(Base64UrlDecode(encoded));
+        var compressedData = Base64UrlDecode(encoded);
+        RequireQrCompressedSize(compressedData);
+        var data = ZstdDecompress(compressedData);
         if (!string.Equals(Sha256Hex(data), first.Checksum, StringComparison.OrdinalIgnoreCase))
         {
             throw new ArgumentException("QR checksum mismatch");
@@ -116,9 +142,22 @@ public static class ProjectQrPayload
     {
         var index = int.Parse(indexText);
         var total = int.Parse(totalText);
-        if (index < 1 || index > total || total <= 0)
+        if (index < 1 || index > total || total <= 0 || total > ProjectFactory.MaxQrChunks)
         {
             throw new ArgumentException("Invalid project QR index");
+        }
+        if (string.IsNullOrWhiteSpace(session) || session.Length > 128)
+        {
+            throw new ArgumentException("Invalid project QR session");
+        }
+        if (checksum.Length != 64 || checksum.Any(character => !Uri.IsHexDigit(character)))
+        {
+            throw new ArgumentException("Invalid project QR checksum");
+        }
+        if (string.IsNullOrEmpty(payload) ||
+            payload.Any(character => !(char.IsAsciiLetterOrDigit(character) || character is '-' or '_')))
+        {
+            throw new ArgumentException("Invalid project QR payload");
         }
 
         return new QrChunk(session, index, total, checksum.ToLowerInvariant(), payload);
@@ -132,8 +171,42 @@ public static class ProjectQrPayload
 
     private static byte[] ZstdDecompress(byte[] data)
     {
-        using var decompressor = new Decompressor();
-        return decompressor.Unwrap(data).ToArray();
+        using var input = new MemoryStream(data, writable: false);
+        using var decompressor = new DecompressionStream(input);
+        using var output = new MemoryStream();
+        var buffer = new byte[64 * 1024];
+        while (true)
+        {
+            var read = decompressor.Read(buffer, 0, buffer.Length);
+            if (read == 0)
+            {
+                break;
+            }
+
+            if (output.Length + read > ProjectFactory.MaxProjectJsonBytes)
+            {
+                throw new ArgumentException($"Project JSON exceeds {ProjectFactory.MaxProjectJsonBytes} bytes.");
+            }
+            output.Write(buffer, 0, read);
+        }
+        return output.ToArray();
+    }
+
+    private static byte[] RequireProjectJsonSize(byte[] data)
+    {
+        if (data.Length > ProjectFactory.MaxProjectJsonBytes)
+        {
+            throw new ArgumentException($"Project JSON exceeds {ProjectFactory.MaxProjectJsonBytes} bytes.");
+        }
+        return data;
+    }
+
+    private static void RequireQrCompressedSize(byte[] data)
+    {
+        if (data.Length > ProjectFactory.MaxQrCompressedBytes)
+        {
+            throw new ArgumentException($"Compressed project QR exceeds {ProjectFactory.MaxQrCompressedBytes} bytes.");
+        }
     }
 
     private static object ToJsonShape(PlcProject project)
@@ -142,7 +215,7 @@ public static class ProjectQrPayload
         return new
     {
         schema = "plc-io-checker-project",
-        schemaVersion = 1,
+        schemaVersion = 2,
         exportInfo = new
         {
             source = "PROJECT_BUILDER",

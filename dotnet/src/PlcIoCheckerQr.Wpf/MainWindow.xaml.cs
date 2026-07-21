@@ -42,6 +42,7 @@ public partial class MainWindow : Window
     private IReadOnlyList<QrChunk> _chunks = [];
     private int _currentIndex;
     private string _lastJson = "";
+    private string? _projectId;
 
     private int _chunkSize = 800;
     private int _displaySize = 1000;

@@ -45,7 +45,7 @@ the row editing grids.
 
 ## Project JSON Compatibility
 
-Use the shared `plc-io-checker-project` schema v1 as the source of truth for
+Use the shared `plc-io-checker-project` schema v2 as the source of truth for
 JSON structure and selection values:
 
 - `schema`

@@ -21,7 +21,9 @@ internal static class ProjectInputBuilder
         string DevicesText = "D100,Int16",
         string WatchText = "",
         string TrapsText = "",
-        string CommentsText = "") => new(
+        string CommentsText = "",
+        string ProjectId = "",
+        IReadOnlyList<string>? TrapIds = null) => new(
         Name: Name,
         Vendor: Vendor,
         ConnectionMode: ConnectionMode,
@@ -38,5 +40,7 @@ internal static class ProjectInputBuilder
         DevicesText: DevicesText,
         WatchText: WatchText,
         TrapsText: TrapsText,
-        CommentsText: CommentsText);
+        CommentsText: CommentsText,
+        ProjectId: ProjectId,
+        TrapIds: TrapIds);
 }
