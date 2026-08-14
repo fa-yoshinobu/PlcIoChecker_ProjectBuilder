@@ -3,7 +3,7 @@
 <img src="logo.png" alt="PLC Console ProjectBuilder logo" width="240">
 
 [![.NET 8](https://img.shields.io/badge/.NET-8.0-512BD4?logo=dotnet)](https://dotnet.microsoft.com/)
-[![.NET CI](https://github.com/fa-yoshinobu/PlcIoChecker_ProjectBuilder/actions/workflows/dotnet-ci.yml/badge.svg)](https://github.com/fa-yoshinobu/PlcIoChecker_ProjectBuilder/actions/workflows/dotnet-ci.yml)
+[![.NET CI](https://github.com/fa-yoshinobu/PLC-Console-ProjectBuilder/actions/workflows/dotnet-ci.yml/badge.svg)](https://github.com/fa-yoshinobu/PLC-Console-ProjectBuilder/actions/workflows/dotnet-ci.yml)
 ![Windows WPF](https://img.shields.io/badge/platform-Windows%20WPF-0078D4?logo=windows)
 ![Project JSON v2](https://img.shields.io/badge/project%20JSON-v2-2ea44f)
 ![QR Zstd](https://img.shields.io/badge/QR-Zstd-f97316)
@@ -11,7 +11,7 @@
 
 [![C#](https://img.shields.io/badge/C%23-239120?logo=csharp&logoColor=white)](https://learn.microsoft.com/dotnet/csharp/)
 
-[![Release](https://github.com/fa-yoshinobu/PlcIoChecker_ProjectBuilder/actions/workflows/release.yml/badge.svg)](https://github.com/fa-yoshinobu/PlcIoChecker_ProjectBuilder/actions/workflows/release.yml)
+[![Release](https://github.com/fa-yoshinobu/PLC-Console-ProjectBuilder/actions/workflows/release.yml/badge.svg)](https://github.com/fa-yoshinobu/PLC-Console-ProjectBuilder/actions/workflows/release.yml)
 
 PLC Console ProjectBuilder is a PC tool for creating FA Labo PLC Console project settings and transferring them to the mobile apps as JSON or QR codes.
 
@@ -19,22 +19,22 @@ Instead of entering long PLC settings on a phone, edit the project on a PC and i
 
 ## Public Manual
 
-- Manual site: <https://fa-yoshinobu.github.io/PlcIoChecker_Site/>
-- ProjectBuilder manual: <https://fa-yoshinobu.github.io/PlcIoChecker_Site/projectbuilder/projectbuilder.html>
+- Manual site: <https://plc-console.fa-labo.com/>
+- ProjectBuilder manual: <https://plc-console.fa-labo.com/projectbuilder/projectbuilder.html>
 
 ## Download
 
 Download the Windows executable package from the release Assets:
 
-- Releases: <https://github.com/fa-yoshinobu/PlcIoChecker_ProjectBuilder/releases>
+- Releases: <https://github.com/fa-yoshinobu/PLC-Console-ProjectBuilder/releases>
 - Asset file: `PlcIoCheckerProjectBuilder-win-x64.zip`
 
 Unzip `PlcIoCheckerProjectBuilder-win-x64.zip`, then start `PlcIoCheckerProjectBuilder.exe`.
 
 Related repositories:
 
-- ProjectBuilder: <https://github.com/fa-yoshinobu/PlcIoChecker_ProjectBuilder>
-- Manual site: <https://github.com/fa-yoshinobu/PlcIoChecker_Site>
+- ProjectBuilder: <https://github.com/fa-yoshinobu/PLC-Console-ProjectBuilder>
+- Manual site: <https://github.com/fa-yoshinobu/PLC-Console-Site>
 
 Primary configuration areas:
 

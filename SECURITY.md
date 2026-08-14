@@ -16,7 +16,7 @@ This project does not maintain LTS branches or backport security fixes to older 
 
 Please do not open a public GitHub issue for security vulnerabilities.
 
-Report vulnerabilities privately via [GitHub Security Advisories](https://github.com/fa-yoshinobu/PlcIoChecker_ProjectBuilder/security/advisories/new) or by contacting the maintainer directly.
+Report vulnerabilities privately via [GitHub Security Advisories](https://github.com/fa-yoshinobu/PLC-Console-ProjectBuilder/security/advisories/new) or by contacting the maintainer directly.
 
 Include:
 

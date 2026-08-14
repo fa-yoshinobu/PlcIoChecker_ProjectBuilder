@@ -10,7 +10,7 @@ PLC Console ProjectBuilder の残りの公開作業と保守作業を管理す�
 - [ ] 各リリース後に GitHub Release の配布ファイルを確認する。
   `PlcIoCheckerProjectBuilder-win-x64.zip` に `PlcIoCheckerProjectBuilder.exe` が含まれ、クリーンな Windows PC で起動することを確認する。
 - [ ] 各リリース前に公開マニュアルへのリンクを確認する。
-  アプリの Help メニューは `https://fa-yoshinobu.github.io/PlcIoChecker_Site/` を開き、上部ヘッダーのリンクは `https://fa-yoshinobu.github.io/PlcIoChecker_Site/projectbuilder/projectbuilder.html` を開く。
+  アプリの Help メニューは `https://plc-console.fa-labo.com/` を開き、上部ヘッダーのリンクは `https://plc-console.fa-labo.com/projectbuilder/projectbuilder.html` を開く。
 - [ ] ZIP 配布のみを継続するか、インストーラーを追加するか決める。
   現在の配布方法は GitHub Releases からの ZIP のみ。
 
