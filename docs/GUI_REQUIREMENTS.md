@@ -1,6 +1,6 @@
 # GUI Requirements
 
-This app exists because configuring PLC IO Checker projects on a smartphone is
+This app exists because configuring FA Labo PLC Console projects on a smartphone is
 tedious. The PC GUI should make project data entry easier, then export project
 JSON v1 and QR codes for Android and iOS.
 

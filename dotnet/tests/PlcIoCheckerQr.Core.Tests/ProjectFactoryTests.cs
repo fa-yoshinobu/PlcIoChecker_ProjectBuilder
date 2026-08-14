@@ -106,7 +106,7 @@ public sealed class ProjectFactoryTests
     [Fact]
     public void SlugifyLowercasesAndKeepsFallbackForEmptySlug()
     {
-        Assert.Equal("plc-io-checker-2026", ProjectFactory.Slugify(" PLC IO Checker!! 2026 "));
+        Assert.Equal("plc-console-2026", ProjectFactory.Slugify(" PLC Console!! 2026 "));
         Assert.Equal("plc-project", ProjectFactory.Slugify("###"));
         Assert.Equal("custom", ProjectFactory.Slugify("   ", fallback: "custom"));
     }

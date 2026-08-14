@@ -30,7 +30,7 @@ internal sealed partial class AboutWindow : Window
         LibrariesListView.ItemsSource = new[]
         {
             new LibraryInfo(
-                "PLC IO Checker Project Builder",
+                "PLC Console ProjectBuilder",
                 appVersion,
                 _language.Text("about.library.application"),
                 "MIT License",
