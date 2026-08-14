@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to PLC IO Checker ProjectBuilder will be documented in this file.
+All notable changes to PLC Console ProjectBuilder will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
@@ -12,6 +12,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - `Docs`: 仕様書、README、GUI 要件などの文書。
 - `Tests`: テスト、fixture、検証データ。
 - `Tooling`: ビルド、CLI、開発補助。
+
+## [Unreleased] - 2026-08-14
+
+### Changed
+
+- App/Docs: ProjectBuilder の利用者向け名称を `PLC Console ProjectBuilder` に、モバイルアプリへの公開上の言及を `FA Labo PLC Console` に更新しました。実行ファイル名、repository、内部識別子は変更していません。
 
 ## [Unreleased] - 2026-07-17
 

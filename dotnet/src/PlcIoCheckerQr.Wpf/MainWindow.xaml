@@ -2,7 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:PlcIoCheckerQr.Wpf"
-        Title="PLC IO Checker Project Builder"
+        Title="PLC Console ProjectBuilder"
         Width="1320"
         Height="900"
         Icon="/icon.ico"
@@ -113,11 +113,11 @@
                    Height="64"
                    Margin="0,0,14,0"
                    RenderOptions.BitmapScalingMode="HighQuality"/>
-            <TextBlock Text="PLC IO Checker"
+            <TextBlock Text="PLC Console"
                        Foreground="{StaticResource NavFg}"
                        FontWeight="SemiBold" FontSize="15"
                        VerticalAlignment="Center"/>
-            <TextBlock Text=" Project Builder"
+            <TextBlock Text=" ProjectBuilder"
                        Foreground="{StaticResource NavFgMuted}"
                        FontSize="15"
                        VerticalAlignment="Center"/>

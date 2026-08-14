@@ -1,6 +1,6 @@
-# PLC IO Checker Project Builder
+# PLC Console ProjectBuilder
 
-<img src="logo.png" alt="PLC IO Checker Project Builder logo" width="240">
+<img src="logo.png" alt="PLC Console ProjectBuilder logo" width="240">
 
 [![.NET 8](https://img.shields.io/badge/.NET-8.0-512BD4?logo=dotnet)](https://dotnet.microsoft.com/)
 [![.NET CI](https://github.com/fa-yoshinobu/PlcIoChecker_ProjectBuilder/actions/workflows/dotnet-ci.yml/badge.svg)](https://github.com/fa-yoshinobu/PlcIoChecker_ProjectBuilder/actions/workflows/dotnet-ci.yml)
@@ -13,7 +13,7 @@
 
 [![Release](https://github.com/fa-yoshinobu/PlcIoChecker_ProjectBuilder/actions/workflows/release.yml/badge.svg)](https://github.com/fa-yoshinobu/PlcIoChecker_ProjectBuilder/actions/workflows/release.yml)
 
-PLC IO Checker Project Builder is a PC tool for creating PLC IO Checker project settings and transferring them to the mobile apps as JSON or QR codes.
+PLC Console ProjectBuilder is a PC tool for creating FA Labo PLC Console project settings and transferring them to the mobile apps as JSON or QR codes.
 
 Instead of entering long PLC settings on a phone, edit the project on a PC and import it from the Android/iOS app QR scanner.
 
@@ -43,7 +43,7 @@ Primary configuration areas:
 - Time Chart targets
 - Trap settings
 
-This repository contains only the PC-side project builder and QR export tool. The Android and iOS PLC IO Checker apps are separate paid products, and their source code is not included in this repository.
+This repository contains only the PC-side project builder and QR export tool. The FA Labo PLC Console apps for Android and iOS are separate paid products, and their source code is not included in this repository.
 
 The supported desktop implementation is the .NET WPF app.
 
@@ -105,4 +105,4 @@ emits schema version 2 only; old or invalid JSON is rejected without conversion.
 | Item | Value |
 | --- | --- |
 | License | [MIT](LICENSE) |
-| Scope | Applies only to the PC-side project builder and QR export tool in this repository. It does not include the Android/iOS PLC IO Checker mobile apps. |
+| Scope | Applies only to the PC-side project builder and QR export tool in this repository. It does not include the FA Labo PLC Console mobile apps for Android/iOS. |

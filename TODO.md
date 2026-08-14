@@ -1,6 +1,6 @@
 # TODO
 
-PLC IO Checker Project Builder の残りの公開作業と保守作業を管理する。
+PLC Console ProjectBuilder の残りの公開作業と保守作業を管理する。
 
 ## 公開後 / 公開前の確認
 
