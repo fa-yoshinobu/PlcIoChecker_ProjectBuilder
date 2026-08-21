@@ -17,7 +17,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Changed
 
-- App/Docs: ProjectBuilder の利用者向け名称を `PLC Console ProjectBuilder` に、モバイルアプリへの公開上の言及を `FA Labo PLC Console` に更新しました。実行ファイル名、repository、内部識別子は変更していません。
+- App/Docs: ProjectBuilder の利用者向け名称を `PLC Console ProjectBuilder` に、モバイルアプリへの公開上の言及を `FA Labo PLC Console` に更新しました。実行ファイル名と内部識別子は変更していません。
+- App/Docs: GitHub repository の改名に合わせて repository・Release・Security Advisory のURLを更新し、アプリと文書のマニュアルURLを `https://plc-console.fa-labo.com/` へ移行しました。
 
 ## [Unreleased] - 2026-07-17
 

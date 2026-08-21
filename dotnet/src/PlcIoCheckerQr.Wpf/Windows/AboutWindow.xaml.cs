@@ -35,7 +35,7 @@ internal sealed partial class AboutWindow : Window
                 _language.Text("about.library.application"),
                 "MIT License",
                 "FA Labo(fa_yoshinobu)",
-                "https://github.com/fa-yoshinobu/PlcIoChecker_ProjectBuilder",
+                "https://github.com/fa-yoshinobu/PLC-Console-ProjectBuilder",
                 _language.Format("about.libraryDetails", "MIT License", "FA Labo(fa_yoshinobu)")),
             new LibraryInfo(
                 "QRCoder",
